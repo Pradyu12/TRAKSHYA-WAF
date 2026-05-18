@@ -66,6 +66,14 @@
         .shake-animation {
             animation: shake 0.35s ease-in-out;
         }
+        @keyframes cyberSpin {
+            0% { transform: rotate(0deg) scale(0.5); opacity: 0; filter: drop-shadow(0 0 0px rgba(32,148,139,0)); }
+            50% { transform: rotate(180deg) scale(1.2); filter: drop-shadow(0 0 30px rgba(32,148,139,1)); }
+            100% { transform: rotate(360deg) scale(1); opacity: 1; filter: drop-shadow(0 0 10px rgba(32,148,139,0.6)); }
+        }
+        .cyber-spin-logo {
+            animation: cyberSpin 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
     </style>
     <script id="tailwind-config">
         tailwind.config = {
@@ -194,7 +202,7 @@
         <!-- Right Pane: Credentials Entry Card (7 columns) -->
         <div class="md:col-span-7 glass-panel rounded-lg p-8 border border-[#20948b]/20 bg-black/50 backdrop-blur-md relative overflow-hidden flex flex-col items-center justify-center min-h-[480px] shadow-[0_0_60px_rgba(32,148,139,0.15)]">
             <!-- Transparent Stallion Logo Image -->
-            <img src="./kalki_waf_logo.png?v=3.0" class="w-32 h-32 object-contain filter drop-shadow-[0_0_20px_rgba(32,148,139,0.8)] mb-3" alt="Kalki Logo"/>
+            <img src="./kalki_waf_logo.png?v=3.0" class="w-48 h-48 object-contain filter drop-shadow-[0_0_20px_rgba(32,148,139,0.8)] mb-3" alt="Kalki Logo"/>
             
             <h2 class="font-display-lg text-2xl text-white tracking-widest font-bold text-center uppercase mb-1 drop-shadow-[0_0_10px_rgba(32,148,139,0.4)]">KALKI WAF SECURE</h2>
             <p class="font-code-block text-[9px] text-[#20948b]/60 tracking-[0.3em] uppercase mb-6 text-center">AUTHORIZATION MATRIX GATEWAY</p>
@@ -255,7 +263,7 @@
 <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-3 bg-surface-container/30 backdrop-blur-xl border-b border-[#20948b]/15 shadow-[0_0_15px_rgba(32,148,139,0.1)]">
     <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('overview')">
         <!-- High-tech logo in header -->
-        <img src="./kalki_waf_logo.png?v=3.0" class="w-12 h-12 object-contain filter drop-shadow-[0_0_8px_rgba(32,148,139,0.6)]" alt="Kalki Logo"/>
+        <img id="header-logo" src="./kalki_waf_logo.png?v=3.0" class="w-16 h-16 object-contain filter drop-shadow-[0_0_8px_rgba(32,148,139,0.6)]" alt="Kalki Logo"/>
         <h1 class="font-display-lg text-headline-md tracking-tighter text-primary-container drop-shadow-[0_0_10px_rgba(32,148,139,0.5)]">KALKI WAF</h1>
         <span class="hidden md:block h-4 w-px bg-white/20 ml-2"></span>
         <nav class="hidden md:flex gap-6 ml-2">
@@ -952,6 +960,14 @@
             startHUDTelemetry();
             globeInitialized = true;
             logConsole("Kalki WAF Core: Secure operator control session established.");
+            
+            // Trigger logo animation
+            const logo = document.getElementById('header-logo');
+            if(logo) {
+                logo.classList.remove('cyber-spin-logo');
+                void logo.offsetWidth; // trigger reflow
+                logo.classList.add('cyber-spin-logo');
+            }
         }, 80);
     }
 
