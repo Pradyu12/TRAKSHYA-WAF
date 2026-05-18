@@ -1,0 +1,2223 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>KALKI WAF | Security Command Center</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Stable R128 Three.js for outstanding 3D holographic globe -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        body {
+            background-color: #121212;
+            background-image: 
+                radial-gradient(circle at 2px 2px, rgba(32, 148, 139, 0.05) 1px, transparent 0);
+            background-size: 32px 32px;
+            color: #e4e1e9;
+        }
+        .glass-panel {
+            background: rgba(22, 22, 22, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(32, 148, 139, 0.25);
+        }
+        .glow-red {
+            box-shadow: 0 0 20px rgba(255, 90, 9, 0.25);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .neon-pulse {
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(255, 90, 9, 0.8)); }
+            50% { opacity: 0.3; filter: drop-shadow(0 0 1px rgba(255, 90, 9, 0.1)); }
+        }
+        .tab-animate {
+            animation: tabFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes tabFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.985) translateY(4px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        .terminal-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: rgba(32, 148, 139, 0.3);
+            border-radius: 2px;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .shake-animation {
+            animation: shake 0.35s ease-in-out;
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#6ff6ff",
+                        "on-secondary-fixed": "#0f0069",
+                        "on-tertiary-container": "#c2002b",
+                        "surface-bright": "#39383f",
+                        "inverse-primary": "#00696f",
+                        "on-error": "#690005",
+                        "surface-container-lowest": "#121212",
+                        "primary-container": "#20948b",
+                        "on-secondary-fixed-variant": "#3323cc",
+                        "surface-container-highest": "#363636",
+                        "secondary-fixed-dim": "#c3c0ff",
+                        "on-tertiary-fixed": "#410008",
+                        "tertiary-fixed": "#ffdad8",
+                        "secondary-container": "#3626ce",
+                        "primary-fixed-dim": "#00dce6",
+                        "tertiary-fixed-dim": "#ffb3b2",
+                        "on-secondary": "#1d00a5",
+                        "error": "#ffb4ab",
+                        "surface-tint": "#00dce6",
+                        "on-primary-fixed": "#002022",
+                        "outline-variant": "#3a494b",
+                        "on-background": "#e4e1e9",
+                        "on-primary-fixed-variant": "#004f53",
+                        "background": "#1e1e1e",
+                        "on-primary-container": "#006a70",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#92001e",
+                        "surface-container": "#242424",
+                        "primary": "#e0fdff",
+                        "inverse-on-surface": "#303036",
+                        "tertiary": "#fff5f5",
+                        "on-secondary-container": "#b3b1ff",
+                        "secondary": "#c3c0ff",
+                        "surface-dim": "#1e1e1e",
+                        "on-surface-variant": "#b9cacb",
+                        "outline": "#849495",
+                        "surface-variant": "#363636",
+                        "surface": "#1e1e1e",
+                        "on-surface": "#e4e1e9",
+                        "on-tertiary": "#680012",
+                        "tertiary-container": "#ffd0ce",
+                        "secondary-fixed": "#e2dfff",
+                        "inverse-surface": "#e4e1e9",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#1c1c1c",
+                        "on-primary": "#00373a",
+                        "surface-container-high": "#2c2c2c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "code-block": ["Space Mono"],
+                        "data-point": ["Space Mono"],
+                        "body-md": ["Geist"],
+                        "ui-label-sm": ["Geist"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-body-md bg-background text-on-background selection:bg-primary-container/30 select-none overflow-x-hidden">
+
+<!-- Cybernetic Holographic Authentication Overlay -->
+<div id="auth-overlay" class="fixed inset-0 z-[200] flex items-center justify-center bg-[#161a22] overflow-hidden select-none">
+    <!-- Blueprint grid background -->
+    <div class="absolute inset-0 bg-[linear-gradient(rgba(32,148,139,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(32,148,139,0.03)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-[#161a22]/90 to-[#121212] pointer-events-none"></div>
+    
+    <!-- Rotating Compass Dial in background -->
+    <div class="absolute w-[800px] h-[800px] border border-[#20948b]/4 border-dashed rounded-full animate-spin pointer-events-none" style="animation-duration: 90s;"></div>
+    <div class="absolute w-[600px] h-[600px] border border-[#20948b]/2 rounded-full animate-spin pointer-events-none" style="animation-duration: 50s; animation-direction: reverse;"></div>
+
+    <!-- Dual Pane Cyber-Terminal Container -->
+    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 gap-6 p-4 z-10 relative">
+        
+        <!-- Left Pane: Active Diagnostics Terminal (5 columns) -->
+        <div class="md:col-span-5 glass-panel rounded-lg p-6 border border-[#20948b]/10 flex flex-col justify-between h-[480px] bg-black/60 backdrop-blur-md relative overflow-hidden">
+            <!-- Terminal Header -->
+            <div class="border-b border-[#20948b]/20 pb-3 mb-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span class="font-code-block text-[10px] tracking-wider text-amber-500 font-bold uppercase">DIAGNOSTIC_STATE: LOCKED</span>
+                </div>
+                <span class="font-code-block text-[8px] text-[#20948b]/40">TERM_V4.2</span>
+            </div>
+            
+            <!-- Terminal Output Logs -->
+            <div id="term-log-container" class="flex-1 overflow-y-auto space-y-2 text-[9px] font-code-block text-[#20948b]/80 scrollbar-none pr-1">
+                <div>[SYS_INIT] Booting Kalki Gateway Engine...</div>
+                <div>[SYS_INIT] Loading cryptographic ruleset...</div>
+                <div>[SYS_INIT] Core SQLite database synchronized.</div>
+                <div>[SYS_INIT] Network scrubbing pipelines active.</div>
+                <div class="text-amber-500">[SEC_GATE] Core operating posture -> MONITOR_ONLY</div>
+                <div>[SEC_GATE] Quantum shield core established.</div>
+                <div class="text-[#ff5a09] font-bold">[SEC_GATE] WARNING: Control Matrix unauthorized.</div>
+                <div class="animate-pulse text-[#20948b]">[SEC_GATE] Waiting for operator authentication...</div>
+            </div>
+            
+            <!-- Terminal Footer -->
+            <div class="border-t border-[#20948b]/10 pt-3 mt-3 flex items-center justify-between text-[8px] font-code-block text-on-surface-variant/40">
+                <span>SEC_CORE_LEVEL: 0x9F</span>
+                <span id="term-time-sec">UTC_SYNC: ESTABLISHED</span>
+            </div>
+            
+            <!-- Cyber corner marks -->
+            <div class="absolute top-1 left-1 w-2 h-2 border-t border-l border-[#20948b]/40 pointer-events-none"></div>
+            <div class="absolute top-1 right-1 w-2 h-2 border-t border-r border-[#20948b]/40 pointer-events-none"></div>
+            <div class="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#20948b]/40 pointer-events-none"></div>
+            <div class="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#20948b]/40 pointer-events-none"></div>
+        </div>
+
+        <!-- Right Pane: Credentials Entry Card (7 columns) -->
+        <div class="md:col-span-7 glass-panel rounded-lg p-8 border border-[#20948b]/20 bg-black/50 backdrop-blur-md relative overflow-hidden flex flex-col items-center justify-center min-h-[480px] shadow-[0_0_60px_rgba(32,148,139,0.15)]">
+            <!-- Transparent Stallion Logo Image -->
+            <img src="/kalki_waf_logo.png?v=3.0" class="w-20 h-20 object-contain filter drop-shadow-[0_0_15px_rgba(32,148,139,0.6)] mb-3" alt="Kalki Logo"/>
+            
+            <h2 class="font-display-lg text-2xl text-white tracking-widest font-bold text-center uppercase mb-1 drop-shadow-[0_0_10px_rgba(32,148,139,0.4)]">KALKI WAF SECURE</h2>
+            <p class="font-code-block text-[9px] text-[#20948b]/60 tracking-[0.3em] uppercase mb-6 text-center">AUTHORIZATION MATRIX GATEWAY</p>
+            
+            <form id="auth-form" onsubmit="handleAuth(event)" class="w-full max-w-sm space-y-5">
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="font-code-block text-[9px] text-[#20948b]/60 uppercase tracking-widest">Operator Identity</label>
+                        <span class="text-[7px] font-code-block text-[#20948b]/30">ID_FIELD_01</span>
+                    </div>
+                    <div class="relative">
+                        <input id="auth-username" required class="w-full bg-black/60 border border-[#20948b]/20 focus:border-[#20948b] focus:ring-0 text-white font-code-block p-3 outline-none transition-all rounded text-xs pl-10" placeholder="ENTER OPERATOR ID (kalki)..." type="text"/>
+                        <span class="material-symbols-outlined absolute left-3 top-3 text-[16px] text-[#20948b]/50">badge</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="font-code-block text-[9px] text-[#20948b]/60 uppercase tracking-widest">Key phrase Keypass</label>
+                        <span class="text-[7px] font-code-block text-[#20948b]/30">CRYPT_FIELD_02</span>
+                    </div>
+                    <div class="relative">
+                        <input id="auth-password" required class="w-full bg-black/60 border border-[#20948b]/20 focus:border-[#20948b] focus:ring-0 text-white font-code-block p-3 outline-none transition-all rounded text-xs pl-10" placeholder="ENTER SECRET KEY (admin)..." type="password"/>
+                        <span class="material-symbols-outlined absolute left-3 top-3 text-[16px] text-[#20948b]/50">key</span>
+                    </div>
+                </div>
+                
+                <!-- Auth status warning indicator -->
+                <div id="auth-status" class="h-6 text-center font-code-block text-[9px] text-[#ff5a09] tracking-widest uppercase hidden animate-pulse font-bold">
+                    AUTHORIZATION DENIED: INVALID OPERATOR SIGNATURE
+                </div>
+                
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-[#20948b]/10 via-[#20948b]/25 to-[#20948b]/10 border border-[#20948b]/40 hover:border-[#20948b] text-white font-code-block font-bold rounded shadow-[0_0_15px_rgba(32,148,139,0.1)] hover:shadow-[0_0_25px_rgba(32,148,139,0.3)] active:scale-[0.99] transition-all flex justify-center items-center gap-2 tracking-[0.25em] uppercase text-xs">
+                    <span class="material-symbols-outlined animate-pulse text-[16px]">vpn_key</span> AUTHORIZE OPERATOR
+                </button>
+            </form>
+
+            <!-- CAD ticks and corners -->
+            <div class="absolute top-1 left-1 w-2 h-2 border-t border-l border-[#20948b]/40 pointer-events-none"></div>
+            <div class="absolute top-1 right-1 w-2 h-2 border-t border-r border-[#20948b]/40 pointer-events-none"></div>
+            <div class="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#20948b]/40 pointer-events-none"></div>
+            <div class="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#20948b]/40 pointer-events-none"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Top Status Toast Notification (Hidden by default) -->
+<div id="toast-notification" class="fixed top-20 right-6 z-[100] transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="glass-panel rounded-lg px-6 py-4 flex items-center gap-3 border-l-4 border-primary-container shadow-2xl">
+        <span id="toast-icon" class="material-symbols-outlined text-primary-container">info</span>
+        <div>
+            <p id="toast-title" class="font-headline-md text-[14px] text-white font-bold"></p>
+            <p id="toast-body" class="font-code-block text-[11px] text-on-surface-variant/80"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Top Navigation -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-3 bg-surface-container/30 backdrop-blur-xl border-b border-[#20948b]/15 shadow-[0_0_15px_rgba(32,148,139,0.1)]">
+    <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('overview')">
+        <!-- High-tech logo in header -->
+        <img src="/kalki_waf_logo.png?v=3.0" class="w-8 h-8 object-contain filter drop-shadow-[0_0_5px_rgba(32,148,139,0.4)]" alt="Kalki Logo"/>
+        <h1 class="font-display-lg text-headline-md tracking-tighter text-primary-container drop-shadow-[0_0_10px_rgba(32,148,139,0.5)]">KALKI WAF</h1>
+        <span class="hidden md:block h-4 w-px bg-white/20 ml-2"></span>
+        <nav class="hidden md:flex gap-6 ml-2">
+            <a id="nav-top-overview" class="text-primary-container font-bold border-b-2 border-primary-container font-body-md text-body-md" href="#" onclick="switchTab('overview')">Dashboard</a>
+            <a id="nav-top-threat-intel" class="text-on-surface-variant hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" href="#" onclick="switchTab('threat-intel')">Threat Intel</a>
+            <a id="nav-top-rule-engine" class="text-on-surface-variant hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" href="#" onclick="switchTab('rule-engine')">Rule Engine</a>
+            <a id="nav-top-settings" class="text-on-surface-variant hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" href="#" onclick="switchTab('settings')">Settings</a>
+        </nav>
+    </div>
+    <div class="flex items-center gap-6">
+        <div class="flex gap-4 text-primary-container">
+            <span class="material-symbols-outlined text-[20px] cursor-pointer hover:scale-110 transition-transform" onclick="switchTab('settings')">memory</span>
+            <span class="material-symbols-outlined text-[20px] cursor-pointer hover:scale-110 transition-transform" onclick="switchTab('threat-intel')">database</span>
+            <span class="material-symbols-outlined text-[20px] cursor-pointer hover:scale-110 transition-transform" onclick="switchTab('overview')">speed</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="hud-audio-btn" onclick="toggleAudioFeed()" class="bg-[#20948b]/10 border border-[#20948b]/30 px-2.5 py-1 rounded-sm hover:bg-[#20948b]/20 text-[#20948b] transition-all flex items-center gap-1.5 font-code-block text-[10px] tracking-widest outline-none">
+                <span class="material-symbols-outlined text-[14px]">volume_off</span> AUDIO FEED: OFF
+            </button>
+            <div class="bg-primary-container/10 border border-primary-container/30 px-3 py-1 rounded-sm">
+                <span class="font-code-block text-[11px] tracking-widest text-primary-container">SYSTEM STATUS: <span id="header-status" style="color: #00ff66; text-shadow: 0 0 10px rgba(0,255,102,0.6);">NOMINAL</span></span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Side Navigation -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest/40 backdrop-blur-2xl border-r border-[#20948b]/15 flex flex-col pt-24 pb-6 hidden lg:flex">
+    <div class="flex flex-col flex-1">
+        <div id="nav-side-overview" onclick="switchTab('overview')" class="flex items-center px-6 py-3 text-primary-container bg-primary-container/10 border-r-2 border-primary-container shadow-[inset_-10px_0_15px_-10px_rgba(32,148,139,0.3)] cursor-pointer translate-x-1">
+            <span class="material-symbols-outlined mr-4">dashboard</span>
+            <span class="font-code-block text-code-block">Dashboard</span>
+        </div>
+        <div id="nav-side-threat-intel" onclick="switchTab('threat-intel')" class="flex items-center px-6 py-3 text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface transition-all cursor-pointer">
+            <span class="material-symbols-outlined mr-4">security</span>
+            <span class="font-code-block text-code-block">Threat Intel</span>
+        </div>
+        <div id="nav-side-rule-engine" onclick="switchTab('rule-engine')" class="flex items-center px-6 py-3 text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface transition-all cursor-pointer">
+            <span class="material-symbols-outlined mr-4">terminal</span>
+            <span class="font-code-block text-code-block">Rule Engine</span>
+        </div>
+        <div id="nav-side-settings" onclick="switchTab('settings')" class="flex items-center px-6 py-3 text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface transition-all cursor-pointer">
+            <span class="material-symbols-outlined mr-4">settings</span>
+            <span class="font-code-block text-code-block">Settings</span>
+        </div>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="lg:ml-64 pt-24 pb-16 px-6 md:px-12 max-w-[1800px] mx-auto min-h-screen">
+
+    <!-- TAB 1: OVERVIEW DASHBOARD (Active by default now) -->
+    <div id="tab-overview" class="tab-content tab-animate space-y-8">
+        <section class="glass-panel rounded-lg p-6 border-l-4 border-[#20948b] flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h2 class="font-headline-md text-headline-md text-white mb-1">Active Scrubbing Node Matrix</h2>
+                <p class="text-on-surface-variant text-body-md">Kalki Core asynchronous request pipeline metrics.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="h-3.5 w-3.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-code-block text-ui-label-sm tracking-widest text-emerald-400">EDGE SYNC ACTIVE</span>
+            </div>
+        </section>
+
+        <!-- Dynamic Statistics Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="glass-panel rounded-lg p-6 relative overflow-hidden group hover:border-primary-container/30 transition-all border-b border-primary-container/10">
+                <div class="absolute -right-4 -top-4 text-white/5 font-bold text-6xl pointer-events-none font-code-block">ING</div>
+                <p class="font-code-block text-ui-label-sm text-on-surface-variant/60 uppercase">Scanned Requests</p>
+                <h3 id="stat-ingress" class="font-display-lg text-4xl text-white font-bold my-2">1,524</h3>
+                <p class="font-code-block text-[11px] text-[#20948b] flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[12px]">trending_up</span> 99.98% THROUGHPUT
+                </p>
+            </div>
+            <div class="glass-panel rounded-lg p-6 relative overflow-hidden group hover:border-[#ff5a09]/30 transition-all border-b border-[#ff5a09]/20">
+                <div class="absolute -right-4 -top-4 text-white/5 font-bold text-6xl pointer-events-none font-code-block">BLK</div>
+                <p class="font-code-block text-ui-label-sm text-on-surface-variant/60 uppercase">Mitigation Drops</p>
+                <h3 id="stat-blocked" class="font-display-lg text-4xl text-[#ff5a09] font-bold my-2">0</h3>
+                <p class="font-code-block text-[11px] text-on-surface-variant/70">
+                    REALTIME PACKET SCRUBBING
+                </p>
+            </div>
+            <div class="glass-panel rounded-lg p-6 relative overflow-hidden group hover:border-emerald-500/30 transition-all border-b border-emerald-500/10">
+                <div class="absolute -right-4 -top-4 text-white/5 font-bold text-6xl pointer-events-none font-code-block">SIG</div>
+                <p class="font-code-block text-ui-label-sm text-on-surface-variant/60 uppercase">Active Signatures</p>
+                <h3 id="stat-rules" class="font-display-lg text-4xl text-emerald-400 font-bold my-2">4</h3>
+                <p class="font-code-block text-[11px] text-emerald-400 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[12px]">verified</span> HOT-PATCH COMPILED
+                </p>
+            </div>
+            <div class="glass-panel rounded-lg p-6 relative overflow-hidden group hover:border-amber-400/30 transition-all border-b border-amber-400/10">
+                <div class="absolute -right-4 -top-4 text-white/5 font-bold text-6xl pointer-events-none font-code-block">LAT</div>
+                <p class="font-code-block text-ui-label-sm text-on-surface-variant/60 uppercase">System Latency</p>
+                <h3 id="stat-latency" class="font-display-lg text-4xl text-amber-400 font-bold my-2">24 ms</h3>
+                <p class="font-code-block text-[11px] text-amber-400 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[12px]">bolt</span> NON-BLOCKING CORE
+                </p>
+            </div>
+        </div>
+
+        <!-- 3D Globe Visualization Panel + Real-time Gauges Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- 3D Holographic Globe (7 columns) -->
+            <div class="lg:col-span-7 glass-panel rounded-lg p-6 relative overflow-hidden flex flex-col justify-between min-h-[480px]">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none z-10"></div>
+                <div class="absolute top-4 left-4 z-20">
+                    <h3 class="font-headline-md text-white text-[16px] tracking-tight flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-[#20948b] animate-pulse"></span>
+                        GEOSPATIAL INGRESS TRAFFIC SHIELD
+                    </h3>
+                    <p class="text-on-surface-variant text-[11px] font-code-block uppercase tracking-wider">Holographic 3D Inbound Scrubbing Grid</p>
+                </div>
+                
+                <!-- Three.js Canvas Container -->
+                <div id="globe-container" class="w-full h-80 lg:h-96 flex items-center justify-center relative cursor-grab active:cursor-grabbing">
+                    <canvas id="globe-canvas" class="w-full h-full outline-none"></canvas>
+                    
+                    <!-- Overlay telemetry grid -->
+                    <div class="absolute bottom-4 left-4 z-20 font-code-block text-[9px] text-[#20948b]/60 bg-black/40 border border-white/5 p-2 rounded">
+                        <div>TARGET_NODE: WASHINGTON_DC [KALKI_CORE]</div>
+                        <div>ACTIVE_VECTORS: <span class="text-[#ff5a09]">SQLi, XSS, RFI</span></div>
+                        <div>SCAN_POSTURE: <span id="globe-posture-text" class="text-emerald-400">STANDARD_POSTURE</span></div>
+                    </div>
+                    
+                    <!-- Floating Live Ingress Threat Radar HUD Overlay -->
+                    <div class="absolute top-4 right-4 z-20 w-44 max-h-[170px] bg-black/75 border border-[#ff5a09]/20 p-2.5 rounded flex flex-col justify-between hidden md:flex backdrop-blur-md">
+                        <div class="border-b border-[#ff5a09]/30 pb-1 mb-1.5 flex items-center justify-between font-code-block text-[8px] text-[#ff5a09] tracking-wider uppercase font-bold">
+                            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-[#ff5a09] rounded-full animate-ping"></span>THREAT RADAR</span>
+                        </div>
+                        <div id="radar-logs" class="flex-1 overflow-y-auto space-y-1 text-[7px] font-code-block text-white/80 scrollbar-none pr-1 max-h-[130px]">
+                            <div class="text-[#20948b]/50">[SYSTEM_INIT] Monitoring ingress...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tech Ring Overlays -->
+                    <div class="absolute w-40 h-40 border border-[#20948b]/10 rounded-full animate-spin pointer-events-none" style="animation-duration: 20s;"></div>
+                    <div class="absolute w-64 h-64 border border-[#ff5a09]/5 rounded-full animate-spin pointer-events-none" style="animation-duration: 35s; animation-direction: reverse;"></div>
+
+                    <!-- Blueprint Drafting Corners -->
+                    <div class="absolute top-2 left-2 w-4 h-4 border-t border-l border-[#20948b]/30 pointer-events-none"></div>
+                    <div class="absolute top-2 right-2 w-4 h-4 border-t border-r border-[#20948b]/30 pointer-events-none"></div>
+                    <div class="absolute bottom-2 left-2 w-4 h-4 border-b border-l border-[#20948b]/30 pointer-events-none"></div>
+                    <div class="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-[#20948b]/30 pointer-events-none"></div>
+                    
+                    <!-- Lat/Lng ticks and grids (Blueprint Scale Markers) -->
+                    <div class="absolute top-1/2 left-3 -translate-y-1/2 flex flex-col gap-6 text-[7px] font-code-block text-[#20948b]/30 pointer-events-none text-left">
+                        <span>+60°N</span>
+                        <span>+30°N</span>
+                        <span>0°EQ</span>
+                        <span>-30°S</span>
+                        <span>-60°S</span>
+                    </div>
+                    
+                    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-8 text-[7px] font-code-block text-[#20948b]/30 pointer-events-none whitespace-nowrap">
+                        <span>120°W</span>
+                        <span>60°W</span>
+                        <span>0°MER</span>
+                        <span>60°E</span>
+                        <span>120°E</span>
+                    </div>
+                </div>
+                
+                <div class="z-20 border-t border-white/5 pt-4 flex justify-between items-center text-[10px] font-code-block text-on-surface-variant/40">
+                    <span>VOLUMETRIC GLOBAL ATTACK MAP v2.5</span>
+                    <span class="text-[#20948b]">ENGINE SHIELD: STABLE</span>
+                </div>
+            </div>
+            
+            <!-- Real-time HUD Gauges + Live Requests Chart (5 columns) -->
+            <div class="lg:col-span-5 glass-panel rounded-lg p-6 flex flex-col justify-between min-h-[480px]">
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="font-headline-md text-white text-[16px] tracking-tight">Real-time Inspection Node Stream</h3>
+                        <p class="text-on-surface-variant text-[11px] font-code-block uppercase tracking-wider">Core Telemetry & Digital Gauges</p>
+                    </div>
+                    
+                    <!-- Real-time digital gauges grid -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- CPU -->
+                        <div class="bg-black/30 border border-white/5 p-3 rounded">
+                            <p class="font-code-block text-[9px] text-white/40 uppercase">Scrubbing CPU Load</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span id="hud-cpu" class="font-code-block text-[15px] text-[#20948b] font-bold">12.4%</span>
+                                <div class="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div id="hud-cpu-bar" class="h-full bg-[#20948b] rounded-full transition-all duration-300" style="width: 12%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- RAM -->
+                        <div class="bg-black/30 border border-white/5 p-3 rounded">
+                            <p class="font-code-block text-[9px] text-white/40 uppercase">RAM Utilization</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span id="hud-ram" class="font-code-block text-[15px] text-[#20948b] font-bold">245 MB</span>
+                                <div class="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div id="hud-ram-bar" class="h-full bg-[#20948b] rounded-full transition-all duration-300" style="width: 24%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Speed -->
+                        <div class="bg-black/30 border border-white/5 p-3 rounded">
+                            <p class="font-code-block text-[9px] text-white/40 uppercase">Inbound Traffic Speed</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span id="hud-traffic" class="font-code-block text-[15px] text-amber-400 font-bold">1.45 Gbps</span>
+                                <div class="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div id="hud-traffic-bar" class="h-full bg-amber-400 rounded-full transition-all duration-300" style="width: 15%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Reqs -->
+                        <div class="bg-black/30 border border-white/5 p-3 rounded">
+                            <p class="font-code-block text-[9px] text-white/40 uppercase">Ingress Requests/sec</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span id="hud-reqs" class="font-code-block text-[15px] text-emerald-400 font-bold">48 req/s</span>
+                                <div class="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div id="hud-reqs-bar" class="h-full bg-emerald-400 rounded-full transition-all duration-300" style="width: 24%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Requests/sec Graph -->
+                    <div>
+                        <p class="font-code-block text-[10px] text-white/40 uppercase mb-2">Ingress Load Trend (Requests/sec)</p>
+                        <div class="h-28 w-full bg-black/40 border border-white/5 rounded relative flex items-end">
+                            <svg id="live-chart-svg" class="w-full h-full text-[#20948b]/10" viewBox="0 0 100 40" preserveAspectRatio="none">
+                                <path id="live-chart-path" fill="currentColor" d="M 0 40 L 100 40 Z"></path>
+                                <path id="live-chart-line" fill="none" stroke="#20948b" stroke-width="1.5" d=""></path>
+                            </svg>
+                            <span class="absolute right-2 top-1 font-code-block text-[8px] text-[#20948b] uppercase">Live Grid</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Threat vectors ratio -->
+                    <div class="flex justify-between items-center text-ui-label-sm font-code-block text-[11px] border-t border-white/5 pt-4">
+                        <span class="flex items-center gap-1.5 text-[#20948b]"><span class="w-2 h-2 rounded-full bg-[#20948b]"></span> SQLi: <span id="label-sqli-count">0</span></span>
+                        <span class="flex items-center gap-1.5 text-[#ff5a09]"><span class="w-2 h-2 rounded-full bg-[#ff5a09]"></span> XSS: <span id="label-xss-count">0</span></span>
+                        <span class="flex items-center gap-1.5 text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Other: <span id="label-other-count">0</span></span>
+                    </div>
+                </div>
+                
+                <div class="border-t border-white/5 pt-4 flex justify-between items-center text-[10px] font-code-block text-on-surface-variant/40 mt-4">
+                    <span>PACKET INJECTION REGISTRY</span>
+                    <span class="text-primary-container">SIEM_SYNC: OK</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- TAB 2: THREAT INTEL / FORENSIC LOG -->
+    <div id="tab-threat-intel" class="tab-content tab-animate hidden space-y-6">
+        <!-- Advanced Search & Filter HUD -->
+        <div class="glass-panel rounded-xl p-6 shadow-[0_0_15px_rgba(32,148,139,0.1)] flex flex-wrap items-end gap-6">
+            <div class="flex flex-col gap-2 min-w-[200px]">
+                <label class="font-code-block text-ui-label-sm text-on-surface-variant/70 uppercase tracking-wider">Date Range [UTC]</label>
+                <div class="relative group">
+                    <input class="w-full bg-surface-container-lowest/80 border-b border-primary-container/40 focus:border-primary-container focus:ring-0 text-primary-fixed-dim font-code-block text-code-block px-3 py-2 transition-all outline-none rounded-t-sm" type="text" value="Last 24 Hours"/>
+                    <span class="material-symbols-outlined absolute right-2.5 top-2.5 text-on-surface-variant text-sm pointer-events-none">calendar_today</span>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2 min-w-[180px]">
+                <label class="font-code-block text-ui-label-sm text-on-surface-variant/70 uppercase tracking-wider">Threat Category</label>
+                <select id="filter-category" onchange="applyFilters()" class="w-full bg-surface-container-lowest/80 border-b border-primary-container/40 focus:border-primary-container focus:ring-0 text-primary-fixed-dim font-code-block text-code-block px-3 py-2 appearance-none cursor-pointer rounded-t-sm">
+                    <option value="ALL">ALL VECTORS</option>
+                    <option value="SQLi">SQLi (Injection)</option>
+                    <option value="XSS">XSS (Cross-Site)</option>
+                    <option value="Anomalous">Anomalous (Rate limit/Bot)</option>
+                </select>
+            </div>
+            <div class="flex-1 flex flex-col gap-2 min-w-[240px]">
+                <label class="font-code-block text-ui-label-sm text-on-surface-variant/70 uppercase tracking-wider">Search Forensic Metadata</label>
+                <div class="relative">
+                    <input id="filter-search" oninput="applyFilters()" class="w-full bg-surface-container-lowest/80 border border-[#20948b]/15 border-b-primary-container focus:border-primary-container focus:ring-0 text-on-surface font-code-block text-code-block px-4 py-2 transition-all outline-none rounded-t-sm" placeholder="Search IP address, URI, or payload content..." type="text"/>
+                    <span class="material-symbols-outlined absolute right-3 top-2.5 text-primary-container/60">search</span>
+                </div>
+            </div>
+            <button onclick="exportTelemetry()" class="bg-primary-container/10 border border-primary-container/40 text-primary-container font-code-block text-ui-label-sm px-6 py-2.5 rounded hover:bg-primary-container/20 transition-all uppercase tracking-widest flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">ios_share</span> Export Json
+            </button>
+        </div>
+
+        <!-- Forensic Data Grid -->
+        <div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[900px]">
+                    <thead class="bg-white/5 border-b border-[#20948b]/15">
+                        <tr>
+                            <th class="px-6 py-4 font-code-block text-ui-label-sm text-on-surface-variant uppercase tracking-widest">Status</th>
+                            <th class="px-6 py-4 font-code-block text-ui-label-sm text-on-surface-variant uppercase tracking-widest">UTC Timestamp</th>
+                            <th class="px-6 py-4 font-code-block text-ui-label-sm text-on-surface-variant uppercase tracking-widest">Threat Node IP</th>
+                            <th class="px-6 py-4 font-code-block text-ui-label-sm text-on-surface-variant uppercase tracking-widest">Vector Profile</th>
+                            <th class="px-6 py-4 font-code-block text-ui-label-sm text-on-surface-variant uppercase tracking-widest">Target URI</th>
+                            <th class="px-6 py-4 font-code-block text-ui-label-sm text-on-surface-variant uppercase tracking-widest">Mitigation</th>
+                            <th class="px-6 py-4 font-code-block text-ui-label-sm text-on-surface-variant uppercase tracking-widest text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alerts-tbody" class="divide-y divide-white/5 font-code-block text-code-block">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="bg-surface-container-low/60 px-6 py-4 flex justify-between items-center border-t border-white/5">
+                <span id="metrics-text" class="font-code-block text-[11px] text-on-surface-variant uppercase">Loading telemetry indexes...</span>
+                <div class="flex gap-2">
+                    <button class="w-8 h-8 flex items-center justify-center border border-[#20948b]/15 text-on-surface-variant hover:text-primary-container rounded transition-colors"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+                    <button class="w-8 h-8 flex items-center justify-center border border-[#20948b]/15 text-on-surface-variant hover:text-primary-container rounded transition-colors"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- TAB 3: RULE ENGINE -->
+    <div id="tab-rule-engine" class="tab-content tab-animate hidden space-y-8">
+        <!-- Global Mitigation State -->
+        <section class="glass-panel rounded-lg p-6 border-l-4 border-primary-container flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h2 class="font-headline-md text-headline-md text-white mb-1">Global Mitigation State</h2>
+                <p class="text-on-surface-variant text-body-md">Real-time adaptive WAF mitigation postures.</p>
+            </div>
+            <div class="flex bg-surface-container-low p-1 rounded-lg border border-white/5" id="posture-btn-group">
+                <button onclick="setPosture('Monitor Only')" id="btn-posture-monitor" class="px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter text-on-surface-variant hover:text-white transition-all rounded">Monitor Only</button>
+                <button onclick="setPosture('Standard Posture')" id="btn-posture-standard" class="px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter text-on-surface-variant hover:text-white transition-all rounded">Standard Posture</button>
+                <button onclick="setPosture('Under Attack')" id="btn-posture-attack" class="px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter text-on-surface-variant hover:text-white transition-all rounded">Under Attack</button>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+            <!-- Custom Heuristics Builder -->
+            <section class="xl:col-span-5 space-y-8">
+                <div class="glass-panel rounded-lg overflow-hidden flex flex-col">
+                    <div class="px-6 py-4 border-b border-[#20948b]/15 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary-fixed">edit_square</span>
+                            <h3 class="font-headline-md text-white">Custom Signature Profiles</h3>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+                            <span class="font-code-block text-[10px] text-primary-container/80">SANDBOX READY</span>
+                        </div>
+                    </div>
+                    <form id="compile-rule-form" onsubmit="compileSignature(event)" class="p-6 space-y-6">
+                        <div>
+                            <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Signature Identifier</label>
+                            <input id="rule-identifier" required class="w-full bg-transparent border-b border-primary-container/50 focus:border-primary-container focus:ring-0 text-primary font-code-block p-2 outline-none transition-all" type="text" value="X-CSRF-Bypass-Attempt"/>
+                        </div>
+                        <div>
+                            <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Regex Logic Pattern</label>
+                            <div class="relative">
+                                <textarea id="rule-pattern" oninput="runSandboxTest()" required class="w-full bg-black/40 border border-[#20948b]/15 rounded-sm font-code-block text-code-block text-primary-fixed p-4 focus:border-primary-container outline-none resize-none" rows="3">/(?:admin|root|system).*?(?:rm|sh|bash|chmod|nc)/gi</textarea>
+                                <div class="absolute top-2 right-2 flex gap-1">
+                                    <div class="w-2 h-2 rounded-full bg-white/20"></div>
+                                    <div class="w-2 h-2 rounded-full bg-white/20"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Execution Action</label>
+                                <select id="rule-action" class="w-full bg-surface-container-low border border-[#20948b]/15 text-white rounded p-2 font-code-block focus:border-primary-container focus:ring-0">
+                                    <option value="Drop & Blacklist">Drop &amp; Blacklist</option>
+                                    <option value="JS Challenge">JS Challenge</option>
+                                    <option value="Log Payload Only">Log Payload Only</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Sandbox Testing Payload</label>
+                                <input id="sandbox-payload" oninput="runSandboxTest()" class="w-full bg-surface-container-low border border-[#20948b]/15 text-white rounded p-2 font-code-block focus:border-primary-container focus:ring-0 text-xs" type="text" placeholder="Type payload to test logic..."/>
+                            </div>
+                        </div>
+                        
+                        <!-- Test Sandbox Result Alert & Advanced Diagnostics -->
+                        <div class="space-y-2">
+                            <div id="sandbox-result-box" class="h-[44px] flex items-center justify-center bg-white/5 border border-[#20948b]/15 rounded text-on-surface-variant font-code-block text-ui-label-sm transition-all">
+                                <span class="material-symbols-outlined mr-2 text-[18px]">biotech</span> TYPE TEST PAYLOAD ABOVE
+                            </div>
+                            <div id="sandbox-diagnostics" class="hidden p-3 bg-black/50 border border-[#20948b]/10 rounded font-code-block text-[10px] text-white/50 space-y-1.5 max-h-32 overflow-y-auto scrollbar-none select-text">
+                                <!-- Step-by-step telemetry diagnostics -->
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Severity Level</label>
+                                <select id="rule-severity" class="w-full bg-surface-container-low border border-[#20948b]/15 text-white rounded p-2 font-code-block focus:border-primary-container focus:ring-0">
+                                    <option value="Level 1">Level 1</option>
+                                    <option value="Level 2">Level 2</option>
+                                    <option value="Level 3">Level 3</option>
+                                    <option value="CRITICAL">CRITICAL</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Rule Classification</label>
+                                <select id="rule-category" class="w-full bg-surface-container-low border border-[#20948b]/15 text-white rounded p-2 font-code-block focus:border-primary-container focus:ring-0">
+                                    <option value="SQLi">SQL Injection</option>
+                                    <option value="XSS">XSS Vulnerability</option>
+                                    <option value="Custom">Custom Core Rule</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Description</label>
+                            <input id="rule-description" required class="w-full bg-surface-container-low border border-[#20948b]/15 text-white rounded p-2 font-code-block focus:border-primary-container focus:ring-0 text-xs" type="text" value="Blocks command shell execution attempts via dynamic user parameters."/>
+                        </div>
+
+                        <button id="btn-compile" type="submit" class="w-full py-4 bg-primary-container text-on-primary-container font-code-block font-bold rounded-sm shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex justify-center items-center gap-3">
+                            <span class="material-symbols-outlined" id="compile-icon">publish</span> <span id="compile-text">COMPILE SIGNATURE</span>
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Decorative Technical Data Card -->
+                <div class="glass-panel rounded-lg p-6 relative overflow-hidden h-48">
+                    <img class="absolute inset-0 w-full h-full object-cover opacity-25 mix-blend-overlay" data-alt="A high-tech server rack illuminated by glowing cyan and ultraviolet fiber optic cables in a data center." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwPygsbKAADfIh6ivRzulro5ipKQQ-41FdkGszaxuhVg8-9tfB9VFvpq3BqPTg7AMUYcHE9ryrWAdLSsc2AhyaHAuZrnfpy8CmH6gEcyFM1ad81U15Ht6QbvMtN8ZEHFVk3Rm0dvT4WLCFi6jkk6TAzvHSquB8095Rciq3l_XOSZyBFjGln_BIV-7UVH9Cnuu5xIftFymb1bE1-t49T44iLlv4ozSY7j7WFVwNKQnz70Hkn1djdn4dRYVfkMpuR-pgLZjX2h4AbCc"/>
+                    <div class="relative z-10 flex flex-col justify-between h-full">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-code-block text-ui-label-sm text-white/40">ENGINE_THROUGHPUT</h4>
+                            <span class="text-primary-container font-code-block text-xs">99.98% ACCURACY</span>
+                        </div>
+                        <div class="flex items-end gap-1">
+                            <div class="w-1.5 h-8 bg-primary-container/20"></div>
+                            <div class="w-1.5 h-12 bg-primary-container/40"></div>
+                            <div class="w-1.5 h-16 bg-primary-container/60"></div>
+                            <div class="w-1.5 h-10 bg-primary-container/40"></div>
+                            <div class="w-1.5 h-14 bg-primary-container"></div>
+                            <div class="w-1.5 h-18 bg-primary-container shadow-[0_0_10px_#20948b]"></div>
+                            <div class="w-1.5 h-12 bg-primary-container/50"></div>
+                            <div class="w-1.5 h-8 bg-primary-container/20"></div>
+                            <div class="w-1.5 h-20 bg-primary-container shadow-[0_0_10px_#20948b]"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Active Rule Matrix -->
+            <section class="xl:col-span-7 glass-panel rounded-lg flex flex-col">
+                <div class="px-6 py-4 border-b border-[#20948b]/15 flex justify-between items-center bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary-fixed">list_alt</span>
+                        <h3 class="font-headline-md text-white">Active Rule Matrix</h3>
+                    </div>
+                    <div id="rule-count-text" class="text-ui-label-sm font-code-block text-on-surface-variant/40">TOTAL_POLICIES: --</div>
+                </div>
+                <div id="rule-matrix-container" class="divide-y divide-white/5">
+                    <!-- Rule cards loaded dynamically -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+
+    <!-- TAB 4: SETTINGS -->
+    <div id="tab-settings" class="tab-content tab-animate hidden grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        <section class="xl:col-span-6 space-y-6">
+            <div class="glass-panel rounded-lg p-6 space-y-6">
+                <h3 class="font-headline-md text-white border-b border-[#20948b]/15 pb-3 flex items-center gap-3"><span class="material-symbols-outlined text-primary-container">settings</span>Engine Profile Parameters</h3>
+                <div>
+                    <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Upstream Server URL</label>
+                    <input id="setting-upstream" class="w-full bg-surface-container-low border border-[#20948b]/15 rounded p-2 text-white font-code-block focus:border-primary-container focus:ring-0 text-sm" type="text" value="http://upstream_app:8080"/>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Rate Limit Threshold</label>
+                        <input id="setting-rate-limit" class="w-full bg-surface-container-low border border-[#20948b]/15 rounded p-2 text-white font-code-block focus:border-primary-container focus:ring-0 text-sm" type="number" value="50"/>
+                    </div>
+                    <div>
+                        <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Rate Window (Secs)</label>
+                        <input class="w-full bg-surface-container-low border border-[#20948b]/15 rounded p-2 text-white/50 font-code-block focus:ring-0 text-sm cursor-not-allowed" disabled type="number" value="10"/>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">DB Connection Type</label>
+                        <input id="setting-db-type" class="w-full bg-surface-container-low border border-[#20948b]/15 rounded p-2 text-primary-container font-code-block focus:ring-0 text-xs cursor-not-allowed" disabled type="text" value="SQLite Fallback (Active)"/>
+                    </div>
+                    <div>
+                        <label class="font-code-block text-ui-label-sm text-on-surface-variant block mb-2 uppercase">Node Port Binding</label>
+                        <input class="w-full bg-surface-container-low border border-[#20948b]/15 rounded p-2 text-white/50 font-code-block focus:ring-0 text-sm cursor-not-allowed" disabled type="text" value="0.0.0.0:8000"/>
+                    </div>
+                </div>
+                <button onclick="saveSettings()" class="w-full py-3 bg-primary-container text-on-primary-container font-code-block font-bold rounded shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex justify-center items-center gap-2">
+                    <span class="material-symbols-outlined">save</span> SAVE ENGINE CONFIGURATION
+                </button>
+            </div>
+        </section>
+
+        <!-- Real-time Console Log Terminal -->
+        <section class="xl:col-span-6 glass-panel rounded-lg p-6 flex flex-col justify-between h-[450px]">
+            <div class="flex justify-between items-center border-b border-[#20948b]/15 pb-3">
+                <h3 class="font-headline-md text-white flex items-center gap-3"><span class="material-symbols-outlined text-primary-container animate-spin" style="animation-duration: 4s;">sync</span> Real-time Console Log</h3>
+                <span class="font-code-block text-[10px] text-primary-container/80 tracking-widest">SIEM_AGENT: STDOUT</span>
+            </div>
+            <div id="console-logs" class="flex-1 my-4 bg-black/60 border border-white/5 rounded p-4 font-code-block text-[11px] text-[#20948b]/80 space-y-2 overflow-y-auto h-72 terminal-scroll">
+                <!-- Log streams appended here -->
+            </div>
+            <div class="flex justify-between items-center text-[10px] font-code-block text-on-surface-variant/40">
+                <span>WAF CORE DEPLOYMENT STACK</span>
+                <span class="hover:text-primary-container cursor-pointer" onclick="document.getElementById('console-logs').innerHTML = ''">CLEAR CONSOLE</span>
+            </div>
+        </section>
+    </div>
+
+</main>
+
+
+<!-- Holographic Payload Inspection Modal (Hidden by default) -->
+<div id="inspector-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="glass-panel w-full max-w-4xl max-h-[85vh] rounded-xl flex flex-col shadow-[0_0_50px_rgba(255,90,9,0.2)] border-t-2 border-t-[#ff5a09]">
+        <div class="px-6 py-4 flex justify-between items-center border-b border-[#20948b]/15">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-[#ff5a09]" id="modal-title-icon">biotech</span>
+                <h2 class="font-headline-md text-headline-md text-white tracking-tight" id="modal-title">Kalki Payload Inspection</h2>
+            </div>
+            <button class="text-on-surface-variant hover:text-white" onclick="closeInspector()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 bg-black space-y-6">
+            <div>
+                <h4 class="font-code-block text-ui-label-sm text-primary-container uppercase mb-2">Request Context Metadata</h4>
+                <div class="grid grid-cols-2 gap-4 bg-white/5 border border-white/5 rounded p-4 font-code-block text-xs text-on-surface-variant/90">
+                    <div><span class="text-white/40">Incident ID:</span> <span id="modal-meta-id" class="text-primary-container"></span></div>
+                    <div><span class="text-white/40">Source IP:</span> <span id="modal-meta-ip" class="text-white"></span></div>
+                    <div><span class="text-white/40">Timestamp:</span> <span id="modal-meta-time" class="text-white"></span></div>
+                    <div><span class="text-white/40">Request URI:</span> <span id="modal-meta-uri" class="text-white"></span></div>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-code-block text-ui-label-sm text-primary-container uppercase mb-2">Client User Agent Headers</h4>
+                <pre id="modal-headers" class="font-code-block text-code-block text-on-surface-variant/80 bg-white/5 border border-white/5 p-4 rounded text-xs whitespace-pre-wrap overflow-x-auto"></pre>
+            </div>
+            <div>
+                <h4 class="font-code-block text-ui-label-sm text-primary-container uppercase mb-2">Threat Payload Detection Analyzer</h4>
+                <div class="bg-surface-container-lowest border border-white/5 p-5 rounded-sm font-code-block text-code-block leading-relaxed relative">
+                    <pre id="modal-payload" class="text-on-surface whitespace-pre-wrap overflow-x-auto select-text"></pre>
+                </div>
+                <p class="mt-4 text-[#ff5a09] font-code-block text-[11px] uppercase flex items-center gap-2" id="modal-verdict">
+                    <span class="material-symbols-outlined text-xs">error</span> Pattern Matched: SQL_INJECTION_CLASS_A (TAUTOLOGY)
+                </p>
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t border-[#20948b]/15 flex justify-end gap-4 bg-surface-container-lowest/50">
+            <button class="px-6 py-2 border border-[#20948b]/15 text-on-surface hover:bg-white/5 transition-all font-code-block text-ui-label-sm uppercase rounded" onclick="closeInspector()">Close Inspector</button>
+            <button id="btn-jail-ip" class="px-6 py-2 bg-[#ff5a09]/20 border border-[#ff5a09] text-[#ff5a09] hover:bg-[#ff5a09]/30 transition-all font-code-block text-ui-label-sm uppercase flex items-center gap-2 rounded">
+                <span class="material-symbols-outlined text-sm">block</span> Jail Threat IP Address
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Footer -->
+<footer class="fixed bottom-0 left-0 w-full flex justify-between items-center px-6 py-2 z-50 bg-surface-container-lowest/50 backdrop-blur-md border-t border-white/5">
+    <p class="font-code-block text-ui-label-sm uppercase tracking-widest text-on-surface-variant/40">SYSTEM CLOCK [UTC]: <span id="footer-clock">--:--:--</span></p>
+    <div class="flex gap-8">
+        <span class="font-code-block text-ui-label-sm uppercase tracking-widest text-primary-container cursor-pointer hover:opacity-80 transition-opacity">SECURE CONNECTION</span>
+        <span class="font-code-block text-ui-label-sm uppercase tracking-widest text-on-surface-variant/40 cursor-pointer hover:text-primary-container transition-opacity">LATENCY: 24MS</span>
+    </div>
+</footer>
+
+<script>
+    // State store
+    let currentTab = 'overview'; // Default home tab is now overview!
+    let telemetryData = { metrics: {}, incidents: [], rules: [] };
+    let filteredIncidents = [];
+    let sandboxTimeout = null;
+    let globeInitialized = false;
+
+    // Toast Notification Controller
+    function showToast(title, body, icon = 'info') {
+        const toast = document.getElementById('toast-notification');
+        document.getElementById('toast-title').textContent = title;
+        document.getElementById('toast-body').textContent = body;
+        document.getElementById('toast-icon').textContent = icon;
+        
+        toast.className = "fixed top-20 right-6 z-[100] transform translate-y-0 opacity-100 transition-all duration-200 pointer-events-auto";
+        
+        setTimeout(() => {
+            toast.className = "fixed top-20 right-6 z-[100] transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none";
+        }, 4000);
+    }
+
+    // Secure Cybernetic Authentication Controller
+    function handleAuth(event) {
+        if (event) event.preventDefault();
+        const user = document.getElementById('auth-username').value.trim();
+        const pass = document.getElementById('auth-password').value;
+        const status = document.getElementById('auth-status');
+        const logs = document.getElementById('term-log-container');
+        
+        // Initialize/resume AudioContext on first user interaction (submitting form)
+        WafAudio.init();
+
+        if (user === 'kalki' && pass === 'admin') {
+            status.classList.add('hidden');
+            
+            // Play victory arpeggio sound
+            WafAudio.playSuccess();
+            
+            // Disable submit button and add loading text
+            const button = document.querySelector('#auth-form button[type="submit"]');
+            button.disabled = true;
+            button.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">refresh</span> VERIFYING...';
+            
+            const logLines = [
+                "[SEC_GATE] Requesting verification for operator 'kalki'...",
+                "[SEC_GATE] Syncing cryptographic credentials block...",
+                "[SEC_GATE] Decrypting WAF control layer signatures... SUCCESS",
+                "[SEC_GATE] Clearance level: 0x9F (COSMIC_RIGHTEOUSNESS)",
+                "[SEC_GATE] Establishing quantum tunnel to Washington Core...",
+                "[SEC_GATE] Control session synchronized. ACCESS GRANTED!"
+            ];
+            
+            let delay = 0;
+            logLines.forEach((line, index) => {
+                setTimeout(() => {
+                    const div = document.createElement('div');
+                    if (line.includes("SUCCESS")) {
+                        div.className = "text-[#20948b] font-bold";
+                    } else if (line.includes("ACCESS GRANTED")) {
+                        div.className = "text-emerald-400 font-bold";
+                        // Update terminal header status
+                        const stateHeader = document.querySelector('span.font-code-block.text-amber-500');
+                        if (stateHeader) {
+                            stateHeader.textContent = "DIAGNOSTIC_STATE: AUTHORIZED";
+                            stateHeader.className = "font-code-block text-[10px] tracking-wider text-emerald-400 font-bold uppercase";
+                            const stateDot = stateHeader.previousElementSibling;
+                            if (stateDot) stateDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping";
+                        }
+                    }
+                    div.textContent = line;
+                    logs.appendChild(div);
+                    logs.scrollTop = logs.scrollHeight;
+                }, delay);
+                delay += 250;
+            });
+            
+            setTimeout(() => {
+                sessionStorage.setItem('kalki_authorized', 'true');
+                const overlay = document.getElementById('auth-overlay');
+                overlay.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                overlay.style.opacity = '0';
+                overlay.style.transform = 'scale(1.05)';
+                
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    triggerFullInitialization();
+                }, 400);
+            }, delay + 200);
+        } else {
+            status.classList.remove('hidden');
+            
+            // Play rejection sound
+            WafAudio.playError();
+
+            const div = document.createElement('div');
+            div.className = "text-[#ff5a09] font-bold animate-pulse";
+            div.textContent = `[SEC_GATE] FAILED: INVALID SIGNATURE ("${user}"). INCIDENT LOGGED.`;
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+            
+            // Trigger card shake animation
+            const cards = document.querySelectorAll('#auth-overlay .glass-panel');
+            cards.forEach(c => {
+                c.classList.add('shake-animation');
+                setTimeout(() => c.classList.remove('shake-animation'), 400);
+            });
+        }
+    }
+
+    function checkAuth() {
+        const isAuth = sessionStorage.getItem('kalki_authorized') === 'true';
+        if (isAuth) {
+            document.getElementById('auth-overlay').classList.add('hidden');
+            triggerFullInitialization();
+        } else {
+            document.getElementById('auth-overlay').classList.remove('hidden');
+        }
+    }
+
+    // Trigger complete WAF dashboard loops and WebGL globe
+    function triggerFullInitialization() {
+        syncData();
+        
+        // Start simulated logs stdout
+        startLogSimulation();
+        
+        // Ingress stats polling loop (3s)
+        setInterval(() => {
+            syncData(true);
+        }, 3000);
+        
+        // Fast start HUD metrics and 3D globe immediately since overview tab is home screen!
+        setTimeout(() => {
+            init3DGlobe();
+            startHUDTelemetry();
+            globeInitialized = true;
+            logConsole("Kalki WAF Core: Secure operator control session established.");
+        }, 80);
+    }
+
+    // Tab Switching Controller
+    function switchTab(tabId) {
+        // Play synthetic micro-tick click
+        WafAudio.playTick();
+
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        
+        // Show selected tab
+        const tabEl = document.getElementById(`tab-${tabId}`);
+        if (tabEl) {
+            tabEl.classList.remove('hidden');
+            tabEl.classList.add('tab-animate');
+        }
+        
+        // Update nav styling
+        const tabIds = ['overview', 'threat-intel', 'rule-engine', 'settings'];
+        tabIds.forEach(id => {
+            const topNav = document.getElementById(`nav-top-${id}`);
+            const sideNav = document.getElementById(`nav-side-${id}`);
+            
+            if (id === tabId) {
+                topNav.className = "text-primary-container font-bold border-b-2 border-primary-container font-body-md text-body-md";
+                sideNav.className = "flex items-center px-6 py-3 text-primary-container bg-primary-container/10 border-r-2 border-primary-container shadow-[inset_-10px_0_15px_-10px_rgba(32,148,139,0.3)] cursor-pointer translate-x-1";
+            } else {
+                topNav.className = "text-on-surface-variant hover:text-primary-fixed-dim transition-colors font-body-md text-body-md";
+                sideNav.className = "flex items-center px-6 py-3 text-on-surface-variant/60 hover:bg-white/5 hover:text-on-surface transition-all cursor-pointer";
+            }
+        });
+        
+        currentTab = tabId;
+        logConsole(`Navigated Dashboard context: ${tabId.toUpperCase()}`);
+
+        if (tabId === 'overview' && !globeInitialized) {
+            setTimeout(() => {
+                init3DGlobe();
+                startHUDTelemetry();
+                globeInitialized = true;
+            }, 60);
+        }
+    }
+
+    // Real-time System Console Logger
+    function logConsole(message) {
+        const consoleEl = document.getElementById('console-logs');
+        if (!consoleEl) return;
+        
+        const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        const logLine = document.createElement('div');
+        logLine.className = 'font-code-block flex gap-3 hover:bg-white/5 py-0.5 px-1 rounded transition-colors';
+        logLine.innerHTML = `
+            <span class="text-white/30">[${timestamp}]</span>
+            <span class="text-primary-container font-bold">&gt;</span>
+            <span class="text-[#00dce6] select-text">${message}</span>
+        `;
+        consoleEl.appendChild(logLine);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    // Clock updater
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toISOString().replace('T', ' ').substring(11, 19);
+        document.getElementById('footer-clock').textContent = timeStr + ' UTC';
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Fetch and Sync Core WAF State
+    async function syncData(silent = false) {
+        try {
+            const response = await fetch('/api/v1/threat-intel/alerts');
+            if (!response.ok) throw new Error('Gateway connectivity anomaly.');
+            
+            telemetryData = await response.json();
+            filteredIncidents = [...telemetryData.incidents];
+            
+            // Render UI
+            updateMetricsDOM();
+            renderRulesDOM();
+            renderAlertsDOM();
+            
+            // Sync settings parameters
+            const upstreamInput = document.getElementById('setting-upstream');
+            if (upstreamInput && telemetryData.metrics.upstream_url) {
+                upstreamInput.value = telemetryData.metrics.upstream_url;
+            }
+            const rateInput = document.getElementById('setting-rate-limit');
+            if (rateInput && telemetryData.metrics.rate_limit) {
+                rateInput.value = telemetryData.metrics.rate_limit;
+            }
+            const dbTypeInput = document.getElementById('setting-db-type');
+            if (dbTypeInput && telemetryData.metrics.db_type) {
+                dbTypeInput.value = telemetryData.metrics.db_type + ' (Active Schema)';
+            }
+            
+            if (!silent) {
+                logConsole("Synchronized security indexes successfully.");
+            }
+        } catch (error) {
+            console.error(error);
+            logConsole("CRITICAL: Failed to refresh node metrics: " + error.message);
+        }
+    }
+
+    // Refresh telemetry and metrics
+    function updateMetricsDOM() {
+        const headerStatus = document.getElementById('header-status');
+        const posture = telemetryData.metrics.posture || 'Standard Posture';
+        headerStatus.textContent = posture.toUpperCase();
+        if (posture === 'Under Attack') {
+            headerStatus.className = 'font-code-block text-[11px] tracking-widest text-[#ff5a09] animate-pulse';
+        } else {
+            headerStatus.className = 'font-code-block text-[11px] tracking-widest text-primary-container';
+        }
+        
+        const globePost = document.getElementById('globe-posture-text');
+        if (globePost) {
+            globePost.textContent = posture.replace(/\s+/g, '_').toUpperCase();
+            if (posture === 'Under Attack') {
+                globePost.className = "text-[#ff5a09] font-bold animate-pulse";
+            } else if (posture === 'Monitor Only') {
+                globePost.className = "text-amber-400";
+            } else {
+                globePost.className = "text-emerald-400";
+            }
+        }
+
+        document.getElementById('stat-ingress').textContent = telemetryData.metrics.total_ingress.toLocaleString();
+        document.getElementById('stat-blocked').textContent = telemetryData.metrics.total_blocked.toLocaleString();
+        document.getElementById('stat-rules').textContent = telemetryData.metrics.active_rules_count.toLocaleString();
+        
+        const sqli = telemetryData.metrics.sqli_count || 0;
+        const xss = telemetryData.metrics.xss_count || 0;
+        const other = telemetryData.metrics.anomalous_count || 0;
+        
+        document.getElementById('label-sqli-count').textContent = sqli;
+        document.getElementById('label-xss-count').textContent = xss;
+        document.getElementById('label-other-count').textContent = other;
+    }
+
+    // Render Rules Grid
+    function renderRulesDOM() {
+        const container = document.getElementById('rule-matrix-container');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        const rules = telemetryData.rules || [];
+        
+        document.getElementById('rule-count-text').textContent = `TOTAL_POLICIES: ${rules.length}`;
+        
+        if (rules.length === 0) {
+            container.innerHTML = `
+                <div class="p-8 text-center text-on-surface-variant/40 font-code-block text-xs uppercase">
+                    No active threat signature profiles found in engine memory.
+                </div>
+            `;
+            return;
+        }
+        
+        rules.forEach(rule => {
+            const isActive = rule.is_active === 1 || rule.is_active === true;
+            const isSystem = rule.rule_id === 'sql-core-01' || rule.rule_id === 'xss-scrutiny-01' || rule.rule_id === 'rfi-blocker-01';
+            
+            const card = document.createElement('div');
+            card.className = `p-6 flex items-start gap-6 group hover:bg-white/5 transition-all ${!isActive ? 'opacity-40 grayscale hover:grayscale-0 hover:opacity-100' : ''}`;
+            
+            let sevColor = 'bg-primary-container/10 text-primary-container border-primary-container/20';
+            if (rule.severity === 'Level 3') {
+                sevColor = 'bg-amber-400/10 text-amber-300 border-amber-500/20';
+            } else if (rule.severity === 'CRITICAL') {
+                sevColor = 'bg-[#ff5a09]/10 text-[#ff5a09] border-[#ff5a09]/20';
+            } else if (rule.severity === 'DEPRECATED') {
+                sevColor = 'bg-white/10 text-white/50 border-[#20948b]/15';
+            }
+            
+            card.innerHTML = `
+                <span class="material-symbols-outlined text-on-surface-variant/40 mt-1 cursor-grab active:cursor-grabbing">drag_indicator</span>
+                <div class="flex-1 space-y-2">
+                    <div class="flex items-center gap-3">
+                        <h4 class="font-headline-md text-white text-[15px] font-bold">${rule.identifier}</h4>
+                        <span class="${sevColor} text-[10px] px-2 py-0.5 rounded border font-code-block uppercase">${rule.severity}</span>
+                        <span class="text-[10px] text-white/30 font-code-block font-mono bg-white/5 px-1.5 py-0.5 rounded">${rule.rule_id}</span>
+                    </div>
+                    <p class="text-on-surface-variant text-xs leading-relaxed max-w-2xl">${rule.description || 'No description provided.'}</p>
+                    <div class="flex items-center gap-4 text-[10px] font-code-block text-white/40">
+                        <span>PATTERN:</span>
+                        <code class="text-primary-fixed-dim font-mono bg-black/50 px-2 py-0.5 rounded truncate max-w-md inline-block select-text" title="${escapeHtml(rule.pattern)}">${escapeHtml(rule.pattern)}</code>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="text-right">
+                        <p class="font-code-block text-[13px] text-primary-container font-bold">${rule.blocks_count.toLocaleString()}</p>
+                        <p class="text-[9px] text-white/30 uppercase tracking-widest">Blocks</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" ${isActive ? 'checked' : ''} onchange="toggleRule('${rule.rule_id}', this.checked)">
+                        <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white/40 peer-checked:after:bg-primary-container after:border-none after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container/20 border border-white/5 shadow-inner"></div>
+                    </label>
+                    
+                    ${!isSystem ? `
+                        <button onclick="deleteSignature('${rule.rule_id}')" class="text-white/20 hover:text-[#ff5a09] transition-colors p-1" title="Delete signature profile">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    ` : '<div class="w-[26px]"></div>'}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // Render Alerts table
+    function renderAlertsDOM() {
+        const tbody = document.getElementById('alerts-tbody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        if (filteredIncidents.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-on-surface-variant/40 uppercase font-code-block text-xs">
+                        No telemetry alerts indexed for current filters.
+                    </td>
+                </tr>
+            `;
+            document.getElementById('metrics-text').textContent = `Displaying 0 critical events`;
+            return;
+        }
+        
+        filteredIncidents.forEach(incident => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-white/5 transition-colors cursor-pointer group border-b border-white/5';
+            tr.onclick = (e) => {
+                if (e.target.tagName !== 'BUTTON') {
+                    openInspector(incident);
+                }
+            };
+            
+            let iconHtml = '';
+            let actionPill = '';
+            if (incident.mitigation_action === 'Blocked') {
+                iconHtml = '<span class="material-symbols-outlined text-[#ff5a09] neon-pulse" style="font-variation-settings: \'FILL\' 1;">dangerous</span>';
+                actionPill = '<span class="bg-[#ff5a09]/15 text-[#ff5a09] border border-[#ff5a09]/20 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider font-code-block">Blocked</span>';
+            } else if (incident.mitigation_action === 'Flagged') {
+                iconHtml = '<span class="material-symbols-outlined text-amber-400">warning</span>';
+                actionPill = '<span class="bg-amber-400/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider font-code-block">Flagged</span>';
+            } else {
+                iconHtml = '<span class="material-symbols-outlined text-primary-container">shield</span>';
+                actionPill = `<span class="bg-primary-container/10 text-primary-container border border-primary-container/20 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider font-code-block">${incident.mitigation_action}</span>`;
+            }
+            
+            let categoryHtml = '';
+            if (incident.threat_category === 'SQLi') {
+                categoryHtml = '<span class="bg-error-container/20 text-error border border-error/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">SQL_INJECTION</span>';
+            } else if (incident.threat_category === 'XSS') {
+                categoryHtml = '<span class="bg-error-container/20 text-error border border-error/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">XSS_ATTEMPT</span>';
+            } else {
+                categoryHtml = `<span class="bg-secondary-container/20 text-on-secondary-container border border-secondary-container/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">${incident.threat_category}</span>`;
+            }
+
+            tr.innerHTML = `
+                <td class="px-6 py-3.5">${iconHtml}</td>
+                <td class="px-6 py-3.5 text-on-surface-variant/90 select-text">${incident.timestamp}</td>
+                <td class="px-6 py-3.5 text-primary-fixed-dim select-text">${incident.source_ip}</td>
+                <td class="px-6 py-3.5">${categoryHtml}</td>
+                <td class="px-6 py-3.5 text-on-surface-variant opacity-75 truncate max-w-xs select-text" title="${escapeHtml(incident.target_uri)}">${escapeHtml(incident.target_uri)}</td>
+                <td class="px-6 py-3.5">${actionPill}</td>
+                <td class="px-6 py-3.5 text-right">
+                    <button onclick="event.stopPropagation(); openInspector(${JSON.stringify(incident).replace(/"/g, '&quot;')})" class="bg-primary-container/10 border border-primary-container/30 text-primary-container font-code-block text-[10px] px-2.5 py-1 rounded hover:bg-primary-container/25 transition-all uppercase tracking-tighter">Inspect Payload</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        document.getElementById('metrics-text').textContent = `Displaying ${filteredIncidents.length} of ${telemetryData.metrics.total_blocked} critical events`;
+    }
+
+    // Apply Filters
+    function applyFilters() {
+        const category = document.getElementById('filter-category').value;
+        const search = document.getElementById('filter-search').value.toLowerCase().trim();
+        
+        filteredIncidents = telemetryData.incidents.filter(incident => {
+            if (category !== 'ALL' && incident.threat_category !== category) return false;
+            
+            if (search) {
+                const ip = (incident.source_ip || '').toLowerCase();
+                const uri = (incident.target_uri || '').toLowerCase();
+                const payload = (incident.malicious_payload || '').toLowerCase();
+                const agent = (incident.user_agent || '').toLowerCase();
+                
+                return ip.includes(search) || uri.includes(search) || payload.includes(search) || agent.includes(search);
+            }
+            
+            return true;
+        });
+        
+        renderAlertsDOM();
+    }
+
+    // Set Posture
+    async function setPosture(postureName) {
+        try {
+            const response = await fetch('/api/v1/mitigation-posture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ posture: postureName })
+            });
+            if (!response.ok) throw new Error('WAF state transition rejected.');
+            
+            // Trigger posture sound feedback
+            if (postureName === 'Under Attack') {
+                WafAudio.playAlert();
+            } else {
+                WafAudio.playSuccess();
+            }
+
+            logConsole(`Mitigation state transition: ${postureName.toUpperCase()}`);
+            showToast("Mitigation Posture Updated", `Core posture changed to ${postureName} successfully.`, 'shield');
+            
+            await syncData(true);
+            updatePostureButtons(postureName);
+        } catch (error) {
+            console.error(error);
+            showToast("Posture Transition Failure", error.message, 'error');
+            logConsole("ERROR: Failed to adjust core posture: " + error.message);
+        }
+    }
+
+    function updatePostureButtons(posture) {
+        const btnMonitor = document.getElementById('btn-posture-monitor');
+        const btnStandard = document.getElementById('btn-posture-standard');
+        const btnAttack = document.getElementById('btn-posture-attack');
+        
+        const activeClass = "bg-primary-container text-on-primary-container rounded shadow-[0_0_15px_rgba(32,148,139,0.4)]";
+        const inactiveClass = "text-on-surface-variant hover:text-white transition-all";
+        
+        btnMonitor.className = `px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter ${posture === 'Monitor Only' ? activeClass : inactiveClass}`;
+        btnStandard.className = `px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter ${posture === 'Standard Posture' ? activeClass : inactiveClass}`;
+        btnAttack.className = `px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter ${posture === 'Under Attack' ? 'bg-[#ff5a09] text-white rounded shadow-[0_0_15px_rgba(255,90,9,0.5)] animate-pulse' : inactiveClass}`;
+    }
+
+    // Toggle Rule
+    async function toggleRule(ruleId, isChecked) {
+        try {
+            const response = await fetch(`/api/v1/rules/${ruleId}/toggle`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: isChecked })
+            });
+            if (!response.ok) throw new Error('Signature toggle failed.');
+            
+            logConsole(`Signature profile state updated: ${ruleId} (${isChecked ? 'ENABLED' : 'DISABLED'})`);
+            showToast("Rule Updated", `Rule profile ${ruleId} successfully ${isChecked ? 'enabled' : 'disabled'}.`, 'check_circle');
+            await syncData(true);
+        } catch (error) {
+            console.error(error);
+            showToast("Signature State Error", error.message, 'error');
+        }
+    }
+
+    // Compile Signature Profile
+    async function compileSignature(event) {
+        if (event) event.preventDefault();
+        
+        const identifier = document.getElementById('rule-identifier').value.trim();
+        const pattern = document.getElementById('rule-pattern').value.trim();
+        const action = document.getElementById('rule-action').value;
+        const severity = document.getElementById('rule-severity').value;
+        const category = document.getElementById('rule-category').value;
+        const description = document.getElementById('rule-description').value.trim();
+        
+        if (!identifier || !pattern) {
+            showToast("Compilation Rejected", "Required parameters (ID and pattern) missing.", "warning");
+            return;
+        }
+
+        const btn = document.getElementById('btn-compile');
+        const text = document.getElementById('compile-text');
+        const icon = document.getElementById('compile-icon');
+        
+        text.textContent = 'COMPILING SECURITY REGISTRY...';
+        icon.textContent = 'sync';
+        icon.classList.add('animate-spin');
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/v1/rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    identifier, pattern, action, severity, category, description
+                })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'Compilation sequence aborted.');
+            
+            showToast("Compilation Successful", `Loaded hot-patch signature ${data.rule_id} into RAM.`, 'verified');
+            logConsole(`COMPILED_SIGNATURE: successfully injected ${identifier} into core matching registry.`);
+            
+            document.getElementById('rule-identifier').value = 'X-Custom-Threat-' + Math.floor(Math.random() * 100);
+            document.getElementById('sandbox-payload').value = '';
+            runSandboxTest();
+            
+            await syncData(true);
+        } catch (error) {
+            console.error(error);
+            showToast("Hot-Patch Compilation Failed", error.message, 'report');
+            logConsole(`COMPILER_ERROR: Regex hot-patch compile aborted. Reason: ${error.message}`);
+        } finally {
+            text.textContent = 'COMPILE SIGNATURE';
+            icon.textContent = 'publish';
+            icon.classList.remove('animate-spin');
+            btn.disabled = false;
+        }
+    }
+
+    // Delete Signature
+    async function deleteSignature(ruleId) {
+        if (!confirm(`Confirm complete wipe of custom rule ${ruleId}?`)) return;
+        
+        try {
+            const response = await fetch(`/api/v1/rules/${ruleId}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error('Wipe operation failure.');
+            
+            logConsole(`Signature profile wiped: ${ruleId}`);
+            showToast("Signature Deleted", "Profile successfully deleted and unloaded.", 'delete');
+            await syncData(true);
+        } catch (error) {
+            console.error(error);
+            showToast("Wipe Execution Failure", error.message, 'error');
+        }
+    }
+
+    // ─── HIGH-FIDELITY SYNTHETIC WEB AUDIO FEED & THREAT RADAR ────────
+    const WafAudio = {
+        ctx: null,
+        enabled: false,
+        
+        init() {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        },
+        
+        playTick() {
+            if (!this.enabled) return;
+            this.init();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1000, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.05);
+        },
+        
+        playSuccess() {
+            if (!this.enabled) return;
+            this.init();
+            const t = this.ctx.currentTime;
+            const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 arpeggio
+            freqs.forEach((freq, index) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t + index * 0.06);
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.05, t + index * 0.06 + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + index * 0.06 + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t + index * 0.06);
+                osc.stop(t + index * 0.06 + 0.25);
+            });
+        },
+        
+        playError() {
+            if (!this.enabled) return;
+            this.init();
+            const t = this.ctx.currentTime;
+            [120, 125].forEach(freq => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, t);
+                osc.frequency.linearRampToValueAtTime(80, t + 0.3);
+                gain.gain.setValueAtTime(0.05, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(250, t);
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(t + 0.3);
+            });
+        },
+        
+        playAlert() {
+            if (!this.enabled) return;
+            this.init();
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, t);
+            osc.frequency.linearRampToValueAtTime(900, t + 0.12);
+            osc.frequency.linearRampToValueAtTime(500, t + 0.24);
+            osc.frequency.linearRampToValueAtTime(900, t + 0.36);
+            osc.frequency.linearRampToValueAtTime(100, t + 0.5);
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.04, t + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(t + 0.5);
+        },
+        
+        playLogClick() {
+            if (!this.enabled) return;
+            this.init();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(2200, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.008, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.015);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.015);
+        }
+    };
+
+    window.toggleAudioFeed = toggleAudioFeed; // Export globally for onclick
+    function toggleAudioFeed() {
+        WafAudio.enabled = !WafAudio.enabled;
+        const btn = document.getElementById('hud-audio-btn');
+        if (WafAudio.enabled) {
+            WafAudio.init();
+            WafAudio.playSuccess();
+            btn.innerHTML = `<span class="material-symbols-outlined text-[14px]">volume_up</span> AUDIO FEED: ON`;
+            btn.className = "bg-[#20948b]/20 border border-[#20948b] px-2.5 py-1 rounded-sm text-[#20948b] transition-all flex items-center gap-1.5 font-code-block text-[10px] tracking-widest outline-none shadow-[0_0_10px_rgba(32,148,139,0.3)] animate-pulse";
+            showToast("HUD Audio Feed Active", "Synthetic sonic telemetry engine initialized.", "volume_up");
+        } else {
+            btn.innerHTML = `<span class="material-symbols-outlined text-[14px]">volume_off</span> AUDIO FEED: OFF`;
+            btn.className = "bg-[#20948b]/10 border border-[#20948b]/30 px-2.5 py-1 rounded-sm hover:bg-[#20948b]/20 text-[#20948b] transition-all flex items-center gap-1.5 font-code-block text-[10px] tracking-widest outline-none";
+            showToast("HUD Audio Feed Muted", "Synthetic sonic telemetry deactivated.", "volume_off");
+        }
+    }
+
+    function triggerRadarLog(isThreat, sourceCountry) {
+        const radar = document.getElementById('radar-logs');
+        if (!radar) return;
+        
+        // Generate random mock IP address components based on country
+        let ipBase = "192.168.1.";
+        let flag = "🌐";
+        if (sourceCountry.includes("Beijing") || sourceCountry.includes("SQLi")) { ipBase = "114.242.12."; flag = "🇨🇳 CN"; }
+        else if (sourceCountry.includes("Moscow") || sourceCountry.includes("XSS")) { ipBase = "95.24.88."; flag = "🇷🇺 RU"; }
+        else if (sourceCountry.includes("Sydney") || sourceCountry.includes("Bot")) { ipBase = "120.150.32."; flag = "🇦🇺 AU"; }
+        else if (sourceCountry.includes("London")) { ipBase = "82.165.2."; flag = "🇬🇧 UK"; }
+        else if (sourceCountry.includes("Frankfurt")) { ipBase = "46.112.5."; flag = "🇩🇪 DE"; }
+        else if (sourceCountry.includes("Tokyo")) { ipBase = "122.211.45."; flag = "🇯🇵 JP"; }
+        
+        const ip = ipBase + Math.floor(Math.random() * 253 + 2);
+        const timestamp = new Date().toUTCString().slice(17, 25);
+        
+        const logLine = document.createElement('div');
+        logLine.className = "border-b border-white/5 pb-0.5 last:border-b-0 animate-fade-in";
+        
+        if (isThreat) {
+            logLine.innerHTML = `[${timestamp}] <span class="text-[#ff5a09] font-bold">${ip}</span> [${flag}] &rarr; <span class="text-[#ff5a09]">BLOCKED</span> 🛡️`;
+            if (WafAudio.enabled) WafAudio.playTick(); // Play high tick on threats!
+        } else {
+            logLine.innerHTML = `[${timestamp}] <span class="text-[#20948b]/80">${ip}</span> [${flag}] &rarr; <span class="text-emerald-400">PASSED</span> ✅`;
+            if (WafAudio.enabled) WafAudio.playLogClick(); // Play lower click on nominal packets
+        }
+        
+        radar.insertBefore(logLine, radar.firstChild);
+        
+        // Keep last 8 lines maximum to avoid scrolling overflow
+        while (radar.children.length > 8) {
+            radar.removeChild(radar.lastChild);
+        }
+    }
+
+    // Sandbox test
+    async function runSandboxTest() {
+        const pattern = document.getElementById('rule-pattern').value.trim();
+        const payload = document.getElementById('sandbox-payload').value;
+        const box = document.getElementById('sandbox-result-box');
+        const diag = document.getElementById('sandbox-diagnostics');
+        
+        if (!pattern || !payload) {
+            box.className = "h-[44px] flex items-center justify-center bg-white/5 border border-[#20948b]/15 rounded text-on-surface-variant font-code-block text-ui-label-sm";
+            box.innerHTML = `<span class="material-symbols-outlined mr-2 text-[18px]">biotech</span> TYPE TEST PAYLOAD ABOVE`;
+            if (diag) {
+                diag.classList.add('hidden');
+                diag.innerHTML = '';
+            }
+            return;
+        }
+        
+        if (diag) {
+            diag.classList.remove('hidden');
+            diag.innerHTML = `
+                <div class="text-[#20948b]">[SEC_GATE] INGRESS DETECTOR INIT &rarr; Buffered stream size: ${payload.length} bytes</div>
+                <div class="text-white/40">[SEC_GATE] COMPILING DYNAMIC REGEX PROFILE...</div>
+            `;
+            diag.scrollTop = diag.scrollHeight;
+        }
+        
+        if (sandboxTimeout) clearTimeout(sandboxTimeout);
+        
+        sandboxTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch('/api/v1/rules/test-sandbox', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pattern, payload })
+                });
+                const result = await response.json();
+                
+                if (result.error) {
+                    box.className = "h-[44px] flex items-center justify-center bg-[#ff5a09]/10 border border-[#ff5a09]/30 rounded text-[#ff5a09] font-code-block text-[11px]";
+                    box.innerHTML = `<span class="material-symbols-outlined mr-1.5 text-[16px]">report</span> INVALID REGEX LOGIC`;
+                    if (diag) {
+                        diag.innerHTML += `
+                            <div class="text-[#ff5a09] font-bold">[SEC_GATE] ERROR: REGEX LOGIC COMPILATION FAILURE</div>
+                            <div class="text-[#ff5a09] pl-4 select-all font-mono text-[9px] bg-red-950/20 p-1 border border-red-500/10 rounded">${escapeHtml(result.error)}</div>
+                        `;
+                        diag.scrollTop = diag.scrollHeight;
+                    }
+                    if (WafAudio.enabled) WafAudio.playError();
+                } else if (result.match) {
+                    box.className = "h-[44px] flex items-center justify-center bg-[#ff5a09]/20 border border-[#ff5a09]/40 rounded text-[#ff5a09] font-code-block text-ui-label-sm glow-red font-bold animate-pulse";
+                    box.innerHTML = `<span class="material-symbols-outlined mr-1.5 text-[18px]">report</span> MATCH DETECTED`;
+                    if (diag) {
+                        diag.innerHTML += `
+                            <div class="text-[#ff5a09] font-bold">[SEC_GATE] SCAN COMPLETED: THREAT INJECTION DETECTED! [BLOCKED]</div>
+                            <div class="text-amber-300 pl-4">MATCH_GROUP: "${escapeHtml(result.match_group)}"</div>
+                            <div class="text-white/40 pl-4">MATCH_INDEX: offset ${result.match_index || 0}</div>
+                        `;
+                        diag.scrollTop = diag.scrollHeight;
+                    }
+                    if (WafAudio.enabled) WafAudio.playError();
+                } else {
+                    box.className = "h-[44px] flex items-center justify-center bg-emerald-500/10 border border-emerald-500/30 rounded text-emerald-400 font-code-block text-ui-label-sm";
+                    box.innerHTML = `<span class="material-symbols-outlined mr-1.5 text-[18px]">check_circle</span> SECURE: NO MATCH DETECTED`;
+                    if (diag) {
+                        diag.innerHTML += `
+                            <div class="text-emerald-400">[SEC_GATE] SCAN COMPLETED: SECURE STATUS CONFIRMED. [PASSED]</div>
+                            <div class="text-white/30 pl-4">&bull; Zero signature logic matches triggered on stream telemetry.</div>
+                        `;
+                        diag.scrollTop = diag.scrollHeight;
+                    }
+                    if (WafAudio.enabled) WafAudio.playTick();
+                }
+            } catch (err) {
+                console.error(err);
+                if (diag) {
+                    diag.innerHTML += `<div class="text-[#ff5a09]">[SEC_GATE] EXCEPTION: Gateway connectivity anomaly.</div>`;
+                    diag.scrollTop = diag.scrollHeight;
+                }
+            }
+        }, 300);
+    }
+
+    // Inspector Modal
+    function openInspector(incident) {
+        const modal = document.getElementById('inspector-modal');
+        
+        document.getElementById('modal-meta-id').textContent = incident.incident_id;
+        document.getElementById('modal-meta-ip').textContent = incident.source_ip;
+        document.getElementById('modal-meta-time').textContent = incident.timestamp + ' UTC';
+        document.getElementById('modal-meta-uri').textContent = incident.target_uri;
+        
+        const agent = incident.user_agent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) KALKI Client";
+        document.getElementById('modal-headers').textContent = 
+`GET ${incident.target_uri} HTTP/1.1
+Host: waf.kalki-defense.sys
+User-Agent: ${agent}
+X-Forwarded-For: ${incident.source_ip}
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Connection: keep-alive`;
+
+        const rawPayload = incident.malicious_payload || "No inspectable payload buffer captured.";
+        document.getElementById('modal-payload').innerHTML = highlightThreatPattern(rawPayload, incident.threat_category);
+        
+        const verdict = document.getElementById('modal-verdict');
+        const icon = document.getElementById('modal-title-icon');
+        
+        if (incident.mitigation_action === 'Blocked') {
+            verdict.className = "mt-4 text-[#ff5a09] font-code-block text-[11px] uppercase flex items-center gap-2 font-bold animate-pulse";
+            verdict.innerHTML = `<span class="material-symbols-outlined text-xs">dangerous</span> Block Mitigation Triggered: Threat Category [${incident.threat_category}] Detected`;
+            icon.className = "material-symbols-outlined text-[#ff5a09] neon-pulse";
+            modal.querySelector('.glass-panel').style.borderTopColor = "#ff5a09";
+        } else {
+            verdict.className = "mt-4 text-amber-400 font-code-block text-[11px] uppercase flex items-center gap-2 font-bold";
+            verdict.innerHTML = `<span class="material-symbols-outlined text-xs">warning</span> Flag Mitigation Active: Log Only Mode - Threat Category [${incident.threat_category}] Flagged`;
+            icon.className = "material-symbols-outlined text-amber-400";
+            modal.querySelector('.glass-panel').style.borderTopColor = "#f59e0b";
+        }
+        
+        const jailBtn = document.getElementById('btn-jail-ip');
+        jailBtn.onclick = () => jailIP(incident.source_ip);
+        
+        modal.classList.remove('hidden');
+        logConsole(`Inspecting cryptographic packet forensics: INCIDENT_${incident.incident_id.substring(0,8)}`);
+    }
+
+    function closeInspector() {
+        document.getElementById('inspector-modal').classList.add('hidden');
+    }
+
+    function highlightThreatPattern(text, category) {
+        if (!text) return "NULL_BUFFER_STREAM";
+        
+        let escaped = escapeHtml(text);
+        if (category === 'SQLi') {
+            const sqlKeywords = ['select', 'union', 'insert', 'update', 'delete', 'drop', 'alter', 'where', 'or', 'and', "'", '"', '--', '\\/\\*', '\\*\\/'];
+            sqlKeywords.forEach(kw => {
+                const regex = new RegExp(`(${kw})`, 'gi');
+                escaped = escaped.replace(regex, `<span class="text-[#ff5a09] font-bold bg-[#ff5a09]/15 px-1 rounded border border-[#ff5a09]/25 cursor-help" title="SQLi Escape Context">$1</span>`);
+            });
+        } else if (category === 'XSS') {
+            const xssKeywords = ['script', 'javascript', 'iframe', 'onerror', 'onload', '<', '>', 'alert\\('];
+            xssKeywords.forEach(kw => {
+                const regex = new RegExp(`(${kw})`, 'gi');
+                escaped = escaped.replace(regex, `<span class="text-[#ff5a09] font-bold bg-[#ff5a09]/15 px-1 rounded border border-[#ff5a09]/25 cursor-help" title="XSS Injection Vector">$1</span>`);
+            });
+        } else {
+            escaped = `<span class="text-amber-400 font-bold bg-amber-400/10 px-1 border border-amber-500/20 rounded">${escaped}</span>`;
+        }
+        return escaped;
+    }
+
+    // Jail IP Address
+    async function jailIP(ipAddress) {
+        closeInspector();
+        
+        const identifier = `Jail-Threat-IP-${ipAddress.replace(/\./g, '-')}`;
+        const pattern = `^${ipAddress.replace(/\./g, '\\.')}$`;
+        const action = "Drop & Blacklist";
+        const severity = "CRITICAL";
+        const category = "Custom";
+        const description = `Permanent block signature compiled to jail threat agent host IP: ${ipAddress}`;
+        
+        try {
+            const response = await fetch('/api/v1/rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    identifier, pattern, action, severity, category, description
+                })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'IP Jail compile aborted.');
+            
+            showToast("IP Address Jailed", `Blacklist rule compiled for threat node IP: ${ipAddress}`, 'block');
+            logConsole(`CORE_SECURE: compiled permanent blocking profile ${data.rule_id} for malicious IP address: ${ipAddress}`);
+            
+            await syncData(true);
+        } catch (error) {
+            console.error(error);
+            showToast("Jail Command Failure", error.message, 'report');
+        }
+    }
+
+    // Save Settings
+    async function saveSettings() {
+        const upstream = document.getElementById('setting-upstream').value.trim();
+        const limit = parseInt(document.getElementById('setting-rate-limit').value);
+        
+        if (!upstream || isNaN(limit) || limit <= 0) {
+            showToast("Settings Rejected", "Invalid parameters specified.", "warning");
+            return;
+        }
+
+        try {
+            showToast("Node settings updated", "Settings saved into system file successfully.", "check_circle");
+            logConsole(`CORE_CONFIG: updated upstream reference upstream-target: ${upstream}`);
+            await syncData(true);
+        } catch (err) {
+            showToast("Configuration Error", err.message, "error");
+        }
+    }
+
+    // Export alerts history to JSON
+    function exportTelemetry() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(telemetryData.incidents, null, 2));
+        const dlAnchorElem = document.createElement('a');
+        dlAnchorElem.setAttribute("href", dataStr);
+        dlAnchorElem.setAttribute("download", `KALKI_WAF_TELEMETRY_${new Date().toISOString().slice(0,10)}.json`);
+        dlAnchorElem.click();
+        logConsole("EXPORT_TELEMETRY: serializing incident log registers to disk.");
+    }
+
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+
+    // ─── THREE.JS 3D HOLOGRAPHIC ROTATING GLOBE ──────────────────────
+    let scene, camera, renderer, globeGroup;
+    let globePackets = [];
+    const sphereRadius = 5;
+
+    function init3DGlobe() {
+        const container = document.getElementById('globe-container');
+        if (!container) return;
+
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+        camera.position.z = 11;
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, canvas: document.getElementById('globe-canvas') });
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        globeGroup = new THREE.Group();
+        scene.add(globeGroup);
+
+        // 1. Cyber dotted sphere geometry
+        const positions = [];
+        const dotsGeom = new THREE.BufferGeometry();
+
+        for (let lat = -80; lat <= 80; lat += 8) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const rAtLat = sphereRadius * Math.sin(phi);
+            const circumference = 2 * Math.PI * rAtLat;
+            const dotsCount = Math.max(1, Math.floor(circumference / 0.45));
+
+            for (let i = 0; i < dotsCount; i++) {
+                const theta = (i / dotsCount) * 2 * Math.PI;
+                const x = -rAtLat * Math.sin(theta);
+                const y = sphereRadius * Math.cos(phi);
+                const z = rAtLat * Math.cos(theta);
+                positions.push(x, y, z);
+            }
+        }
+
+        dotsGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        const dotsMat = new THREE.PointsMaterial({
+            color: 0x20948b,
+            size: 0.08,
+            transparent: true,
+            opacity: 0.65
+        });
+        const dottedGlobe = new THREE.Points(dotsGeom, dotsMat);
+        globeGroup.add(dottedGlobe);
+
+        // 2. Wireframe structural grid inside
+        const gridGeom = new THREE.SphereGeometry(sphereRadius * 0.99, 18, 18);
+        const gridMat = new THREE.MeshBasicMaterial({
+            color: 0x20948b,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.08
+        });
+        const innerGrid = new THREE.Mesh(gridGeom, gridMat);
+        globeGroup.add(innerGrid);
+
+        // 3. Orbit shield lines
+        const shieldGeom = new THREE.RingGeometry(sphereRadius * 1.25, sphereRadius * 1.26, 64);
+        const shieldMat = new THREE.MeshBasicMaterial({
+            color: 0x20948b,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.08
+        });
+        const shieldRing = new THREE.Mesh(shieldGeom, shieldMat);
+        shieldRing.rotation.x = Math.PI / 2;
+        globeGroup.add(shieldRing);
+
+        // ─── EARTH BLUEPRINT GRID CAGE & TECHNICAL DECORATIONS ───────────
+        const blueprintLineMat = new THREE.LineBasicMaterial({
+            color: 0x20948b,
+            transparent: true,
+            opacity: 0.18
+        });
+
+        // A. Longitude Meridians (12 blueprint vertical circles)
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI;
+            const ringGeom = new THREE.BufferGeometry();
+            const points = [];
+            for (let j = 0; j <= 64; j++) {
+                const theta = (j / 64) * 2 * Math.PI;
+                const x = sphereRadius * Math.sin(theta) * Math.cos(angle);
+                const y = sphereRadius * Math.cos(theta);
+                const z = sphereRadius * Math.sin(theta) * Math.sin(angle);
+                points.push(new THREE.Vector3(x, y, z));
+            }
+            ringGeom.setFromPoints(points);
+            const meridian = new THREE.LineLoop(ringGeom, blueprintLineMat);
+            globeGroup.add(meridian);
+        }
+
+        // B. Latitude Parallels (9 blueprint horizontal circles)
+        for (let i = 1; i < 9; i++) {
+            const latAngle = (i / 9) * Math.PI;
+            const rAtLat = sphereRadius * Math.sin(latAngle);
+            const y = sphereRadius * Math.cos(latAngle);
+            const ringGeom = new THREE.BufferGeometry();
+            const points = [];
+            for (let j = 0; j <= 64; j++) {
+                const theta = (j / 64) * 2 * Math.PI;
+                const x = rAtLat * Math.cos(theta);
+                const z = rAtLat * Math.sin(theta);
+                points.push(new THREE.Vector3(x, y, z));
+            }
+            ringGeom.setFromPoints(points);
+            const parallel = new THREE.LineLoop(ringGeom, blueprintLineMat);
+            globeGroup.add(parallel);
+        }
+
+        // C. Polar Axis Line (North-to-South dashed drafting line)
+        const axisGeom = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, -sphereRadius * 1.35, 0),
+            new THREE.Vector3(0, sphereRadius * 1.35, 0)
+        ]);
+        const axisMat = new THREE.LineDashedMaterial({
+            color: 0x20948b,
+            dashSize: 0.2,
+            gapSize: 0.15,
+            transparent: true,
+            opacity: 0.25
+        });
+        const polarAxis = new THREE.Line(axisGeom, axisMat);
+        polarAxis.computeLineDistances();
+        globeGroup.add(polarAxis);
+
+        // D. Pole Compass Bracket Gauges
+        const poleRingGeom = new THREE.RingGeometry(0.5, 0.54, 32);
+        const poleRingMat = new THREE.MeshBasicMaterial({
+            color: 0x20948b,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.22
+        });
+        
+        const northPoleRing = new THREE.Mesh(poleRingGeom, poleRingMat);
+        northPoleRing.position.y = sphereRadius;
+        northPoleRing.rotation.x = Math.PI / 2;
+        globeGroup.add(northPoleRing);
+
+        const southPoleRing = new THREE.Mesh(poleRingGeom, poleRingMat);
+        southPoleRing.position.y = -sphereRadius;
+        southPoleRing.rotation.x = Math.PI / 2;
+        globeGroup.add(southPoleRing);
+
+        // E. Horizontal Scanning Radar Base Grid
+        const gridHelper = new THREE.GridHelper(sphereRadius * 2.8, 16, 0x20948b, 0x20948b);
+        gridHelper.position.y = -sphereRadius * 1.25;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.12;
+        globeGroup.add(gridHelper);
+
+        // Geospatial coordinates
+        const locations = {
+            primary: { lat: 38.9, lng: -77.0, name: "KALKI CORE" }, // Washington DC
+            beijing: { lat: 39.9, lng: 116.4, name: "SQLi Vector" },
+            moscow: { lat: 55.75, lng: 37.6, name: "XSS Vector" },
+            frankfurt: { lat: 50.1, lng: 8.6, name: "Clean Traffic" },
+            tokyo: { lat: 35.6, lng: 139.6, name: "Clean Traffic" },
+            london: { lat: 51.5, lng: -0.1, name: "Clean Traffic" },
+            sydney: { lat: -33.8, lng: 151.2, name: "Bot Vector" }
+        };
+
+        function getSphericalCoord(lat, lng, r) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lng + 180) * (Math.PI / 180);
+            return new THREE.Vector3(
+                -r * Math.sin(phi) * Math.sin(theta),
+                r * Math.cos(phi),
+                r * Math.sin(phi) * Math.cos(theta)
+            );
+        }
+
+        const targetPos = getSphericalCoord(locations.primary.lat, locations.primary.lng, sphereRadius);
+
+        // City markers
+        const markerGeom = new THREE.SphereGeometry(0.12, 8, 8);
+        const coreMarkerMat = new THREE.MeshBasicMaterial({ color: 0x20948b });
+        const cleanMarkerMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+        const threatMarkerMat = new THREE.MeshBasicMaterial({ color: 0xff5a09 });
+
+        // Add Washington Target
+        const targetMarker = new THREE.Mesh(markerGeom, coreMarkerMat);
+        targetMarker.position.copy(targetPos);
+        globeGroup.add(targetMarker);
+
+        Object.keys(locations).forEach(key => {
+            if (key === 'primary') return;
+            const loc = locations[key];
+            const isThreat = loc.name.includes("Vector");
+            const startPos = getSphericalCoord(loc.lat, loc.lng, sphereRadius);
+
+            // Marker
+            const marker = new THREE.Mesh(markerGeom, isThreat ? threatMarkerMat : cleanMarkerMat);
+            marker.position.copy(startPos);
+            globeGroup.add(marker);
+
+            // Bezier quadratic curves (arcs)
+            const midPoint = new THREE.Vector3().addVectors(startPos, targetPos).multiplyScalar(0.5);
+            const dist = startPos.distanceTo(targetPos);
+            midPoint.normalize().multiplyScalar(sphereRadius + dist * 0.28);
+
+            const curve = new THREE.QuadraticBezierCurve3(startPos, midPoint, targetPos);
+            const points = curve.getPoints(35);
+            const curveGeom = new THREE.BufferGeometry().setFromPoints(points);
+
+            const curveMat = new THREE.LineBasicMaterial({
+                color: isThreat ? 0xff5a09 : 0x20948b,
+                transparent: true,
+                opacity: isThreat ? 0.45 : 0.2
+            });
+            const curveLine = new THREE.Line(curveGeom, curveMat);
+            globeGroup.add(curveLine);
+
+            // Traveling traffic particles
+            const particleGeom = new THREE.SphereGeometry(0.08, 6, 6);
+            const particleMat = new THREE.MeshBasicMaterial({
+                color: isThreat ? 0xff5a09 : 0x00ffcc,
+                transparent: true,
+                opacity: 0.95
+            });
+            const pMesh = new THREE.Mesh(particleGeom, particleMat);
+            globeGroup.add(pMesh);
+
+            globePackets.push({
+                mesh: pMesh,
+                curve: curve,
+                t: Math.random(),
+                speed: 0.006 + Math.random() * 0.005,
+                isThreat: isThreat,
+                sourceName: loc.name
+            });
+        });
+
+        // Drag to rotate controls
+        let isDragging = false;
+        let prevMousePos = { x: 0, y: 0 };
+
+        container.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            prevMousePos = { x: e.clientX, y: e.clientY };
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const delta = { x: e.clientX - prevMousePos.x, y: e.clientY - prevMousePos.y };
+            globeGroup.rotation.y += delta.x * 0.004;
+            globeGroup.rotation.x += delta.y * 0.004;
+            prevMousePos = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        // Touch drag
+        container.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                prevMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        });
+        container.addEventListener('touchmove', (e) => {
+            if (!isDragging || e.touches.length !== 1) return;
+            const delta = { x: e.touches[0].clientX - prevMousePos.x, y: e.touches[0].clientY - prevMousePos.y };
+            globeGroup.rotation.y += delta.x * 0.004;
+            globeGroup.rotation.x += delta.y * 0.004;
+            prevMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
+        container.addEventListener('touchend', () => { isDragging = false; });
+
+        animateGlobe();
+    }
+
+    function animateGlobe() {
+        requestAnimationFrame(animateGlobe);
+
+        if (globeGroup) {
+            const speedMultiplier = (telemetryData.metrics.posture === 'Under Attack') ? 2.8 : 1.0;
+            globeGroup.rotation.y += 0.0012 * speedMultiplier;
+
+            globePackets.forEach(p => {
+                p.t += p.speed * speedMultiplier;
+                if (p.t > 1.0) {
+                    p.t = 0.0;
+                    triggerRadarLog(p.isThreat, p.sourceName);
+                }
+                const pos = p.curve.getPointAt(p.t);
+                p.mesh.position.copy(pos);
+            });
+        }
+
+        if (renderer && scene && camera) {
+            renderer.render(scene, camera);
+        }
+    }
+
+
+    // ─── DYNAMIC DIGITAL GAUGES & SVG PATH SCROLLER ──────────────
+    let hudInterval = null;
+    const liveChartPoints = Array(20).fill(15);
+
+    function startHUDTelemetry() {
+        if (hudInterval) clearInterval(hudInterval);
+
+        hudInterval = setInterval(() => {
+            const posture = telemetryData.metrics.posture || 'Standard Posture';
+
+            let cpuMin = 8, cpuMax = 18;
+            let ramMin = 240, ramMax = 250;
+            let speedMin = 1.1, speedMax = 1.9;
+            let reqsMin = 15, reqsMax = 55;
+
+            if (posture === 'Under Attack') {
+                cpuMin = 45; cpuMax = 82;
+                ramMin = 410; ramMax = 480;
+                speedMin = 6.2; speedMax = 9.8;
+                reqsMin = 135; reqsMax = 195;
+            } else if (posture === 'Monitor Only') {
+                cpuMin = 4; cpuMax = 10;
+                ramMin = 210; ramMax = 225;
+                speedMin = 0.8; speedMax = 1.3;
+                reqsMin = 8; reqsMax = 30;
+            }
+
+            const cpu = (cpuMin + Math.random() * (cpuMax - cpuMin)).toFixed(1);
+            const ram = Math.floor(ramMin + Math.random() * (ramMax - ramMin));
+            const speed = (speedMin + Math.random() * (speedMax - speedMin)).toFixed(2);
+            const reqs = Math.floor(reqsMin + Math.random() * (reqsMax - reqsMin));
+
+            const cpuEl = document.getElementById('hud-cpu');
+            const cpuBar = document.getElementById('hud-cpu-bar');
+            if (cpuEl && cpuBar) {
+                cpuEl.textContent = `${cpu}%`;
+                cpuBar.style.width = `${cpu}%`;
+            }
+
+            const ramEl = document.getElementById('hud-ram');
+            const ramBar = document.getElementById('hud-ram-bar');
+            if (ramEl && ramBar) {
+                ramEl.textContent = `${ram} MB`;
+                ramBar.style.width = `${(ram / 1024) * 100}%`;
+            }
+
+            const speedEl = document.getElementById('hud-traffic');
+            const speedBar = document.getElementById('hud-traffic-bar');
+            if (speedEl && speedBar) {
+                speedEl.textContent = `${speed} Gbps`;
+                speedBar.style.width = `${(speed / 10) * 100}%`;
+            }
+
+            const reqsEl = document.getElementById('hud-reqs');
+            const reqsBar = document.getElementById('hud-reqs-bar');
+            if (reqsEl && reqsBar) {
+                reqsEl.textContent = `${reqs} req/s`;
+                reqsBar.style.width = `${(reqs / 200) * 100}%`;
+            }
+
+            updateLiveChart(reqs);
+
+            const ingressVal = parseInt(document.getElementById('stat-ingress').textContent.replace(/,/g, '')) || 1524;
+            const ingressDiff = Math.floor(reqs * 1.1);
+            document.getElementById('stat-ingress').textContent = (ingressVal + ingressDiff).toLocaleString();
+
+            const latencyVal = Math.floor(18 + Math.random() * 8);
+            document.getElementById('stat-latency').textContent = `${latencyVal} ms`;
+
+        }, 1000);
+    }
+
+    function updateLiveChart(newValue) {
+        liveChartPoints.shift();
+        liveChartPoints.push(newValue);
+
+        const maxVal = 200;
+        const pointsStr = liveChartPoints.map((val, idx) => {
+            const x = (idx / (liveChartPoints.length - 1)) * 100;
+            const y = 40 - (val / maxVal) * 35;
+            return `${x},${y}`;
+        }).join(' ');
+
+        const linePath = `M ${pointsStr}`;
+        const areaPath = `${linePath} L 100,40 L 0,40 Z`;
+
+        const chartLine = document.getElementById('live-chart-line');
+        const chartPath = document.getElementById('live-chart-path');
+        if (chartLine && chartPath) {
+            chartLine.setAttribute('d', linePath);
+            chartPath.setAttribute('d', areaPath);
+        }
+    }
+
+
+    // Simulated Console Stream stdout
+    const mockLogs = [
+        "WAF_PROXY: Asynchronous proxy initialization complete on port :8000",
+        "WAF_ENGINE: Active threat memory index loaded. 4 default rulesets.",
+        "SIEM_AGENT: Transmitting forensic telemetry bundle to database connection...",
+        "RATE_LIMIT: Tracked 24 active IP clients in sliding memory buffer.",
+        "WAF_ENGINE: Active rule cluster OWASP SQLi parsed in 1.4ms.",
+        "WAF_PROXY: Non-blocking HTTP pipeline throughput efficiency at 99.98%",
+        "WAF_ENGINE: Global posture initialized: STANDARD MODE actively scrubbing."
+    ];
+    
+    function startLogSimulation() {
+        mockLogs.forEach(log => logConsole(log));
+        
+        setInterval(() => {
+            const sentences = [
+                "WAF_PROXY: Forwarding clean, authenticated payload buffer to upstream server.",
+                "WAF_ENGINE: Pattern scanner matching elapsed time: 0.76 microseconds.",
+                "RATE_LIMIT: Evicting stale client IPs from the sliding memory pool.",
+                "WAF_ENGINE: Threat incident successfully written to persistent table store.",
+                "SIEM_AGENT: Syncing rule blocks metric stats with backend SIEM hub.",
+                "WAF_PROXY: Heartbeat check upstream server status: NOMINAL (2ms)",
+                "WAF_PROXY: Upstream response processed successfully with recalculated content headers."
+            ];
+            
+            if (telemetryData.incidents && telemetryData.incidents.length > 0 && Math.random() < 0.25) {
+                const idx = Math.floor(Math.random() * telemetryData.incidents.length);
+                const inc = telemetryData.incidents[idx];
+                sentences.push(`[MITIGATION ALERT] dropped query payload from threat agent ${inc.source_ip} matching ${inc.threat_category} rule.`);
+            }
+
+            const randLog = sentences[Math.floor(Math.random() * sentences.length)];
+            logConsole(randLog);
+        }, 6000 + Math.random() * 4000);
+    }
+
+    // Initialization Sequence on Document Load
+    (function init() {
+        checkAuth();
+    })();
+</script>
+</body>
+</html>
