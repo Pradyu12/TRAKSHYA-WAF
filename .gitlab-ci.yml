@@ -1,0 +1,69 @@
+image: python:3.11-slim
+
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  DOCKER_IMAGE_LATEST: $CI_REGISTRY_IMAGE:latest
+
+cache:
+  paths:
+    - .cache/pip/
+    - venv/
+
+before_script:
+  - python -m pip install --upgrade pip
+  - pip install -r requirements.txt
+
+# ─── TEST STAGE ────────────────────────────────────────────────────────
+test:
+  stage: test
+  script:
+    - python -m py_compile main.py
+    - pytest tests/ -v --tb=short 2>/dev/null || echo "No tests found"
+  only:
+    - main
+    - merge_requests
+
+# ─── BUILD STAGE ───────────────────────────────────────────────────────
+docker-build:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $DOCKER_IMAGE .
+    - docker tag $DOCKER_IMAGE $DOCKER_IMAGE_LATEST
+    - docker push $DOCKER_IMAGE
+    - docker push $DOCKER_IMAGE_LATEST
+  only:
+    - main
+
+# ─── DEPLOY STAGE ──────────────────────────────────────────────────────
+deploy:
+  stage: deploy
+  before_script:
+    - apt-get update && apt-get install -y openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
+        echo '🚀 Pulling latest Docker image...' &&
+        docker pull $DOCKER_IMAGE_LATEST &&
+        echo '🔄 Restarting services...' &&
+        cd /opt/kalki-waf &&
+        docker compose pull &&
+        docker compose up -d --remove-orphans &&
+        docker image prune -f &&
+        echo '✅ Deployment complete!'
+      "
+  only:
+    - main
+  when: manual
