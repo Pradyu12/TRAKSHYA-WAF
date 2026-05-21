@@ -907,7 +907,6 @@ async def inspect_and_proxy_traffic(request: Request, call_next):
             url=upstream_request_url,
             headers=proxy_headers,
             content=body_payload if body_payload else None,
-            cookies=request.cookies,
             timeout=10.0
         )
         
@@ -948,7 +947,7 @@ async def root():
 async def dashboard():
     """Serves the WAF static dashboard interface."""
     try:
-        with open("dashboard.html", "r") as f:
+        with open("index.html", "r") as f:
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Dashboard UI not found")

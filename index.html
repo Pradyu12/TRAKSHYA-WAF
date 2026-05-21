@@ -411,6 +411,8 @@
     </div>
 </div>
 
+
+
 <!-- Top Navigation -->
 <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-3 glass-panel border-b border-[var(--border-cyan)] shadow-[0_0_15px_var(--accent-cyan-glow)]">
     <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('overview')">
@@ -432,6 +434,7 @@
             <span class="material-symbols-outlined text-[20px] cursor-pointer hover:scale-110 transition-transform" onclick="switchTab('overview')">speed</span>
         </div>
         <div class="flex items-center gap-3">
+
             <!-- ─── ADAPTIVE THEME TOGGLE ───────────────────────────────────────
              * Toggle button for light/dark mode. Updates theme in real-time.
              * System preference is detected on first load.
@@ -2375,7 +2378,7 @@ filteredIncidents.forEach((incident, index) => {
     let globeMesh, atmoMesh;
     let orbitLines = [];
     let threatMarkers = [];
-    let packetLine;
+    let packetLines = [];
 
     function init3DGlobe() {
         const container = document.getElementById('globe-container');
@@ -2493,16 +2496,30 @@ filteredIncidents.forEach((incident, index) => {
         backlight.position.set(-3, -1, -2);
         scene.add(backlight);
 
-        // Packet flow line (initial trajectory)
-        const packetMat = new THREE.LineBasicMaterial({ color: 0x20948b, transparent: true, opacity: 0.3 });
-        const packetPoints = [
-            new THREE.Vector3(-3, 0.5, -2),
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(3, -0.5, 2)
-        ];
-        const packetGeo = new THREE.BufferGeometry().setFromPoints(packetPoints);
-        packetLine = new THREE.Line(packetGeo, packetMat);
-        scene.add(packetLine);
+        // Packet flow lines (traffic received, displayed in red)
+        const packetMat = new THREE.LineBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6 });
+        
+        // Generate multiple traffic lines
+        packetLines = [];
+        for (let i = 0; i < 5; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = (Math.random() - 0.5) * Math.PI;
+            const startR = 3.0;
+            const startPt = new THREE.Vector3(
+                startR * Math.cos(theta) * Math.cos(phi),
+                startR * Math.sin(phi),
+                startR * Math.sin(theta) * Math.cos(phi)
+            );
+            
+            const packetPoints = [
+                startPt,
+                new THREE.Vector3(0, 0, 0)
+            ];
+            const packetGeo = new THREE.BufferGeometry().setFromPoints(packetPoints);
+            const line = new THREE.Line(packetGeo, packetMat);
+            scene.add(line);
+            packetLines.push({ mesh: line, startPt: startPt, progress: Math.random() });
+        }
 
         // Some threat markers (random initial positions)
         const threatMat = new THREE.MeshBasicMaterial({ color: 0xff5a09, transparent: true, opacity: 0.7 });
@@ -2556,6 +2573,29 @@ filteredIncidents.forEach((incident, index) => {
         if (atmoMesh) {
             atmoMesh.material.opacity = 0.06 + 0.04 * Math.sin(Date.now() * 0.001);
         }
+
+        // Animate traffic received lines (red lines)
+        packetLines.forEach(line => {
+            line.progress += 0.02;
+            if (line.progress > 1) {
+                line.progress = 0;
+                // randomize starting point
+                const theta = Math.random() * Math.PI * 2;
+                const phi = (Math.random() - 0.5) * Math.PI;
+                const startR = 3.0;
+                line.startPt.set(
+                    startR * Math.cos(theta) * Math.cos(phi),
+                    startR * Math.sin(phi),
+                    startR * Math.sin(theta) * Math.cos(phi)
+                );
+            }
+            
+            // Rebuild geometry to animate the line flowing towards the center
+            const currentR = 1.45 + (1 - line.progress) * (3.0 - 1.45);
+            const currentPt = line.startPt.clone().normalize().multiplyScalar(currentR);
+            const packetPoints = [ line.startPt, currentPt ];
+            line.mesh.geometry.setFromPoints(packetPoints);
+        });
 
         if (renderer && scene && camera) {
             renderer.render(scene, camera);
