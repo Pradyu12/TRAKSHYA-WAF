@@ -1,2768 +1,954 @@
 <!DOCTYPE html>
-<html class="dark" lang="en" id="html-root">
+<html lang="en" class="dark">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>KALKI WAF | Security Command Center</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <!-- Stable R128 Three.js for outstanding 3D holographic globe -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Firebase v9+ Modular SDK (compat mode for CDN) -->
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <style>
-        /* ─── ADAPTIVE COLOR THEME SYSTEM ───────────────────────────────────────
-         * Implements light/dark mode with CSS custom properties.
-         * Glassmorphism backgrounds shift based on active theme.
-         * Contextual semantic colors remain crisp in both modes:
-         *   - Secure: Emerald/Green
-         *   - Warnings: Amber/Orange
-         *   - Blocked/Threats: Crimson/Red
-         *   - System Accents: Cyberpunk Cyan / Electric Blue
-         */
-
-        /* Light Theme (default) */
-        :root {
-            --glass-bg: rgba(255, 255, 255, 0.4);
-            --glass-bg-strong: rgba(255, 255, 255, 0.6);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.18);
-            --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.12);
-            --glass-blur: blur(10px);
-            --glass-blur-heavy: blur(18px);
-
-            --bg-body: #f8f9fa;
-            --bg-surface: #ffffff;
-            --bg-surface-container: #f1f3f5;
-            --bg-surface-low: #e9ecef;
-            --bg-surface-lowest: #dee2e6;
-            --text-primary: #212529;
-            --text-secondary: #495057;
-            --text-on-glass: #212529;
-            --text-muted: #6c757d;
-            --text-white: #212529;
-
-            --accent-cyan: #0dcaf0;
-            --accent-blue: #0d6efd;
-            --accent-emerald: #198754;
-            --accent-amber: #fd7e14;
-            --accent-crimson: #dc3545;
-            --accent-cyan-glow: rgba(13, 202, 240, 0.25);
-            --accent-emerald-glow: rgba(25, 135, 84, 0.25);
-
-            --border-light: rgba(0, 0, 0, 0.06);
-            --border-cyan: rgba(13, 202, 240, 0.2);
-            --hover-overlay: rgba(0, 0, 0, 0.03);
-            --input-bg: rgba(255, 255, 255, 0.7);
-            --input-border: rgba(0, 0, 0, 0.12);
-            --table-row-hover: rgba(0, 0, 0, 0.02);
-            --bg-code: rgba(0, 0, 0, 0.03);
-
-            --scrollbar-track: transparent;
-            --scrollbar-thumb: rgba(13, 202, 240, 0.25);
-        }
-
-        /* Dark Theme */
-        .dark {
-            --glass-bg: rgba(30, 30, 40, 0.4);
-            --glass-bg-strong: rgba(30, 30, 40, 0.6);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-            --glass-blur: blur(10px);
-            --glass-blur-heavy: blur(18px);
-
-            --bg-body: #212529;
-            --bg-surface: #2c3034;
-            --bg-surface-container: #343a40;
-            --bg-surface-low: #2c3034;
-            --bg-surface-lowest: #212529;
-            --text-primary: #f8f9fa;
-            --text-secondary: #e9ecef;
-            --text-on-glass: #f8f9fa;
-            --text-muted: #adb5bd;
-            --text-white: #f8f9fa;
-
-            --accent-cyan: #0dcaf0;
-            --accent-blue: #0d6efd;
-            --accent-emerald: #198754;
-            --accent-amber: #fd7e14;
-            --accent-crimson: #dc3545;
-            --accent-cyan-glow: rgba(13, 202, 240, 0.25);
-            --accent-emerald-glow: rgba(25, 135, 84, 0.25);
-
-            --border-light: rgba(255, 255, 255, 0.05);
-            --border-cyan: rgba(13, 202, 240, 0.25);
-            --hover-overlay: rgba(255, 255, 255, 0.03);
-            --input-bg: rgba(0, 0, 0, 0.5);
-            --input-border: rgba(255, 255, 255, 0.1);
-            --table-row-hover: rgba(255, 255, 255, 0.02);
-            --bg-code: rgba(0, 0, 0, 0.4);
-
-            --scrollbar-track: transparent;
-            --scrollbar-thumb: rgba(13, 202, 240, 0.3);
-        }
-
-        body {
-            background-color: var(--bg-body);
-            background-image:
-                radial-gradient(circle at 2px 2px, rgba(32, 148, 139, 0.04) 1px, transparent 0);
-            background-size: 32px 32px;
-            color: var(--text-primary);
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        /* ─── GLASSMORPHISM CORE ───────────────────────────────────────────────
-         * Sleek glass panels with translucent backgrounds, crisp backdrop blur,
-         * thin elegant borders, and soft drop-shadows for depth.
-         */
-.glass-panel {
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    transition: background 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
-    /* Enhanced glassmorphism with multiple layers */
-    position: relative;
-    overflow: hidden;
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SUDARSHANA PROTOCOL | KALKI WAF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+tailwind.config = {
+  darkMode:'class',
+  theme:{extend:{
+    colors:{
+      bg:'#0d0d12',surface:'#131318','surface-2':'#1a1a21','surface-3':'#1f1f28',
+      border:'rgba(255,255,255,0.07)','border-hi':'rgba(255,255,255,0.12)',
+      primary:'#adc6ff','primary-dim':'#4b8eff',
+      secondary:'#4edea3',tertiary:'#ffb95f',
+      threat:'#ff003c','threat-dim':'rgba(255,0,60,0.15)',
+      muted:'#8b90a0',faint:'#414755',
+    },
+    fontFamily:{mono:['JetBrains Mono','monospace'],sans:['Inter','sans-serif']},
+  }}
 }
-.glass-panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.05) 50%,
-        rgba(255, 255, 255, 0.1) 100%
-    );
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0d0d12;color:#e4e1e8;font-family:'Inter',sans-serif;overflow:hidden}
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:#414755;border-radius:2px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* Layout */
+#shell{display:flex;height:100vh;position:relative;z-index:1}
+#sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;
+  background:rgba(10,10,15,0.92);backdrop-filter:blur(28px);
+  border-right:1px solid rgba(255,255,255,0.06);
+  transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:60}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;background:rgba(13,13,18,0.8);backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,0.06)}
+#content{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:20px}
+
+/* Sidebar */
+.sb-logo{padding:18px 16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.sb-logo-icon{color:#adc6ff;font-size:22px}
+.sb-logo-name{font-size:13px;font-weight:700;color:#adc6ff;letter-spacing:-.01em}
+.sb-logo-sub{font-size:9px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.1em;margin-top:1px}
+.sb-nav{flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;
+  font-size:13px;color:#8b90a0;cursor:pointer;transition:all .15s;
+  border:1px solid transparent;user-select:none}
+.sb-item:hover{background:rgba(255,255,255,0.04);color:#e4e1e8}
+.sb-item.active{background:rgba(173,198,255,0.09);color:#adc6ff;border-color:rgba(173,198,255,0.14)}
+.sb-item .material-symbols-outlined{font-size:17px}
+.sb-footer{padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06)}
+.sb-status{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:7px;
+  background:rgba(78,222,163,0.07);border:1px solid rgba(78,222,163,0.14)}
+.sb-dot{width:6px;height:6px;border-radius:50%;background:#4edea3;animation:pulse 2s infinite}
+.sb-status-txt{font-size:10px;font-family:'JetBrains Mono',monospace;color:#4edea3;text-transform:uppercase;letter-spacing:.08em}
+.sb-ver{font-size:9px;font-family:'JetBrains Mono',monospace;color:#414755;text-align:center;margin-top:7px}
+
+/* Cards */
+.card{background:rgba(19,19,24,0.7);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden}
+.card-hd{padding:13px 18px;border-bottom:1px solid rgba(255,255,255,0.06);
+  display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:10px;font-family:'JetBrains Mono',monospace;color:#c1c6d7;
+  text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:7px}
+.card-title .material-symbols-outlined{font-size:14px}
+
+/* Metric cards */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.mc{background:rgba(19,19,24,0.7);border:1px solid rgba(255,255,255,0.07);
+  border-radius:12px;padding:18px 20px;transition:transform .2s,box-shadow .2s;cursor:default}
+.mc:hover{transform:translateY(-2px);box-shadow:0 10px 40px rgba(0,0,0,0.5)}
+.mc-lbl{font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;
+  text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.mc-lbl .material-symbols-outlined{font-size:15px}
+.mc-val{font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1}
+.mc-sub{font-size:11px;color:#414755;margin-top:5px}
+
+/* Globe */
+.globe-grid{display:grid;grid-template-columns:1fr 320px;gap:14px}
+#globe-wrap{height:290px;position:relative;background:radial-gradient(ellipse at 50% 60%,rgba(75,142,255,0.05) 0%,transparent 65%)}
+#globe-canvas{width:100%;height:100%;display:block}
+
+/* Right panel */
+.rpanel{display:flex;flex-direction:column;gap:14px}
+.chart-bars{display:flex;align-items:flex-end;gap:3px;height:68px;margin-top:10px}
+.cbar{flex:1;border-radius:3px 3px 0 0;min-width:0;transition:height .5s ease,background .5s ease}
+.posture-btns{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.pb{display:flex;align-items:center;gap:8px;padding:8px 13px;border-radius:7px;
+  font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;
+  transition:all .15s;border:1px solid rgba(255,255,255,0.07);
+  background:none;color:#8b90a0;text-align:left;width:100%}
+.pb:hover{background:rgba(255,255,255,0.04);color:#e4e1e8}
+.pb.active{border-color:#adc6ff;background:rgba(173,198,255,0.09);color:#adc6ff}
+.pb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* Tags */
+.tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;
+  font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:.04em;white-space:nowrap}
+.t-blocked{background:rgba(255,0,60,0.12);color:#ff4d6d;border:1px solid rgba(255,0,60,0.22)}
+.t-flagged{background:rgba(255,185,95,0.1);color:#ffb95f;border:1px solid rgba(255,185,95,0.2)}
+.t-allowed{background:rgba(78,222,163,0.08);color:#4edea3;border:1px solid rgba(78,222,163,0.15)}
+.t-sqli{background:rgba(255,0,60,0.08);color:#ff6b8a;border:1px solid rgba(255,0,60,0.15)}
+.t-xss{background:rgba(255,185,95,0.08);color:#ffb95f;border:1px solid rgba(255,185,95,0.15)}
+.t-rfi,.t-other{background:rgba(173,198,255,0.08);color:#adc6ff;border:1px solid rgba(173,198,255,0.15)}
+
+/* Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px;font-family:'JetBrains Mono',monospace}
+thead tr{border-bottom:1px solid rgba(255,255,255,0.06)}
+th{padding:9px 16px;text-align:left;font-size:10px;color:#8b90a0;font-weight:500;
+  text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.03);transition:background .15s}
+tbody tr:hover{background:rgba(255,255,255,0.02)}
+td{padding:9px 16px;color:#e4e1e8;white-space:nowrap}
+td.dim{color:#8b90a0}
+
+/* Forms */
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.06em}
+.fi{background:#1a1a21;border:1px solid #414755;color:#e4e1e8;border-radius:6px;
+  padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none;
+  transition:border-color .15s;width:100%}
+.fi:focus{border-color:#adc6ff}
+.fs{background:#1a1a21;border:1px solid #414755;color:#e4e1e8;border-radius:6px;
+  padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none;width:100%;cursor:pointer}
+.btn-p{background:#adc6ff;color:#001a41;font-weight:600;border-radius:6px;
+  padding:8px 20px;font-size:13px;cursor:pointer;border:none;transition:opacity .15s}
+.btn-p:hover{opacity:.85}
+.btn-d{background:rgba(255,0,60,0.1);color:#ff003c;border:1px solid rgba(255,0,60,0.2);
+  border-radius:5px;padding:5px 11px;font-size:11px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;transition:background .15s}
+.btn-d:hover{background:rgba(255,0,60,0.2)}
+
+/* Toggle */
+.tog{width:38px;height:21px;background:#414755;border-radius:11px;position:relative;
+  cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.on{background:#00a572}
+.tog::after{content:'';position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;
+  border-radius:50%;background:#fff;transition:transform .2s}
+.tog.on::after{transform:translateX(17px)}
+
+/* Sections */
+.sec{display:none}
+.sec.show{display:contents}
+
+/* Animations */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.2)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fadein{animation:fadein .3s ease}
+
+/* Responsive */
+@media(max-width:960px){
+  .metrics{grid-template-columns:1fr 1fr}
+  .globe-grid{grid-template-columns:1fr}
+  .rpanel{flex-direction:row}
 }
-.glass-panel:hover::before {
-    opacity: 1;
+@media(max-width:700px){
+  #sidebar{position:fixed;top:0;left:0;height:100%;transform:translateX(-100%)}
+  #sidebar.open{transform:translateX(0)}
+  .metrics{grid-template-columns:1fr 1fr}
+  #content{padding:14px}
+  .rpanel{flex-direction:column}
 }
-
-.glass-panel-strong {
-    background: var(--glass-bg-strong);
-    backdrop-filter: var(--glass-blur-heavy);
-    -webkit-backdrop-filter: var(--glass-blur-heavy);
-    border: var(--glass-border);
-    box-shadow: var(--glass-shadow);
-    transition: background 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
-    /* Enhanced glassmorphism with multiple layers */
-    position: relative;
-    overflow: hidden;
-}
-.glass-panel-strong::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.15) 0%,
-        rgba(255, 255, 255, 0.08) 50%,
-        rgba(255, 255, 255, 0.15) 100%
-    );
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-.glass-panel-strong:hover::before {
-    opacity: 1;
-}
-
-        /* Theme-aware text colors for glass panels */
-        .glass-panel h1, .glass-panel h2, .glass-panel h3, .glass-panel h4,
-        .glass-panel-strong h1, .glass-panel-strong h2, .glass-panel-strong h3, .glass-panel-strong h4 {
-            color: var(--text-white);
-        }
-
-        .glass-panel p, .glass-panel span, .glass-panel label,
-        .glass-panel-strong p, .glass-panel-strong span, .glass-panel-strong label {
-            color: var(--text-secondary);
-        }
-
-        /* ─── THEME TOGGLE BUTTON ──────────────────────────────────────────── */
-        .theme-toggle-btn {
-            background: var(--glass-bg);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border: var(--glass-border);
-            box-shadow: var(--glass-shadow);
-            color: var(--text-primary);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            outline: none;
-        }
-
-        .theme-toggle-btn:hover {
-            background: var(--glass-bg-strong);
-            box-shadow: 0 4px 20px var(--accent-cyan-glow);
-            transform: scale(1.05);
-        }
-
-        .theme-toggle-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* ─── THEME TRANSITIONS ────────────────────────────────────────────── */
-        /* Non-global transitions: only apply to UI elements we care about,
-         * not canvas/3D elements to avoid performance degradation. */
-        .glass-panel, .glass-panel-strong, .theme-toggle-btn,
-        input, textarea, select, button:not(#globe-canvas),
-        header, aside, footer, .tab-content,
-        #toast-notification, #inspector-modal {
-            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
-        }
-
-        /* Exclude specific elements from transitions for performance */
-        .material-symbols-outlined {
-            transition: none;
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        #globe-canvas, #globe-container canvas, canvas {
-            transition: none !important;
-        }
-
-        .glow-cyan {
-            box-shadow: 0 0 20px var(--accent-cyan-glow);
-        }
-        .glow-red {
-            box-shadow: 0 0 20px rgba(255, 90, 9, 0.25);
-        }
-
-        .neon-pulse {
-            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(255, 90, 9, 0.8)); }
-            50% { opacity: 0.3; filter: drop-shadow(0 0 1px rgba(255, 90, 9, 0.1)); }
-        }
-        .tab-animate {
-            animation: tabFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes tabFadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.985) translateY(4px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-        .terminal-scroll::-webkit-scrollbar {
-            width: 4px;
-        }
-        .terminal-scroll::-webkit-scrollbar-thumb {
-            background: var(--scrollbar-thumb);
-            border-radius: 2px;
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-6px); }
-            40%, 80% { transform: translateX(6px); }
-        }
-        .shake-animation {
-            animation: shake 0.35s ease-in-out;
-        }
-        @keyframes cyberSpin {
-            0% { transform: rotate(0deg) scale(0.5); opacity: 0; filter: drop-shadow(0 0 0px rgba(32,148,139,0)); }
-            50% { transform: rotate(180deg) scale(1.2); filter: drop-shadow(0 0 30px rgba(32,148,139,1)); }
-            100% { transform: rotate(360deg) scale(1); opacity: 1; filter: drop-shadow(0 0 10px rgba(32,148,139,0.6)); }
-        }
-        .cyber-spin-logo {
-            animation: cyberSpin 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        /* Theme-aware scrollbar for all themed elements */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--scrollbar-track);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--scrollbar-thumb);
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-cyan);
-        }
-
-        /* Contextual semantic status colors that work in both modes */
-        .status-secure { color: var(--accent-emerald); }
-        .status-warning { color: var(--accent-amber); }
-        .status-blocked { color: var(--accent-crimson); }
-        .status-accent { color: var(--accent-cyan); }
-
-        .bg-status-secure { background: var(--accent-emerald); }
-        .bg-status-warning { background: var(--accent-amber); }
-        .bg-status-blocked { background: var(--accent-crimson); }
-        .bg-status-accent { background: var(--accent-cyan); }
-
-        .border-status-secure { border-color: var(--accent-emerald); }
-        .border-status-warning { border-color: var(--accent-amber); }
-        .border-status-blocked { border-color: var(--accent-crimson); }
-        .border-status-accent { border-color: var(--accent-cyan); }
-
-        /* Smooth input focus states for glassmorphism */
-        input:focus, textarea:focus, select:focus {
-            border-color: var(--accent-cyan) !important;
-            box-shadow: 0 0 0 2px var(--accent-cyan-glow) !important;
-            outline: none !important;
-        }
-
-    
-    </style>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "primary-fixed": "#6ff6ff",
-                        "on-secondary-fixed": "#0f0069",
-                        "on-tertiary-container": "#c2002b",
-                        "surface-bright": "#39383f",
-                        "inverse-primary": "#00696f",
-                        "on-error": "#690005",
-                        "surface-container-lowest": "#121212",
-                        "primary-container": "#20948b",
-                        "on-secondary-fixed-variant": "#3323cc",
-                        "surface-container-highest": "#363636",
-                        "secondary-fixed-dim": "#c3c0ff",
-                        "on-tertiary-fixed": "#410008",
-                        "tertiary-fixed": "#ffdad8",
-                        "secondary-container": "#3626ce",
-                        "primary-fixed-dim": "#00dce6",
-                        "tertiary-fixed-dim": "#ffb3b2",
-                        "on-secondary": "#1d00a5",
-                        "error": "#ffb4ab",
-                        "surface-tint": "#00dce6",
-                        "on-primary-fixed": "#002022",
-                        "outline-variant": "#3a494b",
-                        "on-background": "#e4e1e9",
-                        "on-primary-fixed-variant": "#004f53",
-                        "background": "#1e1e1e",
-                        "on-primary-container": "#006a70",
-                        "on-error-container": "#ffdad6",
-                        "on-tertiary-fixed-variant": "#92001e",
-                        "surface-container": "#242424",
-                        "primary": "#e0fdff",
-                        "inverse-on-surface": "#303036",
-                        "tertiary": "#fff5f5",
-                        "on-secondary-container": "#b3b1ff",
-                        "secondary": "#c3c0ff",
-                        "surface-dim": "#1e1e1e",
-                        "on-surface-variant": "#b9cacb",
-                        "outline": "#849495",
-                        "surface-variant": "#363636",
-                        "surface": "#1e1e1e",
-                        "on-surface": "#e4e1e9",
-                        "on-tertiary": "#680012",
-                        "tertiary-container": "#ffd0ce",
-                        "secondary-fixed": "#e2dfff",
-                        "inverse-surface": "#e4e1e9",
-                        "error-container": "#93000a",
-                        "surface-container-low": "#1c1c1c",
-                        "on-primary": "#00373a",
-                        "surface-container-high": "#2c2c2c"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.125rem",
-                        "lg": "0.25rem",
-                        "xl": "0.5rem",
-                        "full": "0.75rem"
-                    },
-                    "fontFamily": {
-                        "display-lg": ["Geist"],
-                        "headline-md": ["Geist"],
-                        "code-block": ["Space Mono"],
-                        "data-point": ["Space Mono"],
-                        "body-md": ["Geist"],
-                        "ui-label-sm": ["Geist"]
-                    }
-                }
-            }
-        }
-    </script>
+</style>
 </head>
-<body class="font-body-md bg-[var(--bg-body)] text-[var(--text-primary)] selection:bg-[var(--accent-cyan)]/30 select-none overflow-x-hidden">
+<body>
+<canvas id="bg-canvas"></canvas>
 
-<!-- Floating Top Status Toast Notification (Hidden by default) -->
-<div id="toast-notification" class="fixed top-20 right-6 z-[100] transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none">
-    <div class="glass-panel rounded-lg px-6 py-4 flex items-center gap-3 border-l-4 border-[var(--accent-cyan)] shadow-2xl">
-        <span id="toast-icon" class="material-symbols-outlined text-[var(--accent-cyan)]">info</span>
-        <div>
-            <p id="toast-title" class="font-headline-md text-[14px] text-[var(--text-white)] font-bold"></p>
-            <p id="toast-body" class="font-code-block text-[11px] text-[var(--text-muted)]/80"></p>
-        </div>
+<div id="shell">
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+<aside id="sidebar">
+  <div class="sb-logo">
+    <span class="material-symbols-outlined sb-logo-icon" style="font-variation-settings:'FILL' 1">shield_lock</span>
+    <div>
+      <div class="sb-logo-name">KALKI WAF</div>
+      <div class="sb-logo-sub">Sudarshana Protocol</div>
     </div>
-</div>
-
-
-
-<!-- Top Navigation -->
-<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-3 glass-panel border-b border-[var(--border-cyan)] shadow-[0_0_15px_var(--accent-cyan-glow)]">
-    <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('overview')">
-        <!-- High-tech logo in header -->
-        <img id="header-logo" src="./kalki_waf_logo.png?v=3.0" class="w-16 h-16 object-contain filter drop-shadow-[0_0_8px_rgba(32,148,139,0.6)]" alt="Kalki Logo"/>
-        <h1 class="font-display-lg text-headline-md tracking-tighter text-[var(--accent-cyan)] drop-shadow-[0_0_10px_var(--accent-cyan-glow)]">KALKI WAF</h1>
-        <span class="hidden md:block h-4 w-px bg-[var(--border-light)] ml-2"></span>
-        <nav class="hidden md:flex gap-6 ml-2">
-            <a id="nav-top-overview" class="text-[var(--accent-cyan)] font-bold border-b-2 border-[var(--accent-cyan)] font-body-md text-body-md" href="#" onclick="switchTab('overview')">Dashboard</a>
-            <a id="nav-top-threat-intel" class="text-[var(--text-muted)] hover:text-[var(--accent-cyan)] transition-colors font-body-md text-body-md" href="#" onclick="switchTab('threat-intel')">Threat Intel</a>
-            <a id="nav-top-rule-engine" class="text-[var(--text-muted)] hover:text-[var(--accent-cyan)] transition-colors font-body-md text-body-md" href="#" onclick="switchTab('rule-engine')">Rule Engine</a>
-            <a id="nav-top-settings" class="text-[var(--text-muted)] hover:text-[var(--accent-cyan)] transition-colors font-body-md text-body-md" href="#" onclick="switchTab('settings')">Settings</a>
-        </nav>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-item active" data-sec="dashboard" onclick="nav(this)">
+      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">radar</span>Dashboard
     </div>
-    <div class="flex items-center gap-6">
-        <div class="flex gap-4 text-[var(--accent-cyan)]">
-            <span class="material-symbols-outlined text-[20px] cursor-pointer hover:scale-110 transition-transform" onclick="switchTab('settings')">memory</span>
-            <span class="material-symbols-outlined text-[20px] cursor-pointer hover:scale-110 transition-transform" onclick="switchTab('threat-intel')">database</span>
-            <span class="material-symbols-outlined text-[20px] cursor-pointer hover:scale-110 transition-transform" onclick="switchTab('overview')">speed</span>
-        </div>
-        <div class="flex items-center gap-3">
-
-            <!-- ─── ADAPTIVE THEME TOGGLE ───────────────────────────────────────
-             * Toggle button for light/dark mode. Updates theme in real-time.
-             * System preference is detected on first load.
-             -->
-            <button id="theme-toggle" onclick="toggleTheme()" class="theme-toggle-btn" title="Toggle theme (Light/Dark)">
-                <span id="theme-icon" class="material-symbols-outlined text-[18px]">dark_mode</span>
-            </button>
-            <button id="hud-audio-btn" onclick="toggleAudioFeed()" class="bg-[#20948b]/10 border border-[#20948b]/30 px-2.5 py-1 rounded-sm hover:bg-[#20948b]/20 text-[#20948b] transition-all flex items-center gap-1.5 font-code-block text-[10px] tracking-widest outline-none">
-                <span class="material-symbols-outlined text-[14px]">volume_off</span> AUDIO FEED: OFF
-            </button>
-            <div class="bg-[var(--accent-cyan)]/10 border border-[var(--accent-cyan)]/30 px-3 py-1 rounded-sm">
-                <span class="font-code-block text-[11px] tracking-widest text-[var(--accent-cyan)]">SYSTEM STATUS: <span id="header-status" style="color: #00ff66; text-shadow: 0 0 10px rgba(0,255,102,0.6);">NOMINAL</span></span>
-            </div>
-        </div>
+    <div class="sb-item" data-sec="rules" onclick="nav(this)">
+      <span class="material-symbols-outlined">rule</span>Security Rules
     </div>
-</header>
-
-<!-- Side Navigation -->
-<aside class="fixed left-0 top-0 h-full w-64 glass-panel-strong border-r border-[var(--border-cyan)] flex flex-col pt-24 pb-6 hidden lg:flex">
-    <div class="flex flex-col flex-1">
-        <div id="nav-side-overview" onclick="switchTab('overview')" class="flex items-center px-6 py-3 text-[var(--accent-cyan)] bg-[var(--accent-cyan)]/10 border-r-2 border-[var(--accent-cyan)] shadow-[inset_-10px_0_15px_-10px_rgba(32,148,139,0.3)] cursor-pointer translate-x-1">
-            <span class="material-symbols-outlined mr-4">dashboard</span>
-            <span class="font-code-block text-code-block">Dashboard</span>
-        </div>
-        <div id="nav-side-threat-intel" onclick="switchTab('threat-intel')" class="flex items-center px-6 py-3 text-[var(--text-muted)]/60 hover:bg-[var(--hover-overlay)] hover:text-[var(--text-primary)] transition-all cursor-pointer">
-            <span class="material-symbols-outlined mr-4">security</span>
-            <span class="font-code-block text-code-block">Threat Intel</span>
-        </div>
-        <div id="nav-side-rule-engine" onclick="switchTab('rule-engine')" class="flex items-center px-6 py-3 text-[var(--text-muted)]/60 hover:bg-[var(--hover-overlay)] hover:text-[var(--text-primary)] transition-all cursor-pointer">
-            <span class="material-symbols-outlined mr-4">terminal</span>
-            <span class="font-code-block text-code-block">Rule Engine</span>
-        </div>
-        <div id="nav-side-settings" onclick="switchTab('settings')" class="flex items-center px-6 py-3 text-[var(--text-muted)]/60 hover:bg-[var(--hover-overlay)] hover:text-[var(--text-primary)] transition-all cursor-pointer">
-            <span class="material-symbols-outlined mr-4">settings</span>
-            <span class="font-code-block text-code-block">Settings</span>
-        </div>
+    <div class="sb-item" data-sec="incidents" onclick="nav(this)">
+      <span class="material-symbols-outlined">warning</span>Incidents
     </div>
+    <div class="sb-item" data-sec="sandbox" onclick="nav(this)">
+      <span class="material-symbols-outlined">science</span>Sandbox
+    </div>
+    <div class="sb-item" data-sec="settings" onclick="nav(this)">
+      <span class="material-symbols-outlined">settings</span>Settings
+    </div>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-status">
+      <div class="sb-dot"></div>
+      <span class="sb-status-txt">Engine Active</span>
+    </div>
+    <div class="sb-ver">v1.0.0 · Firebase · SQLite Fallback</div>
+  </div>
 </aside>
 
-<!-- Main Content -->
-<main class="lg:ml-64 pt-24 pb-20 px-8 md:px-16 max-w-[1800px] mx-auto min-h-screen">
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<div id="main">
+  <header id="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="toggleSb()" style="background:none;border:none;color:#8b90a0;cursor:pointer;display:none;padding:2px" id="menu-btn">
+        <span class="material-symbols-outlined" style="font-size:22px">menu</span>
+      </button>
+      <span style="font-size:13px;font-weight:600;color:#e4e1e8" id="page-title">Dashboard</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;
+        background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+        font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.06em">
+        <span id="posture-dot" style="width:5px;height:5px;border-radius:50%;background:#4edea3;animation:pulse 2s infinite;display:inline-block"></span>
+        <span id="posture-label">Standard Posture</span>
+      </div>
+      <span id="clock" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#414755"></span>
+    </div>
+  </header>
 
-    <!-- TAB 1: OVERVIEW DASHBOARD (Active by default now) -->
-    <div id="tab-overview" class="tab-content tab-animate space-y-10">
-        <section class="glass-panel rounded-lg p-8 border-l-4 border-[var(--accent-cyan)] flex flex-col md:flex-row justify-between items-center gap-6">
-            <div>
-                <h2 class="font-headline-md text-headline-md text-[var(--text-white)] mb-1">Active Scrubbing Node Matrix</h2>
-                <p class="text-[var(--text-muted)] text-body-md">Kalki Core asynchronous request pipeline metrics.</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="h-3.5 w-3.5 rounded-full bg-[var(--accent-emerald)] animate-pulse"></span>
-                <span class="font-code-block text-ui-label-sm tracking-widest text-[var(--accent-emerald)]">EDGE SYNC ACTIVE</span>
-            </div>
-        </section>
+  <div id="content">
 
-        <!-- Dynamic Statistics Row -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div class="glass-panel rounded-lg p-8 relative overflow-hidden group hover:border-[var(--accent-cyan)]/30 transition-all border-b border-[var(--accent-cyan)]/10">
-                <div class="absolute -right-4 -top-4 text-[var(--text-muted)]/5 font-bold text-6xl pointer-events-none font-code-block">ING</div>
-                <p class="font-code-block text-ui-label-sm text-[var(--text-muted)]/60 uppercase">Scanned Requests</p>
-                <h3 id="stat-ingress" class="font-display-lg text-4xl text-[var(--text-white)] font-bold my-2">1,524</h3>
-                <p class="font-code-block text-[11px] text-[var(--accent-cyan)] flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[12px]">trending_up</span> 99.98% THROUGHPUT
-                </p>
-            </div>
-            <div class="glass-panel rounded-lg p-8 relative overflow-hidden group hover:border-[var(--accent-crimson)]/30 transition-all border-b border-[var(--accent-crimson)]/20">
-                <div class="absolute -right-4 -top-4 text-[var(--text-muted)]/5 font-bold text-6xl pointer-events-none font-code-block">BLK</div>
-                <p class="font-code-block text-ui-label-sm text-[var(--text-muted)]/60 uppercase">Mitigation Drops</p>
-                <h3 id="stat-blocked" class="font-display-lg text-4xl text-[var(--accent-crimson)] font-bold my-2">0</h3>
-                <p class="font-code-block text-[11px] text-[var(--text-muted)]/70">REALTIME PACKET SCRUBBING</p>
-            </div>
-            <div class="glass-panel rounded-lg p-8 relative overflow-hidden group hover:border-[var(--accent-emerald)]/30 transition-all border-b border-[var(--accent-emerald)]/10">
-                <div class="absolute -right-4 -top-4 text-[var(--text-muted)]/5 font-bold text-6xl pointer-events-none font-code-block">SIG</div>
-                <p class="font-code-block text-ui-label-sm text-[var(--text-muted)]/60 uppercase">Active Signatures</p>
-                <h3 id="stat-rules" class="font-display-lg text-4xl text-[var(--accent-emerald)] font-bold my-2">4</h3>
-                <p class="font-code-block text-[11px] text-[var(--accent-emerald)] flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[12px]">verified</span> HOT-PATCH COMPILED
-                </p>
-            </div>
-            <div class="glass-panel rounded-lg p-8 relative overflow-hidden group hover:border-[var(--accent-amber)]/30 transition-all border-b border-[var(--accent-amber)]/10">
-                <div class="absolute -right-4 -top-4 text-[var(--text-muted)]/5 font-bold text-6xl pointer-events-none font-code-block">LAT</div>
-                <p class="font-code-block text-ui-label-sm text-[var(--text-muted)]/60 uppercase">System Latency</p>
-                <h3 id="stat-latency" class="font-display-lg text-4xl text-[var(--accent-amber)] font-bold my-2">24 ms</h3>
-                <p class="font-code-block text-[11px] text-[var(--accent-amber)] flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[12px]">bolt</span> NON-BLOCKING CORE
-                </p>
-            </div>
+<!-- ═══════════════════════ DASHBOARD ═══════════════════════ -->
+<div id="sec-dashboard" class="sec show">
+
+  <!-- Metrics -->
+  <div class="metrics fadein">
+    <div class="mc">
+      <div class="mc-lbl">Total Blocked <span class="material-symbols-outlined" style="color:#ff003c;font-variation-settings:'FILL' 1">block</span></div>
+      <div class="mc-val" style="color:#ff003c" id="m-blocked">—</div>
+      <div class="mc-sub">threats neutralized</div>
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">Total Ingress <span class="material-symbols-outlined" style="color:#adc6ff;font-variation-settings:'FILL' 1">swap_vert</span></div>
+      <div class="mc-val" style="color:#adc6ff" id="m-ingress">—</div>
+      <div class="mc-sub">requests inspected</div>
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">Active Rules <span class="material-symbols-outlined" style="color:#4edea3;font-variation-settings:'FILL' 1">security</span></div>
+      <div class="mc-val" style="color:#4edea3" id="m-rules">—</div>
+      <div class="mc-sub">signatures loaded</div>
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">SQLi / XSS <span class="material-symbols-outlined" style="color:#ffb95f;font-variation-settings:'FILL' 1">bug_report</span></div>
+      <div class="mc-val" style="color:#ffb95f"><span id="m-sqli">—</span><span style="color:#414755;font-size:16px"> / </span><span id="m-xss">—</span></div>
+      <div class="mc-sub">injection attempts</div>
+    </div>
+  </div>
+
+  <!-- Globe + Right Panel -->
+  <div class="globe-grid fadein">
+    <!-- Holographic Globe -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title">
+          <span class="material-symbols-outlined" style="color:#ff003c;font-variation-settings:'FILL' 1">public</span>
+          Global Threat Map
         </div>
-
-        <!-- 3D Globe Visualization Panel + Real-time Gauges Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            <!-- 3D Holographic Globe (7 columns) -->
-            <div class="lg:col-span-7 glass-panel rounded-lg p-8 relative overflow-hidden flex flex-col justify-between min-h-[480px]">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none z-10"></div>
-                <div class="absolute top-8 left-8 z-20">
-                    <h3 class="font-headline-md text-white text-[16px] tracking-tight flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-[#20948b] animate-pulse"></span>
-                        GEOSPATIAL INGRESS TRAFFIC SHIELD
-                    </h3>
-                    <p class="text-[var(--text-muted)] text-[11px] font-code-block uppercase tracking-wider">Holographic 3D Inbound Scrubbing Grid</p>
-                </div>
-
-                <!-- Threat Alert Banner -->
-                <div id="alert-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[60] bg-[var(--accent-crimson)]/90 backdrop-blur text-white px-6 py-2 rounded-full font-code-block text-ui-label-sm shadow-[0_0_20px_var(--accent-crimson)] font-bold flex items-center gap-3 w-max">
-                    <span class="material-symbols-outlined animate-ping text-[18px]">warning</span>
-                    <span>CRITICAL THREAT DETECTED FROM IP <span id="alert-ip" class="text-white/80"></span></span>
-                </div>
-
-                <!-- Three.js Canvas Container -->
-                <div id="globe-container" class="w-full h-80 lg:h-96 flex items-center justify-center relative cursor-grab active:cursor-grabbing">
-                    <canvas id="globe-canvas" class="w-full h-full outline-none"></canvas>
-
-                    <!-- Overlay telemetry grid -->
-                    <div class="absolute bottom-8 left-8 z-20 font-code-block text-[9px] text-[#20948b]/60 glass-panel border border-white/5 p-3 rounded">
-                        <div>TARGET_NODE: WASHINGTON_DC [KALKI_CORE]</div>
-                        <div>ACTIVE_VECTORS: <span class="text-[#ff5a09]">SQLi, XSS, RFI</span></div>
-                        <div>SCAN_POSTURE: <span id="globe-posture-text" class="text-emerald-400">STANDARD_POSTURE</span></div>
-                    </div>
-
-                    <!-- Floating Live Ingress Threat Radar HUD Overlay -->
-                    <div class="absolute top-8 right-8 z-20 w-44 max-h-[170px] glass-panel border border-[#ff5a09]/20 p-2.5 rounded flex flex-col justify-between hidden md:flex">
-                        <div class="border-b border-[#ff5a09]/30 pb-1 mb-1.5 flex items-center justify-between font-code-block text-[8px] text-[#ff5a09] tracking-wider uppercase font-bold">
-                            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-[#ff5a09] rounded-full animate-ping"></span>THREAT RADAR</span>
-                        </div>
-                        <div id="radar-logs" class="flex-1 overflow-y-auto space-y-1 text-[7px] font-code-block text-white/80 scrollbar-none pr-1 max-h-[130px]">
-                            <div class="text-[#20948b]/50">[SYSTEM_INIT] Monitoring ingress...</div>
-                        </div>
-                    </div>
-
-                    <!-- Tech Ring Overlays -->
-                    <div class="absolute w-40 h-40 border border-[#20948b]/10 rounded-full animate-spin pointer-events-none" style="animation-duration: 20s;"></div>
-                    <div class="absolute w-64 h-64 border border-[#ff5a09]/5 rounded-full animate-spin pointer-events-none" style="animation-duration: 35s; animation-direction: reverse;"></div>
-
-                    <!-- Blueprint Drafting Corners -->
-                    <div class="absolute top-8 left-8 w-4 h-4 border-t border-l border-[#20948b]/30 pointer-events-none"></div>
-                    <div class="absolute top-8 right-8 w-4 h-4 border-t border-r border-[#20948b]/30 pointer-events-none"></div>
-                    <div class="absolute bottom-8 left-8 w-4 h-4 border-b border-l border-[#20948b]/30 pointer-events-none"></div>
-                    <div class="absolute bottom-8 right-8 w-4 h-4 border-b border-r border-[#20948b]/30 pointer-events-none"></div>
-
-                    <!-- Lat/Lng ticks and grids (Blueprint Scale Markers) -->
-                    <div class="absolute top-1/2 left-3 -translate-y-1/2 flex flex-col gap-6 text-[7px] font-code-block text-[#20948b]/30 pointer-events-none text-left">
-                        <span>+60°N</span>
-                        <span>+30°N</span>
-                        <span>0°EQ</span>
-                        <span>-30°S</span>
-                        <span>-60°S</span>
-                    </div>
-
-                    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-8 text-[7px] font-code-block text-[#20948b]/30 pointer-events-none whitespace-nowrap">
-                        <span>120°W</span>
-                        <span>60°W</span>
-                        <span>0°MER</span>
-                        <span>60°E</span>
-                        <span>120°E</span>
-                    </div>
-                </div>
-
-                <div class="z-20 border-t border-[var(--border-light)] pt-4 flex justify-between items-center text-[10px] font-code-block text-[var(--text-muted)]/40">
-                    <span>VOLUMETRIC GLOBAL ATTACK MAP v2.5</span>
-                    <span class="text-[#20948b]">ENGINE SHIELD: STABLE</span>
-                </div>
-            </div>
-
-            <!-- Real-time HUD Gauges + Live Requests Chart (5 columns) -->
-            <div class="lg:col-span-5 glass-panel rounded-lg p-8 flex flex-col justify-between min-h-[480px]">
-                <div class="space-y-6">
-                    <div>
-                        <h3 class="font-headline-md text-[var(--text-white)] text-[16px] tracking-tight">Real-time Inspection Node Stream</h3>
-                        <p class="text-[var(--text-muted)] text-[11px] font-code-block uppercase tracking-wider">Core Telemetry & Digital Gauges</p>
-                    </div>
-
-                    <!-- Real-time digital gauges grid -->
-                    <div class="grid grid-cols-2 gap-6">
-                        <!-- CPU -->
-                        <div class="bg-[var(--bg-code)] border border-[var(--border-light)] p-3 rounded">
-                            <p class="font-code-block text-[9px] text-[var(--text-muted)]/60 uppercase">Scrubbing CPU Load</p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span id="hud-cpu" class="font-code-block text-[15px] text-[var(--accent-cyan)] font-bold">12.4%</span>
-                                <div class="flex-1 h-1.5 bg-[var(--border-light)] rounded-full overflow-hidden">
-                                    <div id="hud-cpu-bar" class="h-full bg-[var(--accent-cyan)] rounded-full transition-all duration-300" style="width: 12%;"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- RAM -->
-                        <div class="bg-[var(--bg-code)] border border-[var(--border-light)] p-3 rounded">
-                            <p class="font-code-block text-[9px] text-[var(--text-muted)]/60 uppercase">RAM Utilization</p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span id="hud-ram" class="font-code-block text-[15px] text-[var(--accent-cyan)] font-bold">245 MB</span>
-                                <div class="flex-1 h-1.5 bg-[var(--border-light)] rounded-full overflow-hidden">
-                                    <div id="hud-ram-bar" class="h-full bg-[var(--accent-cyan)] rounded-full transition-all duration-300" style="width: 24%;"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Speed -->
-                        <div class="bg-[var(--bg-code)] border border-[var(--border-light)] p-3 rounded">
-                            <p class="font-code-block text-[9px] text-[var(--text-muted)]/60 uppercase">Inbound Traffic Speed</p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span id="hud-traffic" class="font-code-block text-[15px] text-[var(--accent-amber)] font-bold">1.45 Gbps</span>
-                                <div class="flex-1 h-1.5 bg-[var(--border-light)] rounded-full overflow-hidden">
-                                    <div id="hud-traffic-bar" class="h-full bg-[var(--accent-amber)] rounded-full transition-all duration-300" style="width: 15%;"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Reqs -->
-                        <div class="bg-[var(--bg-code)] border border-[var(--border-light)] p-3 rounded">
-                            <p class="font-code-block text-[9px] text-[var(--text-muted)]/60 uppercase">Ingress Requests/sec</p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span id="hud-reqs" class="font-code-block text-[15px] text-[var(--accent-emerald)] font-bold">48 req/s</span>
-                                <div class="flex-1 h-1.5 bg-[var(--border-light)] rounded-full overflow-hidden">
-                                    <div id="hud-reqs-bar" class="h-full bg-[var(--accent-emerald)] rounded-full transition-all duration-300" style="width: 24%;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Live Requests/sec Graph -->
-                    <div>
-                        <p class="font-code-block text-[10px] text-[var(--text-muted)]/60 uppercase mb-2">Ingress Load Trend (Requests/sec)</p>
-                        <div class="h-28 w-full bg-[var(--bg-code)] border border-[var(--border-light)] rounded relative flex items-end">
-                            <svg id="live-chart-svg" class="w-full h-full text-[#20948b]/10" viewBox="0 0 100 40" preserveAspectRatio="none">
-                                <path id="live-chart-path" fill="currentColor" d="M 0 40 L 100 40 Z"></path>
-                                <path id="live-chart-line" fill="none" stroke="#20948b" stroke-width="1.5" d=""></path>
-                            </svg>
-                            <span class="absolute right-2 top-1 font-code-block text-[8px] text-[#20948b] uppercase">Live Grid</span>
-                        </div>
-                    </div>
-
-                    <!-- Threat vectors ratio -->
-                    <div class="flex justify-between items-center text-ui-label-sm font-code-block text-[11px] border-t border-[var(--border-light)] pt-4">
-                        <span class="flex items-center gap-1.5 text-[var(--accent-cyan)]"><span class="w-2 h-2 rounded-full bg-[var(--accent-cyan)]"></span> SQLi: <span id="label-sqli-count">0</span></span>
-                        <span class="flex items-center gap-1.5 text-[var(--accent-crimson)]"><span class="w-2 h-2 rounded-full bg-[var(--accent-crimson)]"></span> XSS: <span id="label-xss-count">0</span></span>
-                        <span class="flex items-center gap-1.5 text-[var(--accent-amber)]"><span class="w-2 h-2 rounded-full bg-[var(--accent-amber)]"></span> Other: <span id="label-other-count">0</span></span>
-                    </div>
-                </div>
-
-                <div class="border-t border-[var(--border-light)] pt-4 flex justify-between items-center text-[10px] font-code-block text-[var(--text-muted)]/40 mt-4">
-                    <span>PACKET INJECTION REGISTRY</span>
-                    <span class="text-[var(--accent-cyan)]">SIEM_SYNC: OK</span>
-                </div>
-            </div>
+        <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#ff003c;animation:blink 1.5s infinite">● LIVE</span>
+      </div>
+      <div id="globe-wrap">
+        <canvas id="globe-canvas"></canvas>
+      </div>
+      <div style="padding:10px 18px;display:flex;gap:18px;border-top:1px solid rgba(255,255,255,0.06)">
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0">
+          <span style="width:7px;height:7px;border-radius:50%;background:#ff003c;display:inline-block;box-shadow:0 0 6px #ff003c"></span>Threat Origin
         </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0">
+          <span style="width:7px;height:7px;border-radius:50%;background:#adc6ff;display:inline-block;box-shadow:0 0 6px #adc6ff"></span>Protected Node
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0">
+          <span style="width:7px;height:7px;border-radius:50%;background:#4edea3;display:inline-block;box-shadow:0 0 6px #4edea3"></span>Clean Traffic
+        </div>
+      </div>
     </div>
 
-
-    <!-- TAB 2: THREAT INTEL / FORENSIC LOG -->
-    <div id="tab-threat-intel" class="tab-content tab-animate hidden space-y-10">
-        <!-- Advanced Search & Filter HUD -->
-        <div class="glass-panel rounded-xl p-8 shadow-[0_0_15px_var(--accent-cyan-glow)] flex flex-wrap items-end gap-8">
-            <div class="flex flex-col gap-2 min-w-[200px]">
-                <label class="font-code-block text-ui-label-sm text-[var(--text-muted)]/70 uppercase tracking-wider">Date Range [UTC]</label>
-                <div class="relative group">
-                    <input class="w-full bg-[var(--input-bg)] border-b border-[var(--accent-cyan)]/40 focus:border-[var(--accent-cyan)] focus:ring-0 text-[var(--text-primary)] font-code-block text-code-block px-3 py-2 transition-all outline-none rounded-t-sm" type="text" value="Last 24 Hours"/>
-                    <span class="material-symbols-outlined absolute right-2.5 top-2.5 text-[var(--text-muted)] text-sm pointer-events-none">calendar_today</span>
-                </div>
-            </div>
-            <div class="flex flex-col gap-2 min-w-[180px]">
-                <label class="font-code-block text-ui-label-sm text-[var(--text-muted)]/70 uppercase tracking-wider">Threat Category</label>
-                <select id="filter-category" onchange="applyFilters()" class="w-full bg-[var(--input-bg)] border-b border-[var(--accent-cyan)]/40 focus:border-[var(--accent-cyan)] focus:ring-0 text-[var(--text-primary)] font-code-block text-code-block px-3 py-2 appearance-none cursor-pointer rounded-t-sm">
-                    <option value="ALL">ALL VECTORS</option>
-                    <option value="SQLi">SQLi (Injection)</option>
-                    <option value="XSS">XSS (Cross-Site)</option>
-                    <option value="Anomalous">Anomalous (Rate limit/Bot)</option>
-                </select>
-            </div>
-            <div class="flex-1 flex flex-col gap-2 min-w-[240px]">
-                <label class="font-code-block text-ui-label-sm text-[var(--text-muted)]/70 uppercase tracking-wider">Search Forensic Metadata</label>
-                <div class="relative">
-                    <input id="filter-search" oninput="applyFilters()" class="w-full bg-[var(--input-bg)] border border-[var(--input-border)] border-b-[var(--accent-cyan)] focus:border-[var(--accent-cyan)] focus:ring-0 text-[var(--text-primary)] font-code-block text-code-block px-4 py-2 transition-all outline-none rounded-t-sm" placeholder="Search IP address, URI, or payload content..." type="text"/>
-                    <span class="material-symbols-outlined absolute right-3 top-2.5 text-[var(--accent-cyan)]/60">search</span>
-                </div>
-            </div>
-            <button onclick="exportTelemetry()" class="bg-[var(--accent-cyan)]/10 border border-[var(--accent-cyan)]/40 text-[var(--accent-cyan)] font-code-block text-ui-label-sm px-6 py-2.5 rounded hover:bg-[var(--accent-cyan)]/20 transition-all uppercase tracking-widest flex items-center gap-2">
-                <span class="material-symbols-outlined text-[16px]">ios_share</span> Export Json
-            </button>
+    <!-- Right Panel -->
+    <div class="rpanel">
+      <!-- Traffic Chart -->
+      <div class="card" style="padding:16px;flex:1">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:6px">
+            <span class="material-symbols-outlined" style="font-size:14px;color:#adc6ff">show_chart</span>Traffic
+          </div>
+          <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#414755">req/min</span>
         </div>
-
-        <!-- Forensic Data Grid -->
-        <div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[900px]">
-                    <thead class="bg-[var(--hover-overlay)] border-b border-[var(--border-cyan)]">
-                        <tr>
-                            <th class="px-8 py-5 font-code-block text-ui-label-sm text-[var(--text-muted)] uppercase tracking-widest">Status</th>
-                            <th class="px-8 py-5 font-code-block text-ui-label-sm text-[var(--text-muted)] uppercase tracking-widest">UTC Timestamp</th>
-                            <th class="px-8 py-5 font-code-block text-ui-label-sm text-[var(--text-muted)] uppercase tracking-widest">Threat Node IP</th>
-                            <th class="px-8 py-5 font-code-block text-ui-label-sm text-[var(--text-muted)] uppercase tracking-widest">Vector Profile</th>
-                            <th class="px-8 py-5 font-code-block text-ui-label-sm text-[var(--text-muted)] uppercase tracking-widest">Target URI</th>
-                            <th class="px-8 py-5 font-code-block text-ui-label-sm text-[var(--text-muted)] uppercase tracking-widest">Mitigation</th>
-                            <th class="px-8 py-5 font-code-block text-ui-label-sm text-[var(--text-muted)] uppercase tracking-widest text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="alerts-tbody" class="divide-y divide-[var(--border-light)] font-code-block text-code-block">
-                        <!-- Loaded dynamically -->
-                    </tbody>
-                </table>
-            </div>
-            <div class="bg-[var(--bg-surface-low)]/60 px-8 py-5 flex justify-between items-center border-t border-[var(--border-light)]">
-                <span id="metrics-text" class="font-code-block text-[11px] text-[var(--text-muted)] uppercase">Loading telemetry indexes...</span>
-                <div class="flex gap-2">
-                    <button class="w-8 h-8 flex items-center justify-center border border-[var(--border-cyan)] text-[var(--text-muted)] hover:text-[var(--accent-cyan)] rounded transition-colors"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
-                    <button class="w-8 h-8 flex items-center justify-center border border-[var(--border-cyan)] text-[var(--text-muted)] hover:text-[var(--accent-cyan)] rounded transition-colors"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
-                </div>
-            </div>
+        <div class="chart-bars" id="traffic-chart">
+          <div class="cbar" style="height:40%;background:rgba(173,198,255,0.3)"></div>
+          <div class="cbar" style="height:65%;background:rgba(173,198,255,0.4)"></div>
+          <div class="cbar" style="height:45%;background:rgba(173,198,255,0.3)"></div>
+          <div class="cbar" style="height:80%;background:rgba(255,0,60,0.45)"></div>
+          <div class="cbar" style="height:55%;background:rgba(78,222,163,0.35)"></div>
+          <div class="cbar" style="height:90%;background:rgba(255,0,60,0.5)"></div>
+          <div class="cbar" style="height:60%;background:rgba(173,198,255,0.35)"></div>
+          <div class="cbar" style="height:100%;background:rgba(255,0,60,0.55)"></div>
+          <div class="cbar" style="height:40%;background:rgba(173,198,255,0.3)"></div>
+          <div class="cbar" style="height:70%;background:rgba(173,198,255,0.4)"></div>
         </div>
+      </div>
+      <!-- Posture -->
+      <div class="card" style="padding:16px">
+        <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:6px">
+          <span class="material-symbols-outlined" style="font-size:14px;color:#adc6ff">tune</span>Mitigation Posture
+        </div>
+        <div class="posture-btns" id="posture-btns">
+          <button class="pb" onclick="setPosture('Monitor Only')"><span class="pb-dot" style="background:#ffb95f"></span>Monitor Only</button>
+          <button class="pb active" onclick="setPosture('Standard Posture')"><span class="pb-dot" style="background:#4edea3"></span>Standard Posture</button>
+          <button class="pb" onclick="setPosture('Under Attack')"><span class="pb-dot" style="background:#ff003c"></span>Under Attack</button>
+        </div>
+      </div>
     </div>
+  </div>
 
-
-    <!-- TAB 3: RULE ENGINE -->
-    <div id="tab-rule-engine" class="tab-content tab-animate hidden space-y-10">
-        <!-- Global Mitigation State -->
-        <section class="glass-panel rounded-lg p-8 border-l-4 border-[var(--accent-cyan)] flex flex-col md:flex-row justify-between items-center gap-6">
-            <div>
-                <h2 class="font-headline-md text-headline-md text-[var(--text-white)] mb-1">Global Mitigation State</h2>
-                <p class="text-[var(--text-muted)] text-body-md">Real-time adaptive WAF mitigation postures.</p>
-            </div>
-            <div class="flex bg-[var(--bg-surface-low)] p-1.5 rounded-lg border border-[var(--border-light)]" id="posture-btn-group">
-                <button onclick="setPosture('Monitor Only')" id="btn-posture-monitor" class="px-8 py-2.5 font-code-block text-ui-label-sm uppercase tracking-tighter text-[var(--text-muted)] hover:text-[var(--text-white)] transition-all rounded">Monitor Only</button>
-                <button onclick="setPosture('Standard Posture')" id="btn-posture-standard" class="px-8 py-2.5 font-code-block text-ui-label-sm uppercase tracking-tighter text-[var(--text-muted)] hover:text-[var(--text-white)] transition-all rounded">Standard Posture</button>
-                <button onclick="setPosture('Under Attack')" id="btn-posture-attack" class="px-8 py-2.5 font-code-block text-ui-label-sm uppercase tracking-tighter text-[var(--text-muted)] hover:text-[var(--text-white)] transition-all rounded">Under Attack</button>
-            </div>
-        </section>
-
-        <div class="grid grid-cols-1 xl:grid-cols-12 gap-10 items-start">
-            <!-- Custom Heuristics Builder -->
-            <section class="xl:col-span-5 space-y-10">
-                <div class="glass-panel rounded-lg overflow-hidden flex flex-col">
-                    <div class="px-6 py-4 border-b border-[var(--border-cyan)] flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[var(--accent-cyan)]">edit_square</span>
-                            <h3 class="font-headline-md text-[var(--text-white)]">Custom Signature Profiles</h3>
-                        </div>
-                        <div class="flex gap-2">
-                            <span class="w-2 h-2 rounded-full bg-[var(--accent-cyan)] animate-pulse"></span>
-                            <span class="font-code-block text-[10px] text-[var(--accent-cyan)]/80">SANDBOX READY</span>
-                        </div>
-                    </div>
-                    <form id="compile-rule-form" onsubmit="compileSignature(event)" class="p-8 space-y-6">
-                        <div>
-                            <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Signature Identifier</label>
-                            <input id="rule-identifier" required class="w-full bg-transparent border-b border-[var(--accent-cyan)]/50 focus:border-[var(--accent-cyan)] focus:ring-0 text-[var(--text-primary)] font-code-block p-2 outline-none transition-all" type="text" value="X-CSRF-Bypass-Attempt"/>
-                        </div>
-                        <div>
-                            <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Regex Logic Pattern</label>
-                            <div class="relative">
-                                <textarea id="rule-pattern" oninput="runSandboxTest()" required class="w-full bg-[var(--bg-code)] border border-[var(--border-cyan)] rounded-sm font-code-block text-code-block text-[var(--text-primary)] p-4 focus:border-[var(--accent-cyan)] outline-none resize-none" rows="3">/(?:admin|root|system).*?(?:rm|sh|bash|chmod|nc)/gi</textarea>
-                                <div class="absolute top-2 right-2 flex gap-1">
-                                    <div class="w-2 h-2 rounded-full bg-white/20"></div>
-                                    <div class="w-2 h-2 rounded-full bg-white/20"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Execution Action</label>
-                                <select id="rule-action" class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] text-[var(--text-primary)] rounded p-2 font-code-block focus:border-[var(--accent-cyan)] focus:ring-0">
-                                    <option value="Drop & Blacklist">Drop &amp; Blacklist</option>
-                                    <option value="JS Challenge">JS Challenge</option>
-                                    <option value="Log Payload Only">Log Payload Only</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Sandbox Testing Payload</label>
-                                <input id="sandbox-payload" oninput="runSandboxTest()" class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] text-[var(--text-primary)] rounded p-2 font-code-block focus:border-[var(--accent-cyan)] focus:ring-0 text-xs" type="text" placeholder="Type payload to test logic..."/>
-                            </div>
-                        </div>
-
-                        <!-- Test Sandbox Result Alert & Advanced Diagnostics -->
-                        <div class="space-y-2">
-                            <div id="sandbox-result-box" class="h-[44px] flex items-center justify-center bg-[var(--hover-overlay)] border border-[var(--border-cyan)] rounded text-[var(--text-muted)] font-code-block text-ui-label-sm transition-all">
-                                <span class="material-symbols-outlined mr-2 text-[18px]">biotech</span> TYPE TEST PAYLOAD ABOVE
-                            </div>
-                            <div id="sandbox-diagnostics" class="hidden p-3 bg-[var(--bg-code)] border border-[var(--border-cyan)]/10 rounded font-code-block text-[10px] text-[var(--text-muted)]/50 space-y-1.5 max-h-32 overflow-y-auto scrollbar-none select-text">
-                                <!-- Step-by-step telemetry diagnostics -->
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Severity Level</label>
-                                <select id="rule-severity" class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] text-[var(--text-primary)] rounded p-2 font-code-block focus:border-[var(--accent-cyan)] focus:ring-0">
-                                    <option value="Level 1">Level 1</option>
-                                    <option value="Level 2">Level 2</option>
-                                    <option value="Level 3">Level 3</option>
-                                    <option value="CRITICAL">CRITICAL</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Rule Classification</label>
-                                <select id="rule-category" class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] text-[var(--text-primary)] rounded p-2 font-code-block focus:border-[var(--accent-cyan)] focus:ring-0">
-                                    <option value="SQLi">SQL Injection</option>
-                                    <option value="XSS">XSS Vulnerability</option>
-                                    <option value="Custom">Custom Core Rule</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Description</label>
-                            <input id="rule-description" required class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] text-[var(--text-primary)] rounded p-2 font-code-block focus:border-[var(--accent-cyan)] focus:ring-0 text-xs" type="text" value="Blocks command shell execution attempts via dynamic user parameters."/>
-                        </div>
-
-                        <button id="btn-compile" type="submit" class="w-full py-4 bg-[var(--accent-cyan)] text-white font-code-block font-bold rounded-sm shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex justify-center items-center gap-3">
-                            <span class="material-symbols-outlined" id="compile-icon">publish</span> <span id="compile-text">COMPILE SIGNATURE</span>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Decorative Technical Data Card -->
-                <div class="glass-panel rounded-lg p-6 relative overflow-hidden h-48">
-                    <img class="absolute inset-0 w-full h-full object-cover opacity-25 mix-blend-overlay" data-alt="A high-tech server rack illuminated by glowing cyan and ultraviolet fiber optic cables in a data center." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwPygsbKAADfIh6ivRzulro5ipKQQ-41FdkGszaxuhVg8-9tfB9VFvpq3BqPTg7AMUYcHE9ryrWAdLSsc2AhyaHAuZrnfpy8CmH6gEcyFM1ad81U15Ht6QbvMtN8ZEHFVk3Rm0dvT4WLCFi6jkk6TAzvHSquB8095Rciq3l_XOSZyBFjGln_BIV-7UVH9Cnuu5xIftFymb1bE1-t49T44iLlv4ozSY7j7WFVwNKQnz70Hkn1djdn4dRYVfkMpuR-pgLZjX2h4AbCc"/>
-                    <div class="relative z-10 flex flex-col justify-between h-full">
-                        <div class="flex justify-between items-start">
-                            <h4 class="font-code-block text-ui-label-sm text-[var(--text-muted)]/40">ENGINE_THROUGHPUT</h4>
-                            <span class="text-[var(--accent-cyan)] font-code-block text-xs">99.98% ACCURACY</span>
-                        </div>
-                        <div class="flex items-end gap-1">
-                            <div class="w-1.5 h-8 bg-[var(--accent-cyan)]/20"></div>
-                            <div class="w-1.5 h-12 bg-[var(--accent-cyan)]/40"></div>
-                            <div class="w-1.5 h-16 bg-[var(--accent-cyan)]/60"></div>
-                            <div class="w-1.5 h-10 bg-[var(--accent-cyan)]/40"></div>
-                            <div class="w-1.5 h-14 bg-[var(--accent-cyan)]"></div>
-                            <div class="w-1.5 h-18 bg-[var(--accent-cyan)] shadow-[0_0_10px_var(--accent-cyan)]"></div>
-                            <div class="w-1.5 h-12 bg-[var(--accent-cyan)]/50"></div>
-                            <div class="w-1.5 h-8 bg-[var(--accent-cyan)]/20"></div>
-                            <div class="w-1.5 h-20 bg-[var(--accent-cyan)] shadow-[0_0_10px_var(--accent-cyan)]"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Active Rule Matrix -->
-            <section class="xl:col-span-7 glass-panel rounded-lg flex flex-col">
-                <div class="px-8 py-5 border-b border-[var(--border-cyan)] flex justify-between items-center bg-[var(--hover-overlay)]">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-[var(--accent-cyan)]">list_alt</span>
-                        <h3 class="font-headline-md text-[var(--text-white)]">Active Rule Matrix</h3>
-                    </div>
-                    <div id="rule-count-text" class="text-ui-label-sm font-code-block text-[var(--text-muted)]/40">TOTAL_POLICIES: --</div>
-                </div>
-                <div id="rule-matrix-container" class="divide-y divide-[var(--border-light)]">
-                    <!-- Rule cards loaded dynamically -->
-                </div>
-            </section>
-        </div>
+  <!-- Live Feed -->
+  <div class="card fadein">
+    <div class="card-hd">
+      <div class="card-title"><span class="material-symbols-outlined">radar</span>Live Threat Feed</div>
+      <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#4edea3;animation:blink 1.5s infinite">STREAMING</span>
     </div>
-
-
-    <!-- TAB 4: SETTINGS -->
-    <div id="tab-settings" class="tab-content tab-animate hidden grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-        <section class="xl:col-span-6 space-y-6">
-            <div class="glass-panel rounded-lg p-6 space-y-6">
-                <h3 class="font-headline-md text-[var(--text-white)] border-b border-[var(--border-cyan)] pb-3 flex items-center gap-3"><span class="material-symbols-outlined text-[var(--accent-cyan)]">settings</span>Engine Profile Parameters</h3>
-                <div>
-                    <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Upstream Server URL</label>
-                    <input id="setting-upstream" class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] rounded p-2 text-[var(--text-primary)] font-code-block focus:border-[var(--accent-cyan)] focus:ring-0 text-sm" type="text" value="http://upstream_app:8080"/>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Rate Limit Threshold</label>
-                        <input id="setting-rate-limit" class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] rounded p-2 text-[var(--text-primary)] font-code-block focus:border-[var(--accent-cyan)] focus:ring-0 text-sm" type="number" value="50"/>
-                    </div>
-                    <div>
-                        <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Rate Window (Secs)</label>
-                        <input class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] rounded p-2 text-[var(--text-muted)]/50 font-code-block focus:ring-0 text-sm cursor-not-allowed" disabled type="number" value="10"/>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">DB Connection Type</label>
-                        <input id="setting-db-type" class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] rounded p-2 text-[var(--accent-cyan)] font-code-block focus:ring-0 text-xs cursor-not-allowed" disabled type="text" value="Firestore (Active Schema)"/>
-                    </div>
-                    <div>
-                        <label class="font-code-block text-ui-label-sm text-[var(--text-muted)] block mb-2 uppercase">Node Port Binding</label>
-                        <input class="w-full bg-[var(--bg-surface-low)] border border-[var(--border-cyan)] rounded p-2 text-[var(--text-muted)]/50 font-code-block focus:ring-0 text-sm cursor-not-allowed" disabled type="text" value="0.0.0.0:8000"/>
-                    </div>
-                </div>
-                <button onclick="saveSettings()" class="w-full py-3 bg-[var(--accent-cyan)] text-white font-code-block font-bold rounded shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex justify-center items-center gap-2">
-                    <span class="material-symbols-outlined">save</span> SAVE ENGINE CONFIGURATION
-                </button>
-            </div>
-        </section>
-
-        <!-- Real-time Console Log Terminal -->
-        <section class="xl:col-span-6 glass-panel rounded-lg p-6 flex flex-col justify-between h-[450px]">
-            <div class="flex justify-between items-center border-b border-[var(--border-cyan)] pb-3">
-                <h3 class="font-headline-md text-[var(--text-white)] flex items-center gap-3"><span class="material-symbols-outlined text-[var(--accent-cyan)] animate-spin" style="animation-duration: 4s;">sync</span> Real-time Console Log</h3>
-                <span class="font-code-block text-[10px] text-[var(--accent-cyan)]/80 tracking-widest">SIEM_AGENT: STDOUT</span>
-            </div>
-            <div id="console-logs" class="flex-1 my-4 bg-[var(--bg-code)] border border-[var(--border-light)] rounded p-4 font-code-block text-[11px] text-[var(--accent-cyan)]/80 space-y-2 overflow-y-auto h-72 terminal-scroll">
-                <!-- Log streams appended here -->
-            </div>
-            <div class="flex justify-between items-center text-[10px] font-code-block text-[var(--text-muted)]/40">
-                <span>WAF CORE DEPLOYMENT STACK</span>
-                <span class="hover:text-[var(--accent-cyan)] cursor-pointer" onclick="document.getElementById('console-logs').innerHTML = ''">CLEAR CONSOLE</span>
-            </div>
-        </section>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Timestamp</th><th>Source IP</th><th>Category</th><th>URI</th><th>Action</th></tr></thead>
+        <tbody id="live-log"><tr><td colspan="5" style="text-align:center;color:#414755;padding:20px">Loading...</td></tr></tbody>
+      </table>
     </div>
+  </div>
 
-</main>
+</div><!-- /dashboard -->
 
-
-<!-- Holographic Payload Inspection Modal (Hidden by default) -->
-<div id="inspector-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
-    <div class="glass-panel w-full max-w-4xl max-h-[85vh] rounded-xl flex flex-col shadow-[0_0_50px_rgba(255,90,9,0.2)] border-t-2 border-t-[#ff5a09]">
-        <div class="px-6 py-4 flex justify-between items-center border-b border-[var(--border-cyan)]">
-            <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-[#ff5a09]" id="modal-title-icon">biotech</span>
-                <h2 class="font-headline-md text-headline-md text-[var(--text-white)] tracking-tight" id="modal-title">Kalki Payload Inspection</h2>
-            </div>
-            <button class="text-[var(--text-muted)] hover:text-[var(--text-white)]" onclick="closeInspector()"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        <div class="flex-1 overflow-y-auto p-6 bg-[var(--bg-body)] space-y-6">
-            <div>
-                <h4 class="font-code-block text-ui-label-sm text-[var(--accent-cyan)] uppercase mb-2">Request Context Metadata</h4>
-                <div class="grid grid-cols-2 gap-4 bg-[var(--hover-overlay)] border border-[var(--border-light)] rounded p-4 font-code-block text-xs text-[var(--text-muted)]/90">
-                    <div><span class="text-[var(--text-muted)]/40">Incident ID:</span> <span id="modal-meta-id" class="text-[var(--accent-cyan)]"></span></div>
-                    <div><span class="text-[var(--text-muted)]/40">Source IP:</span> <span id="modal-meta-ip" class="text-[var(--text-white)]"></span></div>
-                    <div><span class="text-[var(--text-muted)]/40">Timestamp:</span> <span id="modal-meta-time" class="text-[var(--text-white)]"></span></div>
-                    <div><span class="text-[var(--text-muted)]/40">Request URI:</span> <span id="modal-meta-uri" class="text-[var(--text-white)]"></span></div>
-                </div>
-            </div>
-            <div>
-                <h4 class="font-code-block text-ui-label-sm text-[var(--accent-cyan)] uppercase mb-2">Client User Agent Headers</h4>
-                <pre id="modal-headers" class="font-code-block text-code-block text-[var(--text-muted)]/80 bg-[var(--hover-overlay)] border border-[var(--border-light)] p-4 rounded text-xs whitespace-pre-wrap overflow-x-auto"></pre>
-            </div>
-            <div>
-                <h4 class="font-code-block text-ui-label-sm text-[var(--accent-cyan)] uppercase mb-2">Threat Payload Detection Analyzer</h4>
-                <div class="bg-[var(--bg-surface-lowest)] border border-[var(--border-light)] p-5 rounded-sm font-code-block text-code-block leading-relaxed relative">
-                    <pre id="modal-payload" class="text-[var(--text-primary)] whitespace-pre-wrap overflow-x-auto select-text"></pre>
-                </div>
-                <p class="mt-4 text-[#ff5a09] font-code-block text-[11px] uppercase flex items-center gap-2" id="modal-verdict">
-                    <span class="material-symbols-outlined text-xs">error</span> Pattern Matched: SQL_INJECTION_CLASS_A (TAUTOLOGY)
-                </p>
-            </div>
-        </div>
-        <div class="px-6 py-4 border-t border-[var(--border-cyan)] flex justify-end gap-4 bg-[var(--bg-surface-lowest)]/50">
-            <button class="px-6 py-2 border border-[var(--border-cyan)] text-[var(--text-primary)] hover:bg-[var(--hover-overlay)] transition-all font-code-block text-ui-label-sm uppercase rounded" onclick="closeInspector()">Close Inspector</button>
-            <button id="btn-jail-ip" class="px-6 py-2 bg-[#ff5a09]/20 border border-[#ff5a09] text-[#ff5a09] hover:bg-[#ff5a09]/30 transition-all font-code-block text-ui-label-sm uppercase flex items-center gap-2 rounded">
-                <span class="material-symbols-outlined text-sm">block</span> Jail Threat IP Address
-            </button>
-        </div>
+<!-- ═══════════════════════ RULES ═══════════════════════ -->
+<div id="sec-rules" class="sec">
+  <div class="card fadein" style="padding:20px">
+    <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:7px;margin-bottom:16px">
+      <span class="material-symbols-outlined" style="font-size:14px;color:#adc6ff">add_circle</span>New Signature Rule
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="fg"><label class="fl">Identifier</label><input class="fi" id="r-id" placeholder="e.g. Custom SQLi Block"/></div>
+      <div class="fg"><label class="fl">Regex Pattern</label><input class="fi" id="r-pat" placeholder="e.g. union\s+select" style="font-family:'JetBrains Mono',monospace"/></div>
+      <div class="fg"><label class="fl">Action</label>
+        <select class="fs" id="r-act"><option>Drop &amp; Blacklist</option><option>Log Payload Only</option><option>JS Challenge</option></select>
+      </div>
+      <div class="fg"><label class="fl">Category</label><input class="fi" id="r-cat" placeholder="SQLi / XSS / Custom"/></div>
+      <div class="fg"><label class="fl">Severity</label>
+        <select class="fs" id="r-sev"><option>Level 1</option><option>Level 2</option><option>Level 3</option><option>CRITICAL</option></select>
+      </div>
+      <div class="fg"><label class="fl">Description</label><input class="fi" id="r-desc" placeholder="Optional"/></div>
+    </div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
+      <button class="btn-p" onclick="createRule()">Deploy Rule</button>
+      <span id="rule-msg" style="font-size:11px;font-family:'JetBrains Mono',monospace;display:none"></span>
+    </div>
+  </div>
+  <div class="card fadein">
+    <div class="card-hd">
+      <div class="card-title"><span class="material-symbols-outlined">rule</span>Signature Registry</div>
+      <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0" id="rules-count">—</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Identifier</th><th>Category</th><th>Action</th><th>Blocks</th><th>Status</th><th></th></tr></thead>
+        <tbody id="rules-table"><tr><td colspan="7" style="text-align:center;color:#414755;padding:20px">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
-
-<!-- Footer -->
-<footer class="fixed bottom-0 left-0 w-full flex justify-between items-center px-6 py-2 z-50 glass-panel border-t border-[var(--border-light)]">
-    <p class="font-code-block text-ui-label-sm uppercase tracking-widest text-[var(--text-muted)]/40">SYSTEM CLOCK [UTC]: <span id="footer-clock">--:--:--</span></p>
-    <div class="flex gap-8">
-        <span class="font-code-block text-ui-label-sm uppercase tracking-widest text-[var(--accent-cyan)] cursor-pointer hover:opacity-80 transition-opacity">SECURE CONNECTION</span>
-        <span class="font-code-block text-ui-label-sm uppercase tracking-widest text-[var(--text-muted)]/40 cursor-pointer hover:text-[var(--accent-cyan)] transition-opacity">LATENCY: 24MS</span>
+<!-- ═══════════════════════ INCIDENTS ═══════════════════════ -->
+<div id="sec-incidents" class="sec">
+  <div class="card fadein">
+    <div class="card-hd">
+      <div class="card-title"><span class="material-symbols-outlined" style="color:#ff003c;font-variation-settings:'FILL' 1">warning</span>Security Incidents</div>
+      <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0" id="inc-count">—</span>
     </div>
-</footer>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Incident ID</th><th>Timestamp</th><th>Source IP</th><th>Category</th><th>URI</th><th>Action</th></tr></thead>
+        <tbody id="inc-table"><tr><td colspan="6" style="text-align:center;color:#414755;padding:20px">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SANDBOX ═══════════════════════ -->
+<div id="sec-sandbox" class="sec">
+  <div class="card fadein" style="padding:22px;max-width:640px">
+    <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:7px;margin-bottom:18px">
+      <span class="material-symbols-outlined" style="font-size:14px;color:#4edea3">science</span>Regex Sandbox
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><label class="fl">Regex Pattern</label><input class="fi" id="sb-pat" placeholder="union\s+select" style="font-family:'JetBrains Mono',monospace"/></div>
+      <div class="fg"><label class="fl">Test Payload</label>
+        <textarea class="fi" id="sb-pay" rows="3" placeholder="Paste suspicious payload here..." style="resize:none;font-family:'JetBrains Mono',monospace;font-size:12px"></textarea>
+      </div>
+      <button class="btn-p" style="align-self:flex-start" onclick="runSandbox()">Test Pattern</button>
+      <div id="sb-result" style="display:none;padding:14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ SETTINGS ═══════════════════════ -->
+<div id="sec-settings" class="sec">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:760px">
+    <div class="card fadein" style="padding:20px;grid-column:1/-1">
+      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:7px;margin-bottom:16px">
+        <span class="material-symbols-outlined" style="font-size:14px;color:#adc6ff">settings</span>Firewall Configuration
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div><div style="font-size:13px;font-weight:500">Deep Packet Inspection</div><div style="font-size:11px;color:#8b90a0;margin-top:2px">Inspect all request bodies and query strings</div></div>
+          <div class="tog on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div><div style="font-size:13px;font-weight:500">Geo-Blocking (RU/CN)</div><div style="font-size:11px;color:#8b90a0;margin-top:2px">Block traffic from high-risk regions</div></div>
+          <div class="tog" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div><div style="font-size:13px;font-weight:500">Rate Limiting</div><div style="font-size:11px;color:#8b90a0;margin-top:2px">50 req/10s per IP · 10 req/10s under attack</div></div>
+          <div class="tog on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0">
+          <div><div style="font-size:13px;font-weight:500">Upstream Proxy</div><div style="font-size:11px;color:#8b90a0;margin-top:2px" id="upstream-disp">—</div></div>
+          <span class="tag t-allowed">Active</span>
+        </div>
+      </div>
+    </div>
+    <div class="card fadein" style="padding:20px">
+      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.09em;margin-bottom:14px">Database Backend</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="material-symbols-outlined" style="color:#4edea3;font-size:22px;font-variation-settings:'FILL' 1">database</span>
+        <div><div style="font-size:14px;font-weight:600" id="db-disp">—</div><div style="font-size:11px;color:#8b90a0">Active storage backend</div></div>
+      </div>
+    </div>
+    <div class="card fadein" style="padding:20px">
+      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#8b90a0;text-transform:uppercase;letter-spacing:.09em;margin-bottom:14px">Engine Version</div>
+      <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;color:#adc6ff">v1.0.0</div>
+      <div style="font-size:11px;color:#8b90a0;margin-top:4px">KALKI WAF · Sudarshana Protocol</div>
+    </div>
+  </div>
+</div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
 
 <script>
-    // ─── FIREBASE CONFIGURATION ───────────────────────────────────────────────
-    // Initialize Firebase with your project credentials below.
-    // To use Firebase/Firestore:
-    //   1. Go to https://console.firebase.google.com -> Create a project
-    //   2. Register a web app -> copy the config object
-    //   3. Paste it below in the firebaseConfig object
-    //   4. Go to Firestore Database -> Create database (start in test mode)
-    //
-    // If Firebase is unavailable or the config is empty, the dashboard
-    // falls back to the REST API polling method (original behavior).
+// ─── Background Three.js Shield ───────────────────────────────────────
+(function(){
+  const c=document.getElementById('bg-canvas');
+  const s=new THREE.Scene(),cam=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,1000);
+  const r=new THREE.WebGLRenderer({canvas:c,antialias:true,alpha:true});
+  r.setSize(innerWidth,innerHeight); r.setPixelRatio(devicePixelRatio);
+  const shield=new THREE.Mesh(
+    new THREE.IcosahedronGeometry(5,2),
+    new THREE.MeshBasicMaterial({color:0x4b8eff,wireframe:true,transparent:true,opacity:0.07})
+  ); s.add(shield);
+  const pg=new THREE.BufferGeometry(),n=2000,pa=new Float32Array(n*3);
+  for(let i=0;i<n*3;i++) pa[i]=(Math.random()-.5)*28;
+  pg.setAttribute('position',new THREE.BufferAttribute(pa,3));
+  const pts=new THREE.Points(pg,new THREE.PointsMaterial({size:.011,color:0x4edea3,transparent:true,opacity:.3}));
+  s.add(pts); cam.position.z=13;
+  (function a(){requestAnimationFrame(a);shield.rotation.y+=.0007;shield.rotation.x+=.0003;pts.rotation.y-=.0002;r.render(s,cam)})();
+  window.addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();r.setSize(innerWidth,innerHeight)});
+})();
 
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
-    };
+// ─── Holographic Globe ────────────────────────────────────────────────
+(function(){
+  const wrap=document.getElementById('globe-wrap');
+  const canvas=document.getElementById('globe-canvas');
+  const W=()=>wrap.clientWidth, H=()=>wrap.clientHeight;
+  const scene=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(45,W()/H(),.1,100);
+  cam.position.set(0,0,2.8);
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(devicePixelRatio);
+  renderer.setSize(W(),H());
 
-    let firebaseAvailable = false;
-    let firestoreDb = null;
-    let firestoreUnsubscribers = [];
+  // Globe sphere with gradient color
+  const globe=new THREE.Mesh(
+    new THREE.SphereGeometry(1,64,64),
+    new THREE.MeshBasicMaterial({
+      color:0x0a1428,
+      transparent:true,
+      opacity:.9
+    })
+  );
+  scene.add(globe);
 
-    // Initialize Firebase if config has been provided
-    function initFirebase() {
-        try {
-            if (typeof firebase !== 'undefined' && firebaseConfig.projectId && firebaseConfig.projectId !== "YOUR_PROJECT_ID") {
-                firebase.initializeApp(firebaseConfig);
-                firestoreDb = firebase.firestore();
-                firebaseAvailable = true;
-                console.log('[FIREBASE] Firestore initialized successfully');
-                logConsole('Firebase Firestore real-time sync: CONNECTED');
-                return true;
-            } else {
-                console.log('[FIREBASE] Firebase config not set. Using REST API polling fallback.');
-                logConsole('Firebase Firestore: Not configured. Using REST API fallback.');
-                return false;
-            }
-        } catch (e) {
-            console.error('[FIREBASE] Initialization failed:', e);
-            logConsole('Firebase Firestore initialization: FAILED - ' + e.message);
-            return false;
-        }
+  // Holographic grid lines on sphere surface
+  const gridSize = 24;
+  const gridMaterial = new THREE.LineBasicMaterial({color:0x4b8eff,transparent:true,opacity:.15});
+  for(let i=0;i<gridSize;i++){
+    const lat = new THREE.CircleGeometry(1.001, 64);
+    lat.rotateX(i * Math.PI / gridSize - Math.PI/2);
+    const latLine = new THREE.LineLoop(lat, gridMaterial);
+    scene.add(latLine);
+    if(i>0){
+      const lon = new THREE.RingGeometry(1.001-0.001, 1.001+0.001, 64, 2, i * Math.PI / gridSize);
+      const lonLine = new THREE.LineLoop(lon, gridMaterial);
+      scene.add(lonLine);
     }
+  }
 
-    // ─── FIRESTORE REAL-TIME LISTENERS ────────────────────────────────────────
-    // Binds dashboard data streams directly to Firestore collections using
-    // onSnapshot for instant updates when data changes in the cloud.
+  // Wireframe overlay
+  const wf=new THREE.Mesh(
+    new THREE.SphereGeometry(1.002,32,32),
+    new THREE.MeshBasicMaterial({color:0xff003c,wireframe:true,transparent:true,opacity:.18})
+  ); scene.add(wf);
 
-    function setupFirestoreListeners() {
-        if (!firebaseAvailable || !firestoreDb) return;
+  // Atmosphere layers (multiple for glow effect)
+  const atmo1=new THREE.Mesh(
+    new THREE.SphereGeometry(1.06,32,32),
+    new THREE.MeshBasicMaterial({color:0x4b8eff,transparent:true,opacity:.08,side:THREE.BackSide})
+  ); scene.add(atmo1);
+  const atmo2=new THREE.Mesh(
+    new THREE.SphereGeometry(1.1,32,32),
+    new THREE.MeshBasicMaterial({color:0xff003c,transparent:true,opacity:.04,side:THREE.BackSide})
+  ); scene.add(atmo2);
+  const atmo3=new THREE.Mesh(
+    new THREE.SphereGeometry(1.14,32,32),
+    new THREE.MeshBasicMaterial({color:0x4edea3,transparent:true,opacity:.02,side:THREE.BackSide})
+  ); scene.add(atmo3);
 
-        // Clean up previous listeners
-        firestoreUnsubscribers.forEach(unsub => { try { unsub(); } catch(e) {} });
-        firestoreUnsubscribers = [];
+  // Convert lat/lon to 3D point on sphere
+  function ll2v(lat,lon,r=1.02){
+    const phi=(90-lat)*Math.PI/180, theta=(lon+180)*Math.PI/180;
+    return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(theta),r*Math.cos(phi),r*Math.sin(phi)*Math.sin(theta));
+  }
 
-        // 1. Listen to 'rules' collection for real-time rule updates
-        const rulesUnsub = firestoreDb.collection('rules').onSnapshot((snapshot) => {
-            const rules = [];
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                rules.push({
-                    rule_id: doc.id,
-                    identifier: data.identifier || 'Unknown',
-                    pattern: data.pattern || '',
-                    action: data.action || 'Log Payload Only',
-                    category: data.category || 'Custom',
-                    is_active: data.is_active === true || data.is_active === 1,
-                    blocks_count: data.blocks_count || 0,
-                    severity: data.severity || 'Level 2',
-                    description: data.description || ''
-                });
-            });
-            // Merge into telemetryData
-            telemetryData.rules = rules;
-            telemetryData.metrics.active_rules_count = rules.length;
-            renderRulesDOM();
-            updateMetricsDOM();
-            logConsole('[FIRESTORE] Rules collection synchronized (' + rules.length + ' rules)');
-        }, (error) => {
-            console.error('[FIRESTORE] Rules listener error:', error);
-            logConsole('FIRESTORE ERROR: Rules sync failed - ' + error.message);
-        });
-        firestoreUnsubscribers.push(rulesUnsub);
+  // City nodes [lat, lon, type]  type: 0=protected(blue), 1=threat(red), 2=clean(green)
+  const NODES=[
+    [40.7,-74.0,0],[51.5,-0.1,0],[48.8,2.3,0],[35.7,139.7,0],[1.3,103.8,0],
+    [19.1,72.9,0],[-33.9,151.2,0],[55.8,37.6,1],[39.9,116.4,1],[31.2,121.5,1],
+    [23.1,113.3,1],[37.5,127.0,0],[-23.5,-46.6,2],[52.5,13.4,2],[41.9,12.5,2],
+    [30.0,31.2,1],[6.5,3.4,1],[25.2,55.3,0],[43.7,-79.4,0],[34.0,-118.2,0],
+  ];
 
-        // 2. Listen to 'security_events' collection for real-time incident updates
-        // NOTE: Requires a Firestore composite index on 'timestamp' descending.
-        // Create it in Firebase Console: Firestore Database > Indexes > Add:
-        //   Collection: security_events, Field: timestamp, Order: Descending
-        // If the index is missing, the listener will log an error but other listeners continue.
-        const eventsUnsub = firestoreDb.collection('security_events')
-            .orderBy('timestamp', 'desc')
-            .limit(50)
-            .onSnapshot((snapshot) => {
-                const incidents = [];
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    let ts = data.timestamp;
-                    // Handle Firestore Timestamp objects
-                    if (ts && typeof ts === 'object' && ts.toDate) {
-                        ts = ts.toDate().toISOString().replace('T', ' ').substring(0, 19);
-                    } else if (ts && typeof ts === 'string') {
-                        ts = ts.replace('T', ' ').substring(0, 19);
-                    } else {
-                        ts = new Date().toISOString().replace('T', ' ').substring(0, 19);
-                    }
-                    incidents.push({
-                        incident_id: doc.id,
-                        timestamp: ts,
-                        source_ip: data.source_ip || '0.0.0.0',
-                        threat_category: data.threat_category || 'Anomalous',
-                        target_uri: data.target_uri || '/',
-                        mitigation_action: data.mitigation_action || 'Flagged',
-                        user_agent: data.user_agent || '',
-                        malicious_payload: data.malicious_payload || ''
-                    });
-                });
-                telemetryData.incidents = incidents;
-                filteredIncidents = [...incidents];
+  const dotGeo=new THREE.SphereGeometry(.018,8,8);
+  const mats={
+    0:new THREE.MeshBasicMaterial({color:0xadc6ff}),
+    1:new THREE.MeshBasicMaterial({color:0xff003c}),
+    2:new THREE.MeshBasicMaterial({color:0x4edea3}),
+  };
+  const nodePositions=[];
+  NODES.forEach(([lat,lon,type])=>{
+    const v=ll2v(lat,lon);
+    nodePositions.push({v,type});
+    const dot=new THREE.Mesh(dotGeo,mats[type]);
+    dot.position.copy(v);
+    scene.add(dot);
+    // Glow ring
+    const ring=new THREE.Mesh(
+      new THREE.RingGeometry(.022,.032,16),
+      new THREE.MeshBasicMaterial({color:type===1?0xff003c:type===0?0xadc6ff:0x4edea3,transparent:true,opacity:.4,side:THREE.DoubleSide})
+    );
+    ring.position.copy(v);
+    ring.lookAt(0,0,0);
+    scene.add(ring);
+  });
 
-                // Update metrics counts
-                telemetryData.metrics.total_blocked = incidents.filter(i => i.mitigation_action === 'Blocked').length;
-                telemetryData.metrics.sqli_count = incidents.filter(i => i.threat_category === 'SQLi').length;
-                telemetryData.metrics.xss_count = incidents.filter(i => i.threat_category === 'XSS').length;
-                telemetryData.metrics.anomalous_count = incidents.filter(i => i.threat_category === 'Anomalous').length;
+  // Store for live data arcs
+  const liveArcs = [];
+  const liveArcPool = [];
 
-                renderAlertsDOM();
-                logConsole('[FIRESTORE] Security events synced (' + incidents.length + ' events)');
-            }, (error) => {
-                console.error('[FIRESTORE] Events listener error:', error);
-                logConsole('FIRESTORE ERROR: Events sync failed - ' + error.message);
-            });
-        firestoreUnsubscribers.push(eventsUnsub);
+  // Function to create particle-based arc for live traffic
+  function createLiveArc(from, to, color, isThreat=true) {
+    const curve = new THREE.CubicBezierCurve3(
+      from,
+      from.clone().lerp(to, 0.33).multiplyScalar(1.3),
+      from.clone().lerp(to, 0.66).multiplyScalar(1.3),
+      to
+    );
+    const points = curve.getPoints(50);
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: isThreat ? 0.9 : 0.6,
+      linewidth: isThreat ? 3 : 2
+    });
+    const line = new THREE.Line(geometry, material);
+    return line;
+  }
 
-        // 3. Listen to 'mitigation_state' document for posture updates
-        const postureUnsub = firestoreDb.collection('mitigation_state').doc('global').onSnapshot((doc) => {
-            if (doc.exists) {
-                const data = doc.data();
-                if (data.posture) {
-                    telemetryData.metrics.posture = data.posture;
-                    updateMetricsDOM();
-                    updatePostureButtons(data.posture);
-                    logConsole('[FIRESTORE] Mitigation posture updated: ' + data.posture);
-                }
-            }
-        }, (error) => {
-            console.error('[FIRESTORE] Posture listener error:', error);
-        });
-        firestoreUnsubscribers.push(postureUnsub);
+  // Create particles along arc for "flowing" effect
+  function createArcParticles(from, to, color) {
+    const curve = new THREE.LineCurve3(from, to);
+    const points = curve.getPoints(30);
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.PointsMaterial({
+      color: color,
+      size: 0.02,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending
+    });
+    return new THREE.Points(geometry, material);
+  }
 
-        logConsole('[FIRESTORE] Real-time listeners established for rules, events, and posture.');
+  // Threat arc lines (red) from threat nodes to protected nodes
+  function makeArc(from,to,color,opacity){
+    const pts=[];
+    for(let i=0;i<=40;i++){
+      const t=i/40;
+      const v=new THREE.Vector3().lerpVectors(from,to,t);
+      v.normalize().multiplyScalar(1.02+Math.sin(Math.PI*t)*0.28);
+      pts.push(v);
     }
+    const geo=new THREE.BufferGeometry().setFromPoints(pts);
+    const mat=new THREE.LineBasicMaterial({color,transparent:true,opacity});
+    return new THREE.Line(geo,mat);
+  }
 
-    // ─── FIRESTORE WRITE OPERATIONS ───────────────────────────────────────────
-    // All user actions persist back to Firestore immediately.
+  const threatNodes=nodePositions.filter(n=>n.type===1);
+  const protectedNodes=nodePositions.filter(n=>n.type===0);
+  const arcLines=[];
+  threatNodes.forEach(tn=>{
+    const target=protectedNodes[Math.floor(Math.random()*protectedNodes.length)];
+    const line=makeArc(tn.v,target.v,0xff003c,.55);
+    scene.add(line);
+    arcLines.push({line,mat:line.material,phase:Math.random()*Math.PI*2});
+  });
+  // Clean traffic arcs (green, subtle)
+  nodePositions.filter(n=>n.type===2).forEach(cn=>{
+    const target=protectedNodes[Math.floor(Math.random()*protectedNodes.length)];
+    const line=makeArc(cn.v,target.v,0x4edea3,.25);
+    scene.add(line);
+    arcLines.push({line,mat:line.material,phase:Math.random()*Math.PI*2,clean:true});
+  });
 
-    async function firestoreSaveRule(ruleData) {
-        // Check Firebase availability first
-        if (!firebaseAvailable || !firestoreDb) {
-            console.warn('[FIRESTORE] Firebase not available, skipping save operation');
-            return false;
-        }
-        
-        try {
-            const ruleId = ruleData.rule_id || 'custom-' + Math.random().toString(36).substring(2, 10);
-            await firestoreDb.collection('rules').doc(ruleId).set({
-                identifier: ruleData.identifier,
-                pattern: ruleData.pattern,
-                action: ruleData.action,
-                category: ruleData.category,
-                is_active: ruleData.is_active !== undefined ? ruleData.is_active : true,
-                blocks_count: ruleData.blocks_count || 0,
-                severity: ruleData.severity || 'Level 2',
-                description: ruleData.description || ''
-            });
-            return true;
-        } catch (e) {
-            console.error('[FIRESTORE] Failed to save rule:', e);
-            // Show user-friendly error
-            showToast("Firestore Save Error", "Failed to save rule to Firestore. Changes may not persist.", "error");
-            return false;
-        }
+  // Global globe variables for live data updates
+  window.globeScene = {
+    scene: scene,
+    makeArc: null,
+    ll2v: ll2v,
+    protectedNodes: protectedNodes,
+    liveArcs: liveArcs
+  };
+  // Expose makeArc to global scope for live updates
+  window.globeScene.makeArc = makeArc;
+
+  let t=0;
+  (function animate(){
+    requestAnimationFrame(animate);
+    t+=.008;
+    globe.rotation.y+=.002; globe.rotation.x+=.0005;
+    wf.rotation.y-=.001; wf.rotation.x-=.0003;
+    atmo1.rotation.y+=.0008; atmo2.rotation.y-=.0005; atmo3.rotation.y+=.0003;
+    // Pulse atmosphere
+    atmo1.material.opacity=.06+.04*Math.sin(t*.5);
+    atmo2.material.opacity=.03+.02*Math.sin(t*.7);
+    atmo3.material.opacity=.015+.01*Math.sin(t*.9);
+    // Pulse arc opacity - threat arcs pulse more intensely
+    arcLines.forEach(a=>{
+      a.mat.opacity=a.clean
+        ? .2+.15*Math.sin(t+a.phase)  // Clean traffic: subtle pulse
+        : .5+.4*Math.sin(t*1.5+a.phase);  // Threat arcs: bright pulse
+    });
+    // Update live particles on arcs
+    liveArcs.forEach(arc => {
+      if (arc.userData.particles) {
+        arc.userData.offset = (arc.userData.offset || 0) + 0.02;
+        if (arc.userData.offset > 1) arc.userData.offset = 0;
+      }
+    });
+    renderer.render(scene,cam);
+  })();
+
+  const ro=new ResizeObserver(()=>{
+    renderer.setSize(W(),H());
+    cam.aspect=W()/H(); cam.updateProjectionMatrix();
+  });
+  ro.observe(wrap);
+})();
+
+// ─── Navigation ───────────────────────────────────────────────────────
+const SECS=['dashboard','rules','incidents','sandbox','settings'];
+const TITLES={dashboard:'Dashboard',rules:'Security Rules',incidents:'Incidents',sandbox:'Sandbox',settings:'Settings'};
+
+function nav(el){
+  const sec=el.dataset.sec;
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  SECS.forEach(s=>{
+    const el2=document.getElementById('sec-'+s);
+    el2.classList.remove('show');
+    el2.style.display='none';
+  });
+  const target=document.getElementById('sec-'+sec);
+  target.classList.add('show');
+  target.style.display='contents';
+  document.getElementById('page-title').textContent=TITLES[sec];
+  if(sec==='rules') loadRules();
+  if(sec==='incidents') loadIncidents();
+  if(window.innerWidth<700) document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSb(){
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// Show menu button on mobile
+if(window.innerWidth<700) document.getElementById('menu-btn').style.display='flex';
+window.addEventListener('resize',()=>{
+  document.getElementById('menu-btn').style.display=window.innerWidth<700?'flex':'none';
+});
+
+// ─── Clock ────────────────────────────────────────────────────────────
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false})},1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
+
+// ─── Traffic Chart Animation ──────────────────────────────────────────
+setInterval(()=>{
+  document.querySelectorAll('#traffic-chart .cbar').forEach(b=>{
+    const h=15+Math.random()*85;
+    b.style.height=h+'%';
+    b.style.background=h>70?'rgba(255,0,60,0.5)':h>50?'rgba(255,185,95,0.35)':'rgba(173,198,255,0.3)';
+  });
+},2800);
+
+// ─── API ──────────────────────────────────────────────────────────────
+async function api(path,opts={}){
+  const r=await fetch(path,opts);
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ─── Telemetry ────────────────────────────────────────────────────────
+async function loadTelemetry(){
+  try{
+    const d=await api('/api/v1/threat-intel/alerts');
+    const m=d.metrics||{};
+    document.getElementById('m-blocked').textContent=m.total_blocked??0;
+    document.getElementById('m-ingress').textContent=m.total_ingress??0;
+    document.getElementById('m-rules').textContent=m.active_rules_count??0;
+    document.getElementById('m-sqli').textContent=m.sqli_count??0;
+    document.getElementById('m-xss').textContent=m.xss_count??0;
+    document.getElementById('posture-label').textContent=m.posture??'Standard Posture';
+    document.getElementById('upstream-disp').textContent=m.upstream_url??'—';
+    document.getElementById('db-disp').textContent=m.db_type??'—';
+    syncPosture(m.posture);
+    renderFeed(d.incidents||[]);
+  }catch(e){console.error('Telemetry:',e)}
+}
+
+function catTag(cat){
+  if(!cat) return `<span class="tag t-other">—</span>`;
+  const c=cat.toUpperCase();
+  if(c==='SQLI') return `<span class="tag t-sqli">SQLi</span>`;
+  if(c==='XSS') return `<span class="tag t-xss">XSS</span>`;
+  return `<span class="tag t-rfi">${cat}</span>`;
+}
+function actTag(a){
+  if(!a) return `<span class="tag t-other">—</span>`;
+  if(a==='Blocked') return `<span class="tag t-blocked">Blocked</span>`;
+  if(a==='Flagged') return `<span class="tag t-flagged">Flagged</span>`;
+  return `<span class="tag t-allowed">${a}</span>`;
+}
+
+function getGeoFromIP(ip){
+  // Map IP ranges to approximate lat/lon for demo
+  const ipParts = ip.split('.').map(x => parseInt(x) || 0);
+  const ipNum = (ipParts[0] || 0) * 256 + (ipParts[1] || 0);
+  // Return geo coords based on IP for visualization
+  const lat = ((ipNum * 7) % 180) - 90;
+  const lon = ((ipNum * 13) % 360) - 180;
+  return [lat, lon];
+}
+
+function addLiveArc(incident){
+  const globe = window.globeScene;
+  if (!globe || !globe.makeArc || !globe.ll2v) return;
+  
+  // Get source location and create arc to nearest protected node
+  const [lat, lon] = getGeoFromIP(incident.source_ip);
+  const srcVec = globe.ll2v(lat, lon, 1.05);
+  
+  // Pick nearest target
+  const protectedNodes = globe.protectedNodes;
+  if (protectedNodes.length === 0) return;
+  
+  let minDist = 999, target = null;
+  protectedNodes.forEach(n => {
+    const d = srcVec.distanceTo(n.v);
+    if (d < minDist) { minDist = d; target = n.v; }
+  });
+  
+  if (target) {
+    const isThreat = incident.mitigation_action === 'Blocked' || incident.threat_category === 'SQLi' || incident.threat_category === 'XSS';
+    const color = isThreat ? 0xff003c : 0x4edea3;
+    const arc = globe.makeArc(srcVec, target, color, isThreat ? 0.8 : 0.4);
+    arc.userData = { type: incident.threat_category, created: Date.now() };
+    globe.scene.add(arc);
+    globe.liveArcs.push(arc);
+    
+    // Remove old arcs (keep max 20)
+    if (globe.liveArcs.length > 20) {
+      const old = globe.liveArcs.shift();
+      globe.scene.remove(old);
     }
+  }
+}
 
-    async function firestoreToggleRule(ruleId, isActive) {
-        // Check Firebase availability first
-        if (!firebaseAvailable || !firestoreDb) {
-            console.warn('[FIRESTORE] Firebase not available, skipping toggle operation');
-            return false;
-        }
-        
-        try {
-            await firestoreDb.collection('rules').doc(ruleId).update({ is_active: isActive });
-            return true;
-        } catch (e) {
-            console.error('[FIRESTORE] Failed to toggle rule:', e);
-            // Show user-friendly error
-            showToast("Firestore Toggle Error", "Failed to update rule status in Firestore.", "error");
-            return false;
-        }
+function renderFeed(incidents){
+  const tb=document.getElementById('live-log');
+  if(!incidents.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#414755;padding:20px">No incidents recorded</td></tr>';return}
+  tb.innerHTML=incidents.slice(0,15).map(i=>`
+    <tr>
+      <td class="dim">${(i.timestamp||'').toString().slice(0,19)}</td>
+      <td style="color:#adc6ff">${i.source_ip||'—'}</td>
+      <td>${catTag(i.threat_category)}</td>
+      <td class="dim" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${(i.target_uri||'—').slice(0,32)}</td>
+      <td>${actTag(i.mitigation_action)}</td>
+    </tr>`).join('');
+  // Add live visual arcs for new incidents
+  if (incidents.length > 0) {
+    addLiveArc(incidents[0]);
+  }
+}
+
+// ─── Rules ────────────────────────────────────────────────────────────
+async function loadRules(){
+  try{
+    const rules=await api('/api/v1/rules');
+    document.getElementById('rules-count').textContent=rules.length+' rules';
+    const tb=document.getElementById('rules-table');
+    if(!rules.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#414755;padding:20px">No rules</td></tr>';return}
+    const SYS=['sql-core-01','xss-scrutiny-01','rfi-blocker-01'];
+    tb.innerHTML=rules.map(r=>{
+      const on=r.is_active==1||r.is_active===true;
+      return `<tr>
+        <td class="dim" style="max-width:90px;overflow:hidden;text-overflow:ellipsis">${r.rule_id}</td>
+        <td style="font-weight:500">${r.identifier}</td>
+        <td>${catTag(r.category)}</td>
+        <td class="dim">${r.action}</td>
+        <td style="color:#ffb95f">${r.blocks_count||0}</td>
+        <td><div class="tog ${on?'on':''}" onclick="toggleRule('${r.rule_id}',${on})"></div></td>
+        <td>${SYS.includes(r.rule_id)?'<span style="font-size:10px;color:#414755">SYSTEM</span>':`<button class="btn-d" onclick="deleteRule('${r.rule_id}')">Delete</button>`}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){console.error('Rules:',e)}
+}
+
+async function createRule(){
+  const body={
+    identifier:document.getElementById('r-id').value,
+    pattern:document.getElementById('r-pat').value,
+    action:document.getElementById('r-act').value,
+    category:document.getElementById('r-cat').value||'Custom',
+    severity:document.getElementById('r-sev').value,
+    description:document.getElementById('r-desc').value,
+  };
+  if(!body.identifier||!body.pattern){showMsg('rule-msg','Fill identifier and pattern','#ff003c');return}
+  try{
+    const res=await api('/api/v1/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    showMsg('rule-msg','Deployed: '+res.rule_id,'#4edea3');
+    loadRules();
+  }catch(e){showMsg('rule-msg','Error: '+e.message,'#ff003c')}
+}
+
+async function toggleRule(id,on){
+  await api(`/api/v1/rules/${id}/toggle`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_active:!on})});
+  loadRules();
+}
+
+async function deleteRule(id){
+  if(!confirm('Delete rule '+id+'?')) return;
+  await api(`/api/v1/rules/${id}`,{method:'DELETE'});
+  loadRules();
+}
+
+// ─── Incidents ────────────────────────────────────────────────────────
+async function loadIncidents(){
+  try{
+    const d=await api('/api/v1/threat-intel/alerts');
+    const inc=d.incidents||[];
+    document.getElementById('inc-count').textContent=inc.length+' recent';
+    const tb=document.getElementById('inc-table');
+    if(!inc.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#414755;padding:20px">No incidents</td></tr>';return}
+    tb.innerHTML=inc.map(i=>`
+      <tr>
+        <td style="color:#adc6ff;font-size:11px">${(i.incident_id||'').slice(0,14)}…</td>
+        <td class="dim">${(i.timestamp||'').toString().slice(0,19)}</td>
+        <td>${i.source_ip||'—'}</td>
+        <td>${catTag(i.threat_category)}</td>
+        <td class="dim" style="max-width:140px;overflow:hidden;text-overflow:ellipsis">${(i.target_uri||'—').slice(0,30)}</td>
+        <td>${actTag(i.mitigation_action)}</td>
+      </tr>`).join('');
+  }catch(e){console.error('Incidents:',e)}
+}
+
+// ─── Sandbox ──────────────────────────────────────────────────────────
+async function runSandbox(){
+  const pattern=document.getElementById('sb-pat').value;
+  const payload=document.getElementById('sb-pay').value;
+  const res=document.getElementById('sb-result');
+  if(!pattern||!payload) return;
+  try{
+    const d=await api('/api/v1/rules/test-sandbox',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pattern,payload})});
+    res.style.display='block';
+    if(d.match){
+      res.style.background='rgba(255,0,60,0.08)';res.style.border='1px solid rgba(255,0,60,0.2)';res.style.color='#ff6b8a';
+      res.innerHTML=`<div style="font-weight:600;margin-bottom:4px">⚠ MATCH DETECTED</div><div>Span: [${d.span}]</div><div>Matched: <span style="color:#ff003c">${d.match_group}</span></div>`;
+    }else{
+      res.style.background='rgba(78,222,163,0.06)';res.style.border='1px solid rgba(78,222,163,0.15)';res.style.color='#4edea3';
+      res.innerHTML=d.error?`<div>⚠ Regex error: ${d.error}</div>`:'<div>✓ No match — payload is clean</div>';
     }
-
-    async function firestoreDeleteRule(ruleId) {
-        // Check Firebase availability first
-        if (!firebaseAvailable || !firestoreDb) {
-            console.warn('[FIRESTORE] Firebase not available, skipping delete operation');
-            return false;
-        }
-        
-        try {
-            await firestoreDb.collection('rules').doc(ruleId).delete();
-            return true;
-        } catch (e) {
-            console.error('[FIRESTORE] Failed to delete rule:', e);
-            // Show user-friendly error
-            showToast("Firestore Delete Error", "Failed to delete rule from Firestore.", "error");
-            return false;
-        }
-    }
-
-    async function firestoreSetPosture(posture) {
-        // Check Firebase availability first
-        if (!firebaseAvailable || !firestoreDb) {
-            console.warn('[FIRESTORE] Firebase not available, skipping posture update');
-            return false;
-        }
-        
-        try {
-            await firestoreDb.collection('mitigation_state').doc('global').set({
-                posture: posture
-            }, { merge: true });
-            return true;
-        } catch (e) {
-            console.error('[FIRESTORE] Failed to set posture:', e);
-            // Show user-friendly error
-            showToast("Firestore Posture Error", "Failed to update mitigation posture.", "error");
-            return false;
-        }
-    }
-
-    async function firestoreBlacklistIP(ipAddress, reason, durationHours) {
-        // Check Firebase availability first
-        if (!firebaseAvailable || !firestoreDb) {
-            console.warn('[FIRESTORE] Firebase not available, skipping blacklist operation');
-            return false;
-        }
-        
-        try {
-            await firestoreDb.collection('ip_blacklist').doc(ipAddress.replace(/\./g, '_')).set({
-                ip_address: ipAddress,
-                reason: reason || 'Manual block',
-                duration_hours: durationHours || 24,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            return true;
-        } catch (e) {
-            console.error('[FIRESTORE] Failed to blacklist IP:', e);
-            // Show user-friendly error
-            showToast("Firestore Blacklist Error", "Failed to blacklist IP address.", "error");
-            return false;
-        }
-    }
-
-    async function firestoreLogEvent(eventData) {
-        // Check Firebase availability first
-        if (!firebaseAvailable || !firestoreDb) {
-            console.warn('[FIRESTORE] Firebase not available, skipping event logging');
-            return false;
-        }
-        
-        try {
-            await firestoreDb.collection('security_events').doc(eventData.incident_id || Math.random().toString(36).substring(2)).set({
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                source_ip: eventData.source_ip,
-                user_agent: eventData.user_agent || '',
-                target_uri: eventData.target_uri || '/',
-                malicious_payload: eventData.malicious_payload || '',
-                threat_category: eventData.threat_category || 'Anomalous',
-                mitigation_action: eventData.mitigation_action || 'Flagged'
-            });
-            return true;
-        } catch (e) {
-            console.error('[FIRESTORE] Failed to log event:', e);
-            // Don't show toast for every failed log event to avoid spam
-            // Only show occasionally or for critical events
-            if (eventData.mitigation_action === 'Blocked') {
-                showToast("Firestore Logging Error", "Failed to log security event to Firestore.", "error");
-            }
-            return false;
-        }
-    }
-
-    // ─── ADAPTIVE THEME MANAGER ───────────────────────────────────────────────
-    // System-aware adaptive color theme with manual toggle support.
-    // Detects prefers-color-scheme, stores preference in localStorage,
-    // and applies smooth transitions between light and dark modes.
-
-    function getPreferredTheme() {
-        const stored = localStorage.getItem('kalki-theme');
-        if (stored === 'light' || stored === 'dark') return stored;
-        // Detect system preference
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-            return 'light';
-        }
-        return 'dark';
-    }
-
-    function applyTheme(theme) {
-        const root = document.getElementById('html-root');
-        const icon = document.getElementById('theme-icon');
-        if (theme === 'light') {
-            root.classList.remove('dark');
-            icon.textContent = 'light_mode';
-            document.documentElement.style.colorScheme = 'light';
-        } else {
-            root.classList.add('dark');
-            icon.textContent = 'dark_mode';
-            document.documentElement.style.colorScheme = 'dark';
-        }
-        localStorage.setItem('kalki-theme', theme);
-    }
-
-    function toggleTheme() {
-        const root = document.getElementById('html-root');
-        const isDark = root.classList.contains('dark');
-        const newTheme = isDark ? 'light' : 'dark';
-        applyTheme(newTheme);
-        showToast('Theme Updated', 'Interface switched to ' + newTheme.charAt(0).toUpperCase() + newTheme.slice(1) + ' mode.', 'palette');
-        logConsole('Theme toggled: ' + newTheme.toUpperCase() + ' mode activated.');
-    }
-
-    // Listen for system theme changes
-    if (window.matchMedia) {
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            const stored = localStorage.getItem('kalki-theme');
-            if (!stored) {
-                applyTheme(e.matches ? 'dark' : 'light');
-            }
-        });
-    }
-
-        // Apply initial theme
-        applyTheme(getPreferredTheme());
-
-        // State store
-        let currentTab = 'overview'; // Default home tab is now overview!
-        let telemetryData = { metrics: {}, incidents: [], rules: [] };
-        let filteredIncidents = [];
-        let sandboxTimeout = null;
-        let globeInitialized = false;
-        var restPollingInterval = null; // windows scope for cleanup
-        let initializationComplete = false; // Track if initialization finished
-
-    // Toast Notification Controller
-    function showToast(title, body, icon = 'info') {
-        const toast = document.getElementById('toast-notification');
-        document.getElementById('toast-title').textContent = title;
-        document.getElementById('toast-body').textContent = body;
-        document.getElementById('toast-icon').textContent = icon;
-
-        toast.className = "fixed top-20 right-6 z-[100] transform translate-y-0 opacity-100 transition-all duration-200 pointer-events-auto";
-
-        setTimeout(() => {
-            toast.className = "fixed top-20 right-6 z-[100] transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none";
-        }, 4000);
-    }
-
-
-
-    // Trigger complete WAF dashboard loops and WebGL globe
-    function triggerFullInitialization() {
-        // Clear any previous REST polling interval to prevent duplicates on re-auth
-        if (window.restPollingInterval) {
-            clearInterval(window.restPollingInterval);
-            window.restPollingInterval = null;
-        }
-
-        // Initialize Firebase and set up real-time listeners
-        let firebaseInitialized = false;
-        try {
-            if (initFirebase()) {
-                setupFirestoreListeners();
-                firebaseInitialized = true;
-            }
-        } catch (e) {
-            console.error("[INIT] Firebase initialization error:", e);
-            logConsole("[INIT] Firebase initialization failed, falling back to REST API");
-        }
-
-        // Fallback: start REST API polling if Firebase not available
-        if (!firebaseInitialized) {
-            try {
-                // Fallback: start REST API polling
-                syncData();
-                window.restPollingInterval = setInterval(() => {
-                    syncData(true);
-                }, 3000);
-                logConsole("[INIT] REST API polling initialized as fallback");
-            } catch (e) {
-                console.error("[INIT] REST API initialization error:", e);
-                logConsole("[INIT] Failed to initialize REST API polling");
-            }
-        }
-
-        // Start simulated logs stdout
-        try {
-            startLogSimulation();
-        } catch (e) {
-            console.error("[INIT] Log simulation error:", e);
-        }
-
-        // Fast start HUD metrics and 3D globe immediately since overview tab is home screen!
-        setTimeout(() => {
-            try {
-                init3DGlobe();
-                startHUDTelemetry();
-                globeInitialized = true;
-                logConsole("Kalki WAF Core: Secure operator control session established.");
-            } catch (e) {
-                console.error("[INIT] 3D Globe/HUD initialization error:", e);
-                logConsole("[INIT] Failed to initialize 3D visualization");
-            }
-
-            // Trigger logo animation
-            try {
-                const logo = document.getElementById('header-logo');
-                if(logo) {
-                    logo.classList.remove('cyber-spin-logo');
-                    void logo.offsetWidth; // trigger reflow
-                    logo.classList.add('cyber-spin-logo');
-                }
-            } catch (e) {
-                console.error("[INIT] Logo animation error:", e);
-            }
-        }, 80);
-        
-        // Mark initialization as complete
-        initializationComplete = true;
-        logConsole("[INIT] Full initialization sequence completed");
-    }
-
-    // Tab Switching Controller
-    function switchTab(tabId) {
-        // Play synthetic micro-tick click
-        WafAudio.playTick();
-
-        // Hide all tabs
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-
-        // Show selected tab
-        const tabEl = document.getElementById(`tab-${tabId}`);
-        if (tabEl) {
-            tabEl.classList.remove('hidden');
-            tabEl.classList.add('tab-animate');
-        }
-
-        // Update nav styling
-        const tabIds = ['overview', 'threat-intel', 'rule-engine', 'settings'];
-        tabIds.forEach(id => {
-            const topNav = document.getElementById(`nav-top-${id}`);
-            const sideNav = document.getElementById(`nav-side-${id}`);
-
-            if (id === tabId) {
-                topNav.className = "text-[var(--accent-cyan)] font-bold border-b-2 border-[var(--accent-cyan)] font-body-md text-body-md";
-                sideNav.className = "flex items-center px-6 py-3 text-[var(--accent-cyan)] bg-[var(--accent-cyan)]/10 border-r-2 border-[var(--accent-cyan)] shadow-[inset_-10px_0_15px_-10px_rgba(32,148,139,0.3)] cursor-pointer translate-x-1";
-            } else {
-                topNav.className = "text-[var(--text-muted)] hover:text-[var(--accent-cyan)] transition-colors font-body-md text-body-md";
-                sideNav.className = "flex items-center px-6 py-3 text-[var(--text-muted)]/60 hover:bg-[var(--hover-overlay)] hover:text-[var(--text-primary)] transition-all cursor-pointer";
-            }
-        });
-
-        currentTab = tabId;
-        logConsole(`Navigated Dashboard context: ${tabId.toUpperCase()}`);
-
-        if (tabId === 'overview' && !globeInitialized) {
-            setTimeout(() => {
-                init3DGlobe();
-                startHUDTelemetry();
-                globeInitialized = true;
-            }, 60);
-        }
-    }
-
-    // Real-time System Console Logger
-    function logConsole(message) {
-        const consoleEl = document.getElementById('console-logs');
-        if (!consoleEl) return;
-
-        const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-        const logLine = document.createElement('div');
-        logLine.className = 'font-code-block flex gap-3 hover:bg-[var(--hover-overlay)] py-0.5 px-1 rounded transition-colors';
-        logLine.innerHTML = `
-            <span class="text-[var(--text-muted)]/30">[${timestamp}]</span>
-            <span class="text-[var(--accent-cyan)] font-bold">&gt;</span>
-            <span class="text-[var(--accent-cyan)] select-text">${message}</span>
-        `;
-        consoleEl.appendChild(logLine);
-        consoleEl.scrollTop = consoleEl.scrollHeight;
-    }
-
-    // Clock updater
-    function updateClock() {
-        const now = new Date();
-        const timeStr = now.toISOString().replace('T', ' ').substring(11, 19);
-        document.getElementById('footer-clock').textContent = timeStr + ' UTC';
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // Fetch and Sync Core WAF State (REST API fallback)
-    async function syncData(silent = false) {
-        try {
-            const response = await fetch('/api/v1/threat-intel/alerts');
-            if (!response.ok) {
-                // Try alternative endpoint if primary fails
-                try {
-                    const altResponse = await fetch('/api/threat-intel/alerts');
-                    if (!altResponse.ok) throw new Error('Both primary and alternate API endpoints failed');
-                    telemetryData = await altResponse.json();
-                } catch (altError) {
-                    throw new Error('Gateway connectivity anomaly: ' + altError.message);
-                }
-            } else {
-                telemetryData = await response.json();
-            }
-            
-            filteredIncidents = [...telemetryData.incidents];
-
-            // Render UI
-            updateMetricsDOM();
-            renderRulesDOM();
-            renderAlertsDOM();
-
-            // Sync settings parameters
-            const upstreamInput = document.getElementById('setting-upstream');
-            if (upstreamInput && telemetryData.metrics.upstream_url) {
-                upstreamInput.value = telemetryData.metrics.upstream_url;
-            }
-            const rateInput = document.getElementById('setting-rate-limit');
-            if (rateInput && telemetryData.metrics.rate_limit) {
-                rateInput.value = telemetryData.metrics.rate_limit;
-            }
-            const dbTypeInput = document.getElementById('setting-db-type');
-            if (dbTypeInput && telemetryData.metrics.db_type) {
-                dbTypeInput.value = telemetryData.metrics.db_type + ' (Active Schema)';
-            }
-
-            if (!silent) {
-                logConsole("Synchronized security indexes successfully.");
-            }
-            
-            // Mark data as loaded for UI readiness checks
-            window.dataLoaded = true;
-        } catch (error) {
-            console.error('[SYNC] Error:', error);
-            logConsole("CRITICAL: Failed to refresh node metrics: " + error.message);
-            
-            // Provide fallback data to prevent UI from breaking
-            telemetryData = {
-                metrics: {
-                    total_ingress: 0,
-                    total_blocked: 0,
-                    active_rules_count: 0,
-                    sqli_count: 0,
-                    xss_count: 0,
-                    anomalous_count: 0,
-                    posture: 'Standard Posture',
-                    upstream_url: 'http://localhost:8000',
-                    rate_limit: 100,
-                    db_type: 'SQLite'
-                },
-                incidents: [],
-                rules: [
-                    {
-                        rule_id: 'sql-core-01',
-                        identifier: 'SQL Injection Protection',
-                        severity: 'Level 3',
-                        description: 'Protects against common SQL injection patterns',
-                        pattern: '/(?:admin|root|system).*?(?:rm|sh|bash|chmod|nc)/gi',
-                        action: 'Block',
-                        category: 'SQLi',
-                        is_active: true,
-                        blocks_count: 0
-                    }
-                ]
-            };
-            
-            filteredIncidents = [...telemetryData.incidents];
-            
-            // Still try to render UI with fallback data
-            try {
-                updateMetricsDOM();
-                renderRulesDOM();
-                renderAlertsDOM();
-            } catch (renderError) {
-                console.error('[SYNC] Render error with fallback data:', renderError);
-            }
-            
-            // Mark that we're using fallback data
-            window.usingFallbackData = true;
-            
-            if (!silent) {
-                showToast("Using Fallback Data", "Backend unavailable, showing sample data for demonstration.", "warning");
-            }
-        }
-    }
-
-    // Refresh telemetry and metrics
-    function updateMetricsDOM() {
-        const headerStatus = document.getElementById('header-status');
-        const posture = telemetryData.metrics.posture || 'Standard Posture';
-        headerStatus.textContent = posture.toUpperCase();
-        if (posture === 'Under Attack') {
-            headerStatus.className = 'font-code-block text-[11px] tracking-widest text-[var(--accent-crimson)] animate-pulse';
-        } else {
-            headerStatus.className = 'font-code-block text-[11px] tracking-widest text-[var(--accent-cyan)]';
-        }
-
-        const globePost = document.getElementById('globe-posture-text');
-        if (globePost) {
-            globePost.textContent = posture.replace(/\s+/g, '_').toUpperCase();
-            if (posture === 'Under Attack') {
-                globePost.className = "text-[var(--accent-crimson)] font-bold animate-pulse";
-            } else if (posture === 'Monitor Only') {
-                globePost.className = "text-[var(--accent-amber)]";
-            } else {
-                globePost.className = "text-[var(--accent-emerald)]";
-            }
-        }
-
-        document.getElementById('stat-ingress').textContent = (telemetryData.metrics.total_ingress || 0).toLocaleString();
-        document.getElementById('stat-blocked').textContent = (telemetryData.metrics.total_blocked || 0).toLocaleString();
-        document.getElementById('stat-rules').textContent = (telemetryData.metrics.active_rules_count || 0).toLocaleString();
-
-        const sqli = telemetryData.metrics.sqli_count || 0;
-        const xss = telemetryData.metrics.xss_count || 0;
-        const other = telemetryData.metrics.anomalous_count || 0;
-
-        document.getElementById('label-sqli-count').textContent = sqli;
-        document.getElementById('label-xss-count').textContent = xss;
-        document.getElementById('label-other-count').textContent = other;
-    }
-    // Render Rules Grid
-    function renderRulesDOM() {
-        const container = document.getElementById('rule-matrix-container');
-        if (!container) return;
-
-        container.innerHTML = '';
-        const rules = telemetryData.rules || [];
-
-        document.getElementById('rule-count-text').textContent = `TOTAL_POLICIES: ${rules.length}`;
-
-        if (rules.length === 0) {
-            container.innerHTML = `
-                <div class="p-8 text-center text-[var(--text-muted)]/40 font-code-block text-xs uppercase">
-                    No active threat signature profiles found in engine memory.
-                </div>
-            `;
-            return;
-        }
-
-        rules.forEach(rule => {
-            const isActive = rule.is_active === 1 || rule.is_active === true;
-            const isSystem = rule.rule_id === 'sql-core-01' || rule.rule_id === 'xss-scrutiny-01' || rule.rule_id === 'rfi-blocker-01';
-
-            const card = document.createElement('div');
-            card.className = `p-6 flex items-start gap-6 group hover:bg-[var(--hover-overlay)] transition-all ${!isActive ? 'opacity-40 grayscale hover:grayscale-0 hover:opacity-100' : ''}`;
-
-            let sevColor = 'bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] border-[var(--accent-cyan)]/20';
-            if (rule.severity === 'Level 3') {
-                sevColor = 'bg-[var(--accent-amber)]/10 text-[var(--accent-amber)] border-[var(--accent-amber)]/20';
-            } else if (rule.severity === 'CRITICAL') {
-                sevColor = 'bg-[var(--accent-crimson)]/10 text-[var(--accent-crimson)] border-[var(--accent-crimson)]/20';
-            } else if (rule.severity === 'DEPRECATED') {
-                sevColor = 'bg-white/10 text-white/50 border-[var(--border-cyan)]';
-            }
-
-            card.innerHTML = `
-                <span class="material-symbols-outlined text-[var(--text-muted)]/40 mt-1 cursor-grab active:cursor-grabbing">drag_indicator</span>
-                <div class="flex-1 space-y-2">
-                    <div class="flex items-center gap-3">
-                        <h4 class="font-headline-md text-[var(--text-white)] text-[15px] font-bold">${rule.identifier}</h4>
-                        <span class="${sevColor} text-[10px] px-2 py-0.5 rounded border font-code-block uppercase">${rule.severity}</span>
-                        <span class="text-[10px] text-white/30 font-code-block font-mono bg-white/5 px-1.5 py-0.5 rounded">${rule.rule_id}</span>
-                    </div>
-                    <p class="text-[var(--text-muted)] text-xs leading-relaxed max-w-2xl">${rule.description || 'No description provided.'}</p>
-                    <div class="flex items-center gap-4 text-[10px] font-code-block text-white/40">
-                        <span>PATTERN:</span>
-                        <code class="text-[var(--accent-cyan)] font-mono bg-[var(--bg-code)] px-2 py-0.5 rounded truncate max-w-md inline-block select-text" title="${escapeHtml(rule.pattern)}">${escapeHtml(rule.pattern)}</code>
-                    </div>
-                </div>
-                <div class="flex items-center gap-6">
-                    <div class="text-right">
-                        <p class="font-code-block text-[13px] text-[var(--accent-cyan)] font-bold">${(rule.blocks_count || 0).toLocaleString()}</p>
-                        <p class="text-[9px] text-white/30 uppercase tracking-widest">Blocks</p>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" class="sr-only peer" ${isActive ? 'checked' : ''} onchange="toggleRule('${rule.rule_id}', this.checked)">
-                        <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white/40 peer-checked:after:bg-[var(--accent-cyan)] after:border-none after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-cyan)]/20 border border-white/5 shadow-inner"></div>
-                    </label>
-
-                    ${!isSystem ? `
-                        <button onclick="deleteSignature('${rule.rule_id}')" class="text-white/20 hover:text-[var(--accent-crimson)] transition-colors p-1" title="Delete signature profile">
-                            <span class="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
-                    ` : '<div class="w-[26px]"></div>'}
-                </div>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    // Render Alerts table
-    function renderAlertsDOM() {
-        const tbody = document.getElementById('alerts-tbody');
-        if (!tbody) return;
-
-        tbody.innerHTML = '';
-
-        if (filteredIncidents.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="px-6 py-12 text-center text-[var(--text-muted)]/40 uppercase font-code-block text-xs">
-                        No telemetry alerts indexed for current filters.
-                    </td>
-                </tr>
-            `;
-            document.getElementById('metrics-text').textContent = `Displaying 0 critical events`;
-            return;
-        }
-
-filteredIncidents.forEach((incident, index) => {
-             const tr = document.createElement('tr');
-             tr.className = 'hover:bg-[var(--table-row-hover)] transition-colors cursor-pointer group border-b border-[var(--border-light)]';
-             tr.onclick = (e) => {
-                 if (e.target.tagName !== 'BUTTON') {
-                     openInspector(incident);
-                 }
-             };
-
-            let iconHtml = '';
-            let actionPill = '';
-            if (incident.mitigation_action === 'Blocked') {
-                iconHtml = '<span class="material-symbols-outlined text-[var(--accent-crimson)] neon-pulse" style="font-variation-settings: 'FILL' 1;">dangerous</span>';
-                actionPill = '<span class="bg-[var(--accent-crimson)]/15 text-[var(--accent-crimson)] border border-[var(--accent-crimson)]/20 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider font-code-block">Blocked</span>';
-            } else if (incident.mitigation_action === 'Flagged') {
-                iconHtml = '<span class="material-symbols-outlined text-[var(--accent-amber)]">warning</span>';
-                actionPill = '<span class="bg-[var(--accent-amber)]/10 text-[var(--accent-amber)] border border-[var(--accent-amber)]/20 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider font-code-block">Flagged</span>';
-            } else {
-                iconHtml = '<span class="material-symbols-outlined text-[var(--accent-cyan)]">shield</span>';
-                actionPill = `<span class="bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/20 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider font-code-block">${incident.mitigation_action}</span>`;
-            }
-
-            let categoryHtml = '';
-            if (incident.threat_category === 'SQLi') {
-                categoryHtml = '<span class="bg-[var(--accent-crimson)]/20 text-[var(--accent-crimson)] border border-[var(--accent-crimson)]/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">SQL_INJECTION</span>';
-            } else if (incident.threat_category === 'XSS') {
-                categoryHtml = '<span class="bg-[var(--accent-crimson)]/20 text-[var(--accent-crimson)] border border-[var(--accent-crimson)]/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">XSS_ATTEMPT</span>';
-            } else {
-                categoryHtml = `<span class="bg-[var(--accent-cyan)]/20 text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">${incident.threat_category}</span>`;
-            }
-
-            tr.innerHTML = `
-                <td class="px-6 py-3.5">${iconHtml}</td>
-                <td class="px-6 py-3.5 text-[var(--text-muted)]/90 select-text">${incident.timestamp}</td>
-                <td class="px-6 py-3.5 text-[var(--accent-cyan)] select-text">${incident.source_ip}</td>
-                <td class="px-6 py-3.5">${categoryHtml}</td>
-                <td class="px-6 py-3.5 text-[var(--text-muted)] opacity-75 truncate max-w-xs select-text" title="${escapeHtml(incident.target_uri)}">${escapeHtml(incident.target_uri)}</td>
-                <td class="px-6 py-3.5">${actionPill}</td>
-                <td class="px-6 py-3.5 text-right">
-                    <button onclick="event.stopPropagation(); window._openIncident && window._openIncident(${index})" class="bg-[var(--accent-cyan)]/10 border border-[var(--accent-cyan)]/30 text-[var(--accent-cyan)] font-code-block text-[10px] px-2.5 py-1 rounded hover:bg-[var(--accent-cyan)]/25 transition-all uppercase tracking-tighter">Inspect Payload</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // Store incidents globally for inspector access
-        window._openIncident = function(idx) {
-            if (filteredIncidents[idx]) openInspector(filteredIncidents[idx]);
-        };
-
-        document.getElementById('metrics-text').textContent = `Displaying ${filteredIncidents.length} of ${(telemetryData.metrics.total_blocked || 0).toLocaleString()} critical events`;
-    }
-
-    // Apply Filters
-    function applyFilters() {
-        const category = document.getElementById('filter-category').value;
-        const search = document.getElementById('filter-search').value.toLowerCase().trim();
-
-        filteredIncidents = telemetryData.incidents.filter(incident => {
-            if (category !== 'ALL' && incident.threat_category !== category) return false;
-
-            if (search) {
-                const ip = (incident.source_ip || '').toLowerCase();
-                const uri = (incident.target_uri || '').toLowerCase();
-                const payload = (incident.malicious_payload || '').toLowerCase();
-                const agent = (incident.user_agent || '').toLowerCase();
-
-                return ip.includes(search) || uri.includes(search) || payload.includes(search) || agent.includes(search);
-            }
-
-            return true;
-        });
-
-        renderAlertsDOM();
-    }
-
-    // Set Posture
-    async function setPosture(postureName) {
-        // Try Firestore first, fall back to REST API
-        try {
-            const firestoreSuccess = await firestoreSetPosture(postureName);
-            if (firestoreSuccess) {
-                // Firestore listener will update the UI automatically
-                logConsole(`Mitigation state transition: ${postureName.toUpperCase()} (via Firestore)`);
-                showToast("Mitigation Posture Updated", `Core posture changed to ${postureName} successfully.`, 'shield');
-                return;
-            }
-        } catch (e) {
-            // Fall through to REST API
-        }
-
-        // Fallback to REST API
-        try {
-            const response = await fetch('/api/v1/mitigation-posture', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ posture: postureName })
-            });
-            if (!response.ok) throw new Error('WAF state transition rejected.');
-
-            // Trigger posture sound feedback
-            if (postureName === 'Under Attack') {
-                WafAudio.playAlert();
-            } else {
-                WafAudio.playSuccess();
-            }
-
-            logConsole(`Mitigation state transition: ${postureName.toUpperCase()}`);
-            showToast("Mitigation Posture Updated", `Core posture changed to ${postureName} successfully.`, 'shield');
-
-            await syncData(true);
-            updatePostureButtons(postureName);
-        } catch (error) {
-            console.error(error);
-            showToast("Posture Transition Failure", error.message, 'error');
-            logConsole("ERROR: Failed to adjust core posture: " + error.message);
-        }
-    }
-
-    function updatePostureButtons(posture) {
-        const btnMonitor = document.getElementById('btn-posture-monitor');
-        const btnStandard = document.getElementById('btn-posture-standard');
-        const btnAttack = document.getElementById('btn-posture-attack');
-
-        const activeClass = "bg-[var(--accent-cyan)] text-white rounded shadow-[0_0_15px_var(--accent-cyan-glow)]";
-        const inactiveClass = "text-[var(--text-muted)] hover:text-[var(--text-white)] transition-all";
-
-        btnMonitor.className = `px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter ${posture === 'Monitor Only' ? activeClass : inactiveClass}`;
-        btnStandard.className = `px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter ${posture === 'Standard Posture' ? activeClass : inactiveClass}`;
-        btnAttack.className = `px-6 py-2 font-code-block text-ui-label-sm uppercase tracking-tighter ${posture === 'Under Attack' ? 'bg-[var(--accent-crimson)] text-white rounded shadow-[0_0_15px_rgba(255,90,9,0.5)] animate-pulse' : inactiveClass}`;
-    }
-
-    // Toggle Rule
-    async function toggleRule(ruleId, isChecked) {
-        // Try Firestore first
-        try {
-            const firestoreSuccess = await firestoreToggleRule(ruleId, isChecked);
-            if (firestoreSuccess) {
-                logConsole(`Signature profile state updated (Firestore): ${ruleId} (${isChecked ? 'ENABLED' : 'DISABLED'})`);
-                showToast("Rule Updated", `Rule profile ${ruleId} successfully ${isChecked ? 'enabled' : 'disabled'}.`, 'check_circle');
-                return;
-            }
-        } catch (e) {
-            // Fall through to REST API
-        }
-
-        // Fallback to REST API
-        try {
-            const response = await fetch(`/api/v1/rules/${ruleId}/toggle`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_active: isChecked })
-            });
-            if (!response.ok) throw new Error('Signature toggle failed.');
-
-            logConsole(`Signature profile state updated: ${ruleId} (${isChecked ? 'ENABLED' : 'DISABLED'})`);
-            showToast("Rule Updated", `Rule profile ${ruleId} successfully ${isChecked ? 'enabled' : 'disabled'}.`, 'check_circle');
-            await syncData(true);
-        } catch (error) {
-            console.error(error);
-            showToast("Signature State Error", error.message, 'error');
-        }
-    }
-
-    // Compile Signature Profile
-    async function compileSignature(event) {
-        if (event) event.preventDefault();
-
-        const identifier = document.getElementById('rule-identifier').value.trim();
-        const pattern = document.getElementById('rule-pattern').value.trim();
-        const action = document.getElementById('rule-action').value;
-        const severity = document.getElementById('rule-severity').value;
-        const category = document.getElementById('rule-category').value;
-        const description = document.getElementById('rule-description').value.trim();
-
-        if (!identifier || !pattern) {
-            showToast("Compilation Rejected", "Required parameters (ID and pattern) missing.", "warning");
-            return;
-        }
-
-        const btn = document.getElementById('btn-compile');
-        const text = document.getElementById('compile-text');
-        const icon = document.getElementById('compile-icon');
-
-        text.textContent = 'COMPILING SECURITY REGISTRY...';
-        icon.textContent = 'sync';
-        icon.classList.add('animate-spin');
-        btn.disabled = true;
-
-        // Try Firestore first
-        try {
-            const ruleId = 'custom-' + Math.random().toString(36).substring(2, 10);
-            const firestoreSuccess = await firestoreSaveRule({
-                rule_id: ruleId,
-                identifier: identifier,
-                pattern: pattern,
-                action: action,
-                severity: severity,
-                category: category,
-                description: description,
-                is_active: true,
-                blocks_count: 0
-            });
-            if (firestoreSuccess) {
-                showToast("Compilation Successful", `Loaded hot-patch signature ${ruleId} into RAM (Firestore).`, 'verified');
-                logConsole(`COMPILED_SIGNATURE (Firestore): successfully injected ${identifier} into core matching registry.`);
-
-                document.getElementById('rule-identifier').value = 'X-Custom-Threat-' + Math.floor(Math.random() * 100);
-                document.getElementById('sandbox-payload').value = '';
-                runSandboxTest();
-
-                text.textContent = 'COMPILE SIGNATURE';
-                icon.textContent = 'publish';
-                icon.classList.remove('animate-spin');
-                btn.disabled = false;
-                return;
-            }
-        } catch (e) {
-            // Fall through to REST API
-        }
-
-        // Fallback to REST API
-        try {
-            const response = await fetch('/api/v1/rules', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    identifier, pattern, action, severity, category, description
-                })
-            });
-
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.detail || 'Compilation sequence aborted.');
-
-            showToast("Compilation Successful", `Loaded hot-patch signature ${data.rule_id} into RAM.`, 'verified');
-            logConsole(`COMPILED_SIGNATURE: successfully injected ${identifier} into core matching registry.`);
-
-            document.getElementById('rule-identifier').value = 'X-Custom-Threat-' + Math.floor(Math.random() * 100);
-            document.getElementById('sandbox-payload').value = '';
-            runSandboxTest();
-
-            await syncData(true);
-        } catch (error) {
-            console.error(error);
-            showToast("Hot-Patch Compilation Failed", error.message, 'report');
-            logConsole(`COMPILER_ERROR: Regex hot-patch compile aborted. Reason: ${error.message}`);
-        } finally {
-            text.textContent = 'COMPILE SIGNATURE';
-            icon.textContent = 'publish';
-            icon.classList.remove('animate-spin');
-            btn.disabled = false;
-        }
-    }
-
-    // Delete Signature
-    async function deleteSignature(ruleId) {
-        if (!confirm(`Confirm complete wipe of custom rule ${ruleId}?`)) return;
-
-        // Try Firestore first
-        try {
-            const firestoreSuccess = await firestoreDeleteRule(ruleId);
-            if (firestoreSuccess) {
-                logConsole(`Signature profile wiped (Firestore): ${ruleId}`);
-                showToast("Signature Deleted", "Profile successfully deleted and unloaded.", 'delete');
-                return;
-            }
-        } catch (e) {
-            // Fall through
-        }
-
-        // Fallback to REST API
-        try {
-            const response = await fetch(`/api/v1/rules/${ruleId}`, {
-                method: 'DELETE'
-            });
-            if (!response.ok) throw new Error('Wipe operation failure.');
-
-            logConsole(`Signature profile wiped: ${ruleId}`);
-            showToast("Signature Deleted", "Profile successfully deleted and unloaded.", 'delete');
-            await syncData(true);
-        } catch (error) {
-            console.error(error);
-            showToast("Wipe Execution Failure", error.message, 'error');
-        }
-    }
-
-    // ─── HIGH-FIDELITY SYNTHETIC WEB AUDIO FEED & THREAT RADAR ────────
-    const WafAudio = {
-        ctx: null,
-        enabled: false,
-
-        init() {
-            if (!this.ctx) {
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (this.ctx.state === 'suspended') {
-                this.ctx.resume();
-            }
-        },
-
-        playTick() {
-            if (!this.enabled) return;
-            this.init();
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(1000, this.ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.05);
-            gain.gain.setValueAtTime(0.02, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.05);
-        },
-
-        playSuccess() {
-            if (!this.enabled) return;
-            this.init();
-            const t = this.ctx.currentTime;
-            const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 arpeggio
-            freqs.forEach((freq, index) => {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, t + index * 0.06);
-                gain.gain.setValueAtTime(0, t);
-                gain.gain.linearRampToValueAtTime(0.05, t + index * 0.06 + 0.015);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + index * 0.06 + 0.25);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(t + index * 0.06);
-                osc.stop(t + index * 0.06 + 0.25);
-            });
-        },
-
-        playError() {
-            if (!this.enabled) return;
-            this.init();
-            const t = this.ctx.currentTime;
-            [120, 125].forEach(freq => {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(freq, t);
-                osc.frequency.linearRampToValueAtTime(80, t + 0.3);
-                gain.gain.setValueAtTime(0.05, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(250, t);
-                osc.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(t + 0.3);
-            });
-        },
-
-        playAlert() {
-            if (!this.enabled) return;
-            this.init();
-            const t = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(500, t);
-            osc.frequency.linearRampToValueAtTime(900, t + 0.12);
-            osc.frequency.linearRampToValueAtTime(500, t + 0.24);
-            osc.frequency.linearRampToValueAtTime(900, t + 0.36);
-            osc.frequency.linearRampToValueAtTime(100, t + 0.5);
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.04, t + 0.04);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(t + 0.5);
-        },
-
-        playLogClick() {
-            if (!this.enabled) return;
-            this.init();
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(2200, this.ctx.currentTime);
-            gain.gain.setValueAtTime(0.008, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.015);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.015);
-        }
-    };
-
-    window.toggleAudioFeed = toggleAudioFeed; // Export globally for onclick
-    function toggleAudioFeed() {
-        WafAudio.enabled = !WafAudio.enabled;
-        const btn = document.getElementById('hud-audio-btn');
-        if (WafAudio.enabled) {
-            WafAudio.init();
-            WafAudio.playSuccess();
-            btn.innerHTML = `<span class="material-symbols-outlined text-[14px]">volume_up</span> AUDIO FEED: ON`;
-            btn.className = "bg-[var(--accent-cyan)]/20 border border-[var(--accent-cyan)] px-2.5 py-1 rounded-sm text-[var(--accent-cyan)] transition-all flex items-center gap-1.5 font-code-block text-[10px] tracking-widest outline-none shadow-[0_0_10px_var(--accent-cyan-glow)] animate-pulse";
-            showToast("HUD Audio Feed Active", "Synthetic sonic telemetry engine initialized.", "volume_up");
-        } else {
-            btn.innerHTML = `<span class="material-symbols-outlined text-[14px]">volume_off</span> AUDIO FEED: OFF`;
-            btn.className = "bg-[var(--accent-cyan)]/10 border border-[var(--accent-cyan)]/30 px-2.5 py-1 rounded-sm hover:bg-[var(--accent-cyan)]/20 text-[var(--accent-cyan)] transition-all flex items-center gap-1.5 font-code-block text-[10px] tracking-widest outline-none";
-            showToast("HUD Audio Feed Muted", "Synthetic sonic telemetry deactivated.", "volume_off");
-        }
-    }
-
-    function triggerRadarLog(isThreat, sourceCountry) {
-        const radar = document.getElementById('radar-logs');
-        if (!radar) return;
-
-        // Try to use real incident data from telemetry first
-        let realIp = null;
-        if (telemetryData && telemetryData.incidents && telemetryData.incidents.length > 0) {
-            const action = isThreat ? 'Blocked' : 'Flagged';
-            const match = telemetryData.incidents.find(function(i) {
-                return i.mitigation_action === action && i.source_ip;
-            });
-            if (match) {
-                realIp = match.source_ip;
-            }
-        }
-
-        // Generate IP address - use real data or fallback to country-based mock
-        let ipBase = "192.168.1.";
-        let flag = "🌐";
-        if (realIp) {
-            const parts = realIp.split('.');
-            ipBase = parts.slice(0, 3).join('.') + '.';
-            const firstOctet = parseInt(parts[0]) || 0;
-            if (firstOctet < 50) flag = "🇺🇸 US";
-            else if (firstOctet < 100) flag = "🇨🇳 CN";
-            else if (firstOctet < 150) flag = "🇷🇺 RU";
-            else if (firstOctet < 200) flag = "🇬🇧 UK";
-            else flag = "🇩🇪 DE";
-        } else if (sourceCountry.includes("Beijing") || sourceCountry.includes("SQLi")) { ipBase = "114.242.12."; flag = "🇨🇳 CN"; }
-        else if (sourceCountry.includes("Moscow") || sourceCountry.includes("XSS")) { ipBase = "95.24.88."; flag = "🇷🇺 RU"; }
-        else if (sourceCountry.includes("Sydney") || sourceCountry.includes("Bot")) { ipBase = "120.150.32."; flag = "🇦🇺 AU"; }
-        else if (sourceCountry.includes("London")) { ipBase = "82.165.2."; flag = "🇬🇧 UK"; }
-        else if (sourceCountry.includes("Frankfurt")) { ipBase = "46.112.5."; flag = "🇩🇪 DE"; }
-        else if (sourceCountry.includes("Tokyo")) { ipBase = "122.211.45."; flag = "🇯🇵 JP"; }
-
-        const ip = realIp || (ipBase + Math.floor(Math.random() * 253 + 2));
-        const timestamp = new Date().toUTCString().slice(17, 25);
-
-        const logLine = document.createElement('div');
-        logLine.className = "border-b border-[var(--border-light)] pb-0.5 last:border-b-0 animate-fade-in";
-
-        if (isThreat) {
-            logLine.innerHTML = `[${timestamp}] <span class="text-[var(--accent-crimson)] font-bold">${ip}</span> [${flag}] &rarr; <span class="text-[var(--accent-crimson)]">BLOCKED</span> 🛡️`;
-            if (WafAudio.enabled) WafAudio.playTick(); // Play high tick on threats!
-            
-            // Show alert banner
-            const alertBanner = document.getElementById("alert-banner");
-            const alertIp = document.getElementById("alert-ip");
-            if (alertBanner && alertIp) {
-                alertIp.textContent = ip;
-                alertBanner.classList.remove("hidden");
-                
-                // Clear any existing timeout
-                if (window.alertBannerTimeout) {
-                    clearTimeout(window.alertBannerTimeout);
-                }
-                // Hide after 5 seconds
-                window.alertBannerTimeout = setTimeout(() => {
-                    alertBanner.classList.add("hidden");
-                }, 5000);
-            }
-        } else {
-            logLine.innerHTML = `[${timestamp}] <span class="text-[var(--accent-cyan)]/80">${ip}</span> [${flag}] &rarr; <span class="text-[var(--accent-emerald)]">PASSED</span> ✅`;
-            if (WafAudio.enabled) WafAudio.playLogClick(); // Play lower click on nominal packets
-        }
-
-        radar.insertBefore(logLine, radar.firstChild);
-
-        // Keep last 8 lines maximum to avoid scrolling overflow
-        while (radar.children.length > 8) {
-            radar.removeChild(radar.lastChild);
-        }
-    }
-
-    // Sandbox test
-    async function runSandboxTest() {
-        const pattern = document.getElementById('rule-pattern').value.trim();
-        const payload = document.getElementById('sandbox-payload').value;
-        const box = document.getElementById('sandbox-result-box');
-        const diag = document.getElementById('sandbox-diagnostics');
-
-        if (!pattern || !payload) {
-            box.className = "h-[44px] flex items-center justify-center bg-[var(--hover-overlay)] border border-[var(--border-cyan)] rounded text-[var(--text-muted)] font-code-block text-ui-label-sm";
-            box.innerHTML = `<span class="material-symbols-outlined mr-2 text-[18px]">biotech</span> TYPE TEST PAYLOAD ABOVE`;
-            diag.classList.add('hidden');
-            return;
-        }
-
-        // Debounce
-        if (sandboxTimeout) clearTimeout(sandboxTimeout);
-        sandboxTimeout = setTimeout(async () => {
-            try {
-                const response = await fetch('/api/v1/rules/test-sandbox', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pattern, payload })
-                });
-                const data = await response.json();
-                diag.classList.remove('hidden');
-                if (data.match) {
-                    box.className = "h-[44px] flex items-center justify-center bg-[var(--accent-crimson)]/10 border border-[var(--accent-crimson)] rounded text-[var(--accent-crimson)] font-code-block text-ui-label-sm font-bold";
-                    box.innerHTML = `<span class="material-symbols-outlined mr-2 text-[18px]">dangerous</span> THREAT PATTERN DETECTED`;
-                    diag.innerHTML = `
-                        <div class="text-[var(--accent-crimson)]">[+] Pattern matched at span [${data.span[0]}, ${data.span[1]}]</div>
-                        <div>Match Group: <span class="text-[var(--accent-crimson)] select-text">${escapeHtml(data.match_group)}</span></div>
-                        <div>Rule Pattern: <span class="text-white/80">${escapeHtml(pattern)}</span></div>
-                        <div>Input Payload: <span class="text-white/80">${escapeHtml(payload)}</span></div>
-                    `;
-                } else {
-                    box.className = "h-[44px] flex items-center justify-center bg-[var(--accent-emerald)]/10 border border-[var(--accent-emerald)] rounded text-[var(--accent-emerald)] font-code-block text-ui-label-sm";
-                    box.innerHTML = `<span class="material-symbols-outlined mr-2 text-[18px]">check_circle</span> NO MATCH - PAYLOAD CLEAN`;
-                    diag.innerHTML = `
-                        <div class="text-[var(--accent-emerald)]">[-] No match found for signature pattern.</div>
-                        <div>Rule Pattern: <span class="text-white/80">${escapeHtml(pattern)}</span></div>
-                        <div>Test Payload: <span class="text-white/80">${escapeHtml(payload)}</span></div>
-                        <div>Severity Evaluation: <span class="text-[var(--accent-emerald)]">SAFE</span></div>
-                    `;
-                }
-                WafAudio.playLogClick();
-            } catch (error) {
-                box.className = "h-[44px] flex items-center justify-center bg-[var(--accent-amber)]/10 border border-[var(--accent-amber)] rounded text-[var(--accent-amber)] font-code-block text-ui-label-sm";
-                box.innerHTML = `<span class="material-symbols-outlined mr-2 text-[18px]">warning</span> SANDBOX ERROR: ${error.message}`;
-                diag.classList.add('hidden');
-            }
-        }, 250);
-    }
-
-    // ─── SECURITY INCIDENT INSPECTOR ────────────────────────────────────────
-    function openInspector(incident) {
-        const modal = document.getElementById('inspector-modal');
-        modal.classList.remove('hidden');
-
-        document.getElementById('modal-title').textContent = `Kalki Payload Inspection: ${incident.threat_category}`;
-        document.getElementById('modal-meta-id').textContent = incident.incident_id || 'N/A';
-        document.getElementById('modal-meta-ip').textContent = incident.source_ip;
-        document.getElementById('modal-meta-time').textContent = incident.timestamp;
-        document.getElementById('modal-meta-uri').textContent = incident.target_uri;
-        document.getElementById('modal-headers').textContent = `User-Agent: ${incident.user_agent || 'Unknown'}`;
-
-        const payloadEl = document.getElementById('modal-payload');
-        const payload = incident.malicious_payload || 'No payload captured.';
-        payloadEl.innerHTML = highlightThreatPattern(payload, incident.threat_category);
-
-        const verdict = document.getElementById('modal-verdict');
-        verdict.innerHTML = `<span class="material-symbols-outlined text-xs">error</span> Pattern Matched: ${incident.threat_category} (${incident.mitigation_action})`;
-
-        // Configure Jail IP button
-        const jailBtn = document.getElementById('btn-jail-ip');
-        jailBtn.dataset.ip = incident.source_ip;
-        jailBtn.onclick = () => jailIP(incident.source_ip);
-    }
-
-    function closeInspector() {
-        document.getElementById('inspector-modal').classList.add('hidden');
-    }
-
-    // Highlight malicious patterns in payloads
-    function highlightThreatPattern(payload, category) {
-        let escaped = escapeHtml(payload);
-        if (category === 'SQLi') {
-            escaped = escaped.replace(
-                /((SELECT|UNION|INSERT|UPDATE|DELETE|DROP|ALTER|WHERE|OR|AND|--|#))/gi,
-                '<span class="bg-[var(--accent-crimson)]/20 text-[var(--accent-crimson)] font-bold px-0.5 rounded">$1</span>'
-            );
-        } else if (category === 'XSS') {
-            escaped = escaped.replace(
-                /(<script|<\/script|javascript:|on\w+=|<iframe)/gi,
-                '<span class="bg-[var(--accent-crimson)]/20 text-[var(--accent-crimson)] font-bold px-0.5 rounded">$1</span>'
-            );
-        }
-        return escaped;
-    }
-
-    // Escape HTML to prevent XSS in UI
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // Jail (Blacklist) IP address
-    async function jailIP(ipAddress) {
-        if (!ipAddress) return;
-
-        // Try Firestore first
-        try {
-            const fsSuccess = await firestoreBlacklistIP(ipAddress, 'Jailed via WAF Inspector', 24);
-            if (fsSuccess) {
-                logConsole(`IP_BLACKLIST (Firestore): ${ipAddress} permanently blacklisted.`);
-                showToast("IP Blacklisted", `${ipAddress} has been permanently jailed in the block registry.`, 'block');
-                closeInspector();
-                return;
-            }
-        } catch (e) {
-            // Fall through
-        }
-
-        // Fallback to REST API
-        try {
-            const response = await fetch('/api/v1/blacklist', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ip_address: ipAddress, reason: 'Jailed via WAF Inspector', duration_hours: 24 })
-            });
-            if (!response.ok) throw new Error('Blacklist API failure.');
-
-            logConsole(`IP_BLACKLIST: ${ipAddress} permanently blacklisted.`);
-            showToast("IP Blacklisted", `${ipAddress} has been permanently jailed in the block registry.`, 'block');
-            closeInspector();
-        } catch (error) {
-            showToast("Blacklist Operation Failed", error.message, 'error');
-        }
-    }
-
-    // Save Settings (REST API)
-    async function saveSettings() {
-        const upstream = document.getElementById('setting-upstream').value;
-        const rateLimit = document.getElementById('setting-rate-limit').value;
-
-        try {
-            // Persist settings to backend API
-            const response = await fetch('/api/v1/mitigation-posture', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    posture: telemetryData.posture || 'Standard Posture',
-                    upstream: upstream || '',
-                    rate_limit: parseInt(rateLimit) || 50
-                })
-            });
-            if (!response.ok) {
-                throw new Error('API returned ' + response.status);
-            }
-            logConsole(`[SETTINGS] Profile saved: Upstream=${upstream}, RateLimit=${rateLimit}`);
-            showToast("Configuration Saved", "Engine parameters updated in active memory.", 'save');
-        } catch (error) {
-            console.warn('[SETTINGS] API save failed, using localStorage:', error.message);
-            // Fallback: persist to localStorage
-            try {
-                localStorage.setItem('kalki-settings', JSON.stringify({ upstream, rateLimit }));
-                logConsole(`[SETTINGS] Profile saved locally: Upstream=${upstream}, RateLimit=${rateLimit}`);
-                showToast("Configuration Saved Locally", "Backend unavailable, saved to local storage.", 'save');
-            } catch (e) {
-                showToast("Configuration Save Failed", error.message, 'error');
-            }
-        }
-    }
-
-    // Export Telemetry as JSON
-    function exportTelemetry() {
-        const dataStr = JSON.stringify(telemetryData, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `kalki_telemetry_${new Date().toISOString().substring(0, 10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast("Telemetry Exported", "JSON data saved to local storage.", 'ios_share');
-    }
-
-    // ─── 3D HOLOGRAPHIC GLOBE (Three.js) ─────────────────────────────────────
-    let scene, camera, renderer, globeGroup;
-    let globeMesh, atmoMesh;
-    let orbitLines = [];
-    let threatMarkers = [];
-    let packetLines = [];
-
-    function init3DGlobe() {
-        const container = document.getElementById('globe-container');
-        const canvas = document.getElementById('globe-canvas');
-        if (!container || !canvas) return;
-
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-
-        scene = new THREE.Scene();
-
-        camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-        camera.position.set(0, 1.2, 5.2);
-        camera.lookAt(0, 0, 0);
-
-        renderer = new THREE.WebGLRenderer({
-            canvas: canvas,
-            alpha: true,
-            antialias: true
-        });
-        renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(0x000000, 0);
-
-        globeGroup = new THREE.Group();
-        scene.add(globeGroup);
-
-        // Globe
-        const geo = new THREE.SphereGeometry(1.4, 64, 64);
-        const mat = new THREE.MeshPhongMaterial({
-            color: 0x20948b,
-            emissive: 0x0a4a4a,
-            emissiveIntensity: 0.15,
-            wireframe: false,
-            transparent: true,
-            opacity: 0.55,
-            shininess: 20
-        });
-        globeMesh = new THREE.Mesh(geo, mat);
-        globeGroup.add(globeMesh);
-
-        // Atmosphere glow
-        const atmoGeo = new THREE.SphereGeometry(1.45, 48, 48);
-        const atmoMat = new THREE.MeshBasicMaterial({
-            color: 0x20948b,
-            transparent: true,
-            opacity: 0.08,
-            side: THREE.BackSide
-        });
-        atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
-        globeGroup.add(atmoMesh);
-
-        // Grid lines (lat/lng)
-        const gridMat = new THREE.LineBasicMaterial({ color: 0x20948b, transparent: true, opacity: 0.15 });
-        for (let lat = -80; lat <= 80; lat += 30) {
-            const points = [];
-            const radius = 1.405;
-            for (let i = 0; i <= 64; i++) {
-                const theta = (i / 64) * Math.PI * 2;
-                const phi = (lat / 180) * Math.PI;
-                points.push(new THREE.Vector3(
-                    radius * Math.cos(theta) * Math.cos(phi),
-                    radius * Math.sin(phi),
-                    radius * Math.sin(theta) * Math.cos(phi)
-                ));
-            }
-            const gridGeo = new THREE.BufferGeometry().setFromPoints(points);
-            globeGroup.add(new THREE.Line(gridGeo, gridMat));
-        }
-
-        for (let lng = 0; lng < 360; lng += 30) {
-            const points = [];
-            const radius = 1.405;
-            for (let i = 0; i <= 64; i++) {
-                const phi = -Math.PI / 2 + (i / 64) * Math.PI;
-                const theta = (lng / 180) * Math.PI;
-                points.push(new THREE.Vector3(
-                    radius * Math.cos(theta) * Math.cos(phi),
-                    radius * Math.sin(phi),
-                    radius * Math.sin(theta) * Math.cos(phi)
-                ));
-            }
-            const gridGeo = new THREE.BufferGeometry().setFromPoints(points);
-            globeGroup.add(new THREE.Line(gridGeo, gridMat));
-        }
-
-        // Orbital rings
-        const ringMat = new THREE.LineBasicMaterial({ color: 0x20948b, transparent: true, opacity: 0.08 });
-        for (let r = 0; r < 3; r++) {
-            const points = [];
-            const radius = 1.8 + r * 0.4;
-            const segments = 80;
-            for (let i = 0; i <= segments; i++) {
-                const angle = (i / segments) * Math.PI * 2;
-                points.push(new THREE.Vector3(
-                    radius * Math.cos(angle),
-                    (r - 1) * 0.3,
-                    radius * Math.sin(angle)
-                ));
-            }
-            const ringGeo = new THREE.BufferGeometry().setFromPoints(points);
-            const ring = new THREE.Line(ringGeo, ringMat);
-            ring.rotation.x = 0.5 + r * 0.3;
-            globeGroup.add(ring);
-            orbitLines.push(ring);
-        }
-
-        // Lighting
-        const ambient = new THREE.AmbientLight(0x404060);
-        scene.add(ambient);
-        const light = new THREE.DirectionalLight(0x20948b, 1.2);
-        light.position.set(2, 3, 4);
-        scene.add(light);
-        const backlight = new THREE.DirectionalLight(0x20948b, 0.5);
-        backlight.position.set(-3, -1, -2);
-        scene.add(backlight);
-
-        // Packet flow lines (traffic received, displayed in red)
-        const packetMat = new THREE.LineBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6 });
-        
-        // Generate multiple traffic lines
-        packetLines = [];
-        for (let i = 0; i < 5; i++) {
-            const theta = Math.random() * Math.PI * 2;
-            const phi = (Math.random() - 0.5) * Math.PI;
-            const startR = 3.0;
-            const startPt = new THREE.Vector3(
-                startR * Math.cos(theta) * Math.cos(phi),
-                startR * Math.sin(phi),
-                startR * Math.sin(theta) * Math.cos(phi)
-            );
-            
-            const controlPt = startPt.clone().multiplyScalar(0.5);
-            const curve = new THREE.QuadraticBezierCurve3(startPt, controlPt, new THREE.Vector3(0, 0, 0));
-            const packetPoints = curve.getPoints(32);
-            const packetGeo = new THREE.BufferGeometry().setFromPoints(packetPoints);
-            const line = new THREE.Line(packetGeo, packetMat);
-            scene.add(line);
-            packetLines.push({ mesh: line, startPt: startPt, progress: Math.random() });
-        }
-
-        // Some threat markers (random initial positions)
-        const threatMat = new THREE.MeshBasicMaterial({ color: 0xff5a09, transparent: true, opacity: 0.7 });
-        for (let i = 0; i < 6; i++) {
-            const marker = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), threatMat);
-            const theta = Math.random() * Math.PI * 2;
-            const phi = (Math.random() - 0.5) * Math.PI;
-            const r = 1.45;
-            marker.position.set(
-                r * Math.cos(theta) * Math.cos(phi),
-                r * Math.sin(phi),
-                r * Math.sin(theta) * Math.cos(phi)
-            );
-            globeGroup.add(marker);
-            threatMarkers.push({ mesh: marker, theta, phi, speed: 0.002 + Math.random() * 0.005 });
-        }
-
-        // Start animation
-        animateGlobe();
-
-        // Handle resize
-        window.addEventListener('resize', () => {
-            const w = container.clientWidth;
-            const h = container.clientHeight;
-            camera.aspect = w / h;
-            camera.updateProjectionMatrix();
-            renderer.setSize(w, h);
-        });
-    }
-
-    function animateGlobe() {
-        requestAnimationFrame(animateGlobe);
-
-        if (globeGroup) {
-            globeGroup.rotation.y += 0.002;
-            globeGroup.rotation.x = Math.sin(Date.now() * 0.0001) * 0.05;
-        }
-
-        // Animate threat markers
-        threatMarkers.forEach(t => {
-            t.phi += t.speed;
-            const r = 1.45;
-            t.mesh.position.set(
-                r * Math.cos(t.theta) * Math.cos(t.phi),
-                r * Math.sin(t.phi),
-                r * Math.sin(t.theta) * Math.cos(t.phi)
-            );
-        });
-
-        // Pulse atmosphere
-        if (atmoMesh) {
-            atmoMesh.material.opacity = 0.06 + 0.04 * Math.sin(Date.now() * 0.001);
-        }
-
-        // Animate traffic received lines (red lines)
-        packetLines.forEach(line => {
-            line.progress += 0.02;
-            if (line.progress > 1) {
-                line.progress = 0;
-                // randomize starting point
-                const theta = Math.random() * Math.PI * 2;
-                const phi = (Math.random() - 0.5) * Math.PI;
-                const startR = 3.0;
-                line.startPt.set(
-                    startR * Math.cos(theta) * Math.cos(phi),
-                    startR * Math.sin(phi),
-                    startR * Math.sin(theta) * Math.cos(phi)
-                );
-            }
-            
-            // Rebuild geometry to animate the line flowing towards the center
-            const eased = THREE.MathUtils.smoothstep(line.progress, 0, 1);
-            const controlPt = line.startPt.clone().multiplyScalar(0.5);
-            const curve = new THREE.QuadraticBezierCurve3(line.startPt, controlPt, new THREE.Vector3(0, 0, 0));
-            const pts = curve.getPoints(32);
-            line.mesh.geometry.setFromPoints(pts.slice(0, Math.floor(eased * pts.length)));
-        });
-
-        if (renderer && scene && camera) {
-            renderer.render(scene, camera);
-        }
-    }
-
-    // ─── HUD TELEMETRY AND LIVE CHART ────────────────────────────────────────
-    let chartHistory = [];
-    let chartInterval;
-
-    function startHUDTelemetry() {
-        // Update HUD gauges every 2 seconds
-        chartInterval = setInterval(() => {
-            // Fetch live telemetry from backend or Firestore
-            updateHUDGauges();
-            updateLiveChart();
-        }, 2000);
-
-        // Initial update
-        updateHUDGauges();
-    }
-
-    async function updateHUDGauges() {
-        try {
-            const response = await fetch('/api/v1/telemetry/live');
-            if (!response.ok) return;
-            const data = await response.json();
-
-            const cpu = data.cpu_percent || 0;
-            const ram = data.memory_mb || 0;
-            const reqs = data.requests_per_second || 0;
-            const traffic = 0.5 + Math.random() * 3.5; // Simulated traffic speed (Gbps)
-
-            document.getElementById('hud-cpu').textContent = cpu.toFixed(1) + '%';
-            document.getElementById('hud-cpu-bar').style.width = Math.min(cpu, 100) + '%';
-
-            document.getElementById('hud-ram').textContent = Math.round(ram) + ' MB';
-            document.getElementById('hud-ram-bar').style.width = Math.min(ram / 10, 100) + '%';
-
-            document.getElementById('hud-traffic').textContent = traffic.toFixed(2) + ' Gbps';
-            document.getElementById('hud-traffic-bar').style.width = Math.min(traffic * 15, 100) + '%';
-
-            document.getElementById('hud-reqs').textContent = Math.round(reqs) + ' req/s';
-            document.getElementById('hud-reqs-bar').style.width = Math.min(reqs * 2, 100) + '%';
-        } catch (e) {
-            // Simulated fallback
-            const cpu = 8 + Math.random() * 20;
-            const ram = 180 + Math.random() * 120;
-            const traffic = 0.5 + Math.random() * 3.5;
-            const reqs = 20 + Math.random() * 60;
-
-            document.getElementById('hud-cpu').textContent = cpu.toFixed(1) + '%';
-            document.getElementById('hud-cpu-bar').style.width = cpu + '%';
-            document.getElementById('hud-ram').textContent = Math.round(ram) + ' MB';
-            document.getElementById('hud-ram-bar').style.width = Math.min(ram / 10, 100) + '%';
-            document.getElementById('hud-traffic').textContent = traffic.toFixed(2) + ' Gbps';
-            document.getElementById('hud-traffic-bar').style.width = Math.min(traffic * 15, 100) + '%';
-            document.getElementById('hud-reqs').textContent = Math.round(reqs) + ' req/s';
-            document.getElementById('hud-reqs-bar').style.width = Math.min(reqs * 2, 100) + '%';
-        }
-    }
-
-    function updateLiveChart() {
-        const requests = 20 + Math.floor(Math.random() * 80);
-        chartHistory.push(requests);
-        if (chartHistory.length > 30) chartHistory.shift();
-
-        const path = document.getElementById('live-chart-path');
-        const line = document.getElementById('live-chart-line');
-
-        if (!path || !line) return;
-
-        const width = 100;
-        const height = 40;
-        const maxVal = Math.max(...chartHistory, 50);
-        const points = chartHistory.map((val, idx) => {
-            const x = (idx / (chartHistory.length - 1 || 1)) * width;
-            const y = height - (val / maxVal) * (height - 4) - 2;
-            return `${x},${y}`;
-        });
-
-        if (points.length >= 2) {
-            const firstX = points[0].split(',')[0];
-            const lastX = points[points.length - 1].split(',')[0];
-            const pathD = `M ${firstX},40 L ${points.join(' L ')} L ${lastX},40 Z`;
-            path.setAttribute('d', pathD);
-        } else {
-            path.setAttribute('d', '');
-        }
-
-        if (points.length >= 2) {
-            const lineD = 'M ' + points.join(' L ');
-            line.setAttribute('d', lineD);
-        }
-    }
-
-    // ─── CONSOLE LOG SIMULATION ──────────────────────────────────────────────
-    let logSimInterval;
-
-    function startLogSimulation() {
-        const messages = [
-            "[KERNEL] WAF engine heartbeat: OK | Ingress pipeline stable.",
-            "[KERNEL] Active rule cache validated: " + (telemetryData.rules ? telemetryData.rules.length : 0) + " signatures loaded.",
-            "[NETWORK] Packet inspection throughput: 99.98% efficiency.",
-            "[NETWORK] Zero-day heuristic scan: No anomalies detected.",
-            "[SEC_CORE] GeoIP country blocklist: Synchronized.",
-            "[SEC_CORE] Rate limiter sliding window: Active.",
-            "[AEGIS_AI] Behavioral fingerprinting: Nominal.",
-            "[AEGIS_AI] ML inference engine: Processing packet flows.",
-            "[DATABASE] Transaction log replication: Operational.",
-            "[DATABASE] Index optimization cycle completed.",
-            "[SIEM] Telemetry aggregation: 100% uptime.",
-            "[SIEM] Event correlation engine: Monitoring.",
-            "[CACHE] Redis connection pool: Healthy.",
-            "[CACHE] Request deduplication cache: 98% hit rate.",
-            "[WATCHDOG] Service health check: All green.",
-            "[WATCHDOG] Memory pressure: Low (" + Math.round(180 + Math.random() * 120) + " MB)."
-        ];
-
-        logSimInterval = setInterval(() => {
-            const msg = messages[Math.floor(Math.random() * messages.length)];
-            logConsole(msg);
-
-            // Randomly trigger radar log
-            if (Math.random() < 0.3) {
-                const countries = ["Washington DC", "Beijing", "Moscow", "London", "Sydney", "Frankfurt", "Tokyo", "Mumbai"];
-                const isThreat = Math.random() < 0.25;
-                triggerRadarLog(isThreat, countries[Math.floor(Math.random() * countries.length)]);
-            }
-        }, 4000 + Math.random() * 3000);
-    }
-
-// ─── INITIALIZATION ──────────────────────────────────────────────────────
-     document.addEventListener('DOMContentLoaded', () => {
-         updateClock();
-         setTimeout(() => {
-             logConsole("KALKI WAF Client: DOM ready, initializing dashboard.");
-             updatePostureButtons('Standard Posture');
-         }, 100);
-         setTimeout(() => triggerFullInitialization(), 400);
-     });
-
-    console.log("KALKI WAF v5.0 - Enhanced: Glassmorphism + Firebase Firestore + Adaptive Theme");
+  }catch(e){console.error(e)}
+}
+
+// ─── Posture ──────────────────────────────────────────────────────────
+async function setPosture(p){
+  try{
+    await api('/api/v1/mitigation-posture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({posture:p})});
+    syncPosture(p);
+    document.getElementById('posture-label').textContent=p;
+  }catch(e){console.error(e)}
+}
+
+function syncPosture(p){
+  document.querySelectorAll('#posture-btns .pb').forEach(b=>{
+    b.classList.toggle('active',b.textContent.trim().includes(p||'Standard'));
+  });
+  const dot=document.getElementById('posture-dot');
+  dot.style.background=p==='Under Attack'?'#ff003c':p==='Monitor Only'?'#ffb95f':'#4edea3';
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+function showMsg(id,msg,color){
+  const el=document.getElementById(id);
+  el.textContent=msg;el.style.color=color;el.style.display='inline';
+  setTimeout(()=>el.style.display='none',4000);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────
+loadTelemetry();
+setInterval(loadTelemetry,8000);
 </script>
-
 </body>
 </html>
