@@ -1,6 +1,7 @@
+import os
 import sqlite3
 
-DB_PATH = "security_gateway.db"
+DB_PATH = os.getenv("DB_PATH", "security_gateway.db")
 _BUSY_TIMEOUT = 5000
 
 
