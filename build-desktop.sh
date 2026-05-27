@@ -1,27 +1,29 @@
 #!/bin/bash
-# Build KALKI Desktop as a standalone executable
+# Build KALKI Desktop standalone executable
 # Usage: bash build-desktop.sh
 
 set -e
-
-echo "==> Installing build dependencies..."
-pip install pyinstaller requests sseclient-py pillow pystray
-
-echo "==> Building executable..."
 cd "$(dirname "$0")"
 
-LOGO="frontend/kalki_waf_logo.png"
+echo "==> Installing build dependencies..."
+pip3 install pyinstaller pillow requests sseclient-py --quiet
 
+echo "==> Building KALKI-Desktop..."
 pyinstaller --onefile --windowed \
   --name "KALKI-Desktop" \
-  --add-data "$LOGO:kalki_waf_logo.png" \
-  --icon "$LOGO" \
-  --hidden-import plyer \
-  --hidden-import pystray \
+  --add-data "$(pwd)/frontend/kalki_waf_logo.png:." \
+  --icon "$(pwd)/frontend/kalki_waf_logo.png" \
   --hidden-import PIL \
   --hidden-import PIL._tkinter_finder \
+  --distpath dist \
+  --workpath /tmp/kalki_build \
+  --specpath /tmp/kalki_build \
+  --noconfirm \
   kalki-desktop.py
 
 echo ""
-echo "==> Done! Executable at: dist/KALKI-Desktop"
-ls -lh dist/KALKI-Desktop*
+echo "==> Done!"
+ls -lh "dist/KALKI-Desktop"
+echo ""
+echo "Run: ./dist/KALKI-Desktop"
+echo "Or install system-wide: sudo cp dist/KALKI-Desktop /usr/local/bin/kalki-desktop"

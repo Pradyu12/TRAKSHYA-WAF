@@ -45,9 +45,8 @@ _BASE_DIR = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
 _LOGO_PATH = os.environ.get("KALKI_LOGO", "")
 if not _LOGO_PATH:
     for p in [
-        os.path.join(_BASE_DIR, "frontend", "kalki_waf_logo.png"),
         os.path.join(_BASE_DIR, "kalki_waf_logo.png"),
-        os.path.join(_BASE_DIR, "..", "frontend", "kalki_waf_logo.png"),
+        os.path.join(_BASE_DIR, "frontend", "kalki_waf_logo.png"),
     ]:
         if os.path.isfile(p):
             _LOGO_PATH = p

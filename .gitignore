@@ -43,3 +43,4 @@ htmlcov/
 .kilo/
 .agents/
 
+dist/
