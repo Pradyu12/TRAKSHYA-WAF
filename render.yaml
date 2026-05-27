@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: kalki-waf
+    runtime: python
+    repo: https://github.com/Pradyu12/KALKI-WAF
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ADMIN_API_KEY
+        generateValue: true
+      - key: OTEL_SDK_DISABLED
+        value: "true"
+      - key: DB_PATH
+        value: /tmp/security_gateway.db

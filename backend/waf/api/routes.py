@@ -20,9 +20,29 @@ from waf.rules.models import IPBlacklistRequest, PostureUpdate, RuleCreate, Sand
 
 router = APIRouter()
 
-_FRONTEND_DIR = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend")
-)
+_FRONTEND_DIR: str = ""
+_dashboard_html: str | None = None
+
+
+def _resolve_frontend():
+    global _FRONTEND_DIR, _dashboard_html
+    candidates = [
+        os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "frontend")),
+        os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend")),
+        os.path.normpath(os.path.join(os.getcwd(), "..", "frontend")),
+        os.path.normpath(os.path.join(os.getcwd(), "frontend")),
+        os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "frontend")),
+    ]
+    for d in candidates:
+        p = os.path.join(d, "dashboard.html")
+        if os.path.isfile(p):
+            _FRONTEND_DIR = d
+            _dashboard_html = p
+            return
+    _FRONTEND_DIR = candidates[0]
+
+
+_resolve_frontend()
 
 PROTECTED_RULE_IDS = {"sql-core-01", "xss-scrutiny-01", "rfi-blocker-01"}
 
@@ -71,9 +91,12 @@ async def root():
 
 @router.get("/dashboard")
 async def dashboard():
-    path = os.path.join(_FRONTEND_DIR, "dashboard.html")
+    global _dashboard_html, _FRONTEND_DIR
+    if not _dashboard_html or not os.path.isfile(_dashboard_html):
+        _resolve_frontend()
+    p = _dashboard_html or os.path.join(_FRONTEND_DIR, "dashboard.html")
     try:
-        with open(path) as f:
+        with open(p) as f:
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Dashboard UI not found") from None
@@ -294,12 +317,17 @@ async def remove_from_blacklist(ip: str, _: str | None = Depends(verify_admin_ke
 
 @router.get("/api/v1/agents/script")
 async def agent_script():
-    path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "agents", "kalki-agent.py"))
-    try:
-        with open(path) as f:
-            return Response(content=f.read(), media_type="text/x-python")
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Agent script not found") from None
+    candidates = [
+        os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "agents", "kalki-agent.py")),
+        os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "agents", "kalki-agent.py")),
+        os.path.normpath(os.path.join(os.getcwd(), "..", "agents", "kalki-agent.py")),
+        os.path.normpath(os.path.join(os.getcwd(), "agents", "kalki-agent.py")),
+    ]
+    for p in candidates:
+        if os.path.isfile(p):
+            with open(p) as f:
+                return Response(content=f.read(), media_type="text/x-python")
+    raise HTTPException(status_code=404, detail="Agent script not found") from None
 
 
 @router.post("/api/v1/agents/register")
