@@ -12,7 +12,13 @@ import subprocess
 import sys
 import threading
 import time
+import warnings
 from datetime import UTC, datetime
+
+# Suppress noisy GTK/GLib/Datadog preload warnings at startup
+os.environ.setdefault("GTK_MODULES", "")
+os.environ.pop("LD_PRELOAD", None)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # ── Dependencies ──────────────────────────────────────────────────────
 try:
@@ -36,10 +42,16 @@ except ImportError:
     _HAS_PIL = False
 
 # ── Config ────────────────────────────────────────────────────────────
-SERVER = os.environ.get("KALKI_SERVER", "https://kalki-waf.onrender.com")
+SERVER = os.environ.get("KALKI_SERVER", "http://127.0.0.1:8080")
 POLL_INTERVAL = 3
 SSE_TIMEOUT = 45
 MAX_RECONNECT_DELAY = 30
+
+# Parse --server CLI flag (overrides env / default)
+if "--server" in sys.argv:
+    idx = sys.argv.index("--server")
+    if idx + 1 < len(sys.argv):
+        SERVER = sys.argv[idx + 1]
 
 _BASE_DIR = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
 _LOGO_PATH = os.environ.get("KALKI_LOGO", "")
@@ -104,6 +116,14 @@ class KalkiDesktop:
         else:
             tk.Label(logo_frame, text="KALKI", font=("Consolas", 15, "bold"),
                      fg="#00dddd", bg="#0d0d12").pack(side="left")
+
+        is_remote = "kalki-waf.onrender" in SERVER or not SERVER.startswith("http://127")
+        if is_remote:
+            tk.Label(top, text="☁ remote", font=("Consolas", 7),
+                     fg="#fe00fe", bg="#0d0d12").pack(side="left", padx=(8, 0))
+        else:
+            tk.Label(top, text="◈ local", font=("Consolas", 7),
+                     fg="#00dddd", bg="#0d0d12").pack(side="left", padx=(8, 0))
 
         self.status_dot = tk.Label(top, text="●", font=("Consolas", 9),
                                    fg="#4edea3", bg="#0d0d12")
@@ -197,8 +217,8 @@ class KalkiDesktop:
                                            "KALKI SIEM/XDR", menu)
             self._tray_thread = threading.Thread(target=self._tray_icon.run, daemon=True)
             self._tray_thread.start()
-        except ImportError:
-            pass  # No system tray without pystray
+        except Exception:
+            pass  # Tray unavailable (no DE, no DISPLAY, etc.)
 
     def _tray_show(self):
         self.root.deiconify()
@@ -239,15 +259,15 @@ class KalkiDesktop:
         self._cmd_queue.put(fn)
 
     def _process_queue(self):
-        while self._running:
-            try:
-                fn = self._cmd_queue.get(timeout=0.1)
-                fn()
-            except queue.Empty:
-                pass
-            except Exception:
-                pass
-        self.root.after(50, self._process_queue)
+        try:
+            fn = self._cmd_queue.get_nowait()
+            fn()
+        except queue.Empty:
+            pass
+        except Exception:
+            pass
+        if self._running:
+            self.root.after(50, self._process_queue)
 
     # ── SSE ──────────────────────────────────────────────────────────
     def _sse_loop(self):
@@ -409,6 +429,7 @@ class KalkiDesktop:
 if __name__ == "__main__":
     print("KALKI Desktop — Live SIEM/XDR Monitor")
     print(f"Server: {SERVER}")
+    print("Usage: python3 kalki-desktop.py [--server URL]")
     print("Close window → minimizes to system tray")
     print()
     KalkiDesktop().run()

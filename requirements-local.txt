@@ -1,0 +1,28 @@
+# KALKI local development dependencies
+# Install: pip install -r requirements-local.txt
+
+# Backend
+uvicorn
+fastapi
+httpx
+pydantic
+psutil
+redis
+geoip2
+prometheus-client
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+opentelemetry-exporter-otlp
+cryptography
+python-multipart
+websockets
+PyJWT
+
+# Desktop app
+requests
+sseclient-py
+pillow
+
+# Building
+pyinstaller
