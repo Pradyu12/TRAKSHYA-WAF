@@ -12,6 +12,9 @@ Usage:
   python3 kalki.py agent start            # Register + start local monitoring
   python3 kalki.py agent stop             # Stop local agent
   python3 kalki.py agent status           # Check if agent is running
+  python3 kalki.py status                 # Show overall KALKI status
+  sudo python3 kalki.py install           # Install as system service (auto-start on boot)
+  sudo python3 kalki.py uninstall         # Remove system service
   python3 kalki.py stop                   # Stop all KALKI processes
 """
 
@@ -25,6 +28,7 @@ import socket
 import atexit
 import tempfile
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 KALKI_DIR = Path(__file__).resolve().parent
@@ -90,7 +94,6 @@ def _wait_for_server(port: int, timeout: float = 25.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            import urllib.request
             r = urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2)
             if r.status == 200:
                 return True
@@ -318,6 +321,111 @@ def stop_all():
     print("[KALKI] Stopped")
 
 
+# ── systemd service (install/uninstall/status) ──────────────────────────
+
+SERVICE_NAME = "kalki-waf"
+SERVICE_FILE = Path("/etc/systemd/system") / f"{SERVICE_NAME}.service"
+
+
+def _service_unit() -> str:
+    return f"""\
+[Unit]
+Description=KALKI WAF — Security Monitoring Platform
+After=network.target
+
+[Service]
+Type=simple
+User={os.getenv("SUDO_USER") or os.getenv("USER") or "root"}
+WorkingDirectory={KALKI_DIR}
+ExecStart={_find_python()} {KALKI_DIR / "kalki.py"} server --force
+Restart=on-failure
+RestartSec=5
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+
+def _do_install():
+    unit = _service_unit()
+    tmp = Path(tempfile.gettempdir()) / "kalki-waf.service"
+    try:
+        tmp.write_text(unit)
+        subprocess.run(["sudo", "cp", str(tmp), str(SERVICE_FILE)], check=True)
+        tmp.unlink(missing_ok=True)
+        subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+        subprocess.run(["sudo", "systemctl", "enable", SERVICE_NAME], check=True)
+        subprocess.run(["sudo", "systemctl", "start", SERVICE_NAME], check=True)
+        print(f"[KALKI] Installed and started ({SERVICE_FILE})")
+        subprocess.run(["systemctl", "--no-pager", "-l", "status", SERVICE_NAME])
+    except subprocess.CalledProcessError as e:
+        print(f"[KALKI] Install failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _do_uninstall():
+    try:
+        subprocess.run(["sudo", "systemctl", "stop", SERVICE_NAME],
+                       capture_output=True)
+        subprocess.run(["sudo", "systemctl", "disable", SERVICE_NAME],
+                       capture_output=True)
+        subprocess.run(["sudo", "rm", "-f", str(SERVICE_FILE)], check=True)
+        subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+        print("[KALKI] Service removed")
+    except Exception as e:
+        print(f"[KALKI] Uninstall failed: {e}", file=sys.stderr)
+
+
+def _do_status():
+    print("── KALKI Status ──")
+    # Server
+    try:
+        r = urllib.request.urlopen(f"http://127.0.0.1:{DEFAULT_PORT}/health", timeout=3)
+        data = json.loads(r.read())
+        print(f"  Server:  ● LIVE  ({data.get('version', '?')})")
+    except Exception:
+        print(f"  Server:  ○ DOWN  (http://127.0.0.1:{DEFAULT_PORT})")
+
+    # Agent
+    if AGENT_PID_FILE.exists():
+        try:
+            pid = int(AGENT_PID_FILE.read_text().strip())
+            os.kill(pid, 0)
+            print(f"  Agent:   ● running  (PID {pid})")
+        except (ProcessLookupError, OSError, ValueError):
+            print("  Agent:   ○ stopped")
+    else:
+        print("  Agent:   ○ stopped")
+
+    # Systemd service
+    try:
+        r = subprocess.run(["systemctl", "is-active", SERVICE_NAME],
+                           capture_output=True, text=True, timeout=5)
+        status = r.stdout.strip()
+        dot = "●" if status == "active" else "○"
+        print(f"  Service: {dot} {status}")
+        if r.returncode == 0:
+            r2 = subprocess.run(["systemctl", "is-enabled", SERVICE_NAME],
+                                capture_output=True, text=True, timeout=5)
+            print(f"  Autostart: {r2.stdout.strip()}")
+    except Exception:
+        print(f"  Service: ○ not installed")
+
+    # Desktop (check if any kalki-desktop process exists)
+    try:
+        r = subprocess.run(["pgrep", "-f", "kalki-desktop"],
+                           capture_output=True, text=True, timeout=3)
+        if r.returncode == 0:
+            print(f"  Desktop: ● running")
+        else:
+            print(f"  Desktop: ○ not running (launch: python3 kalki.py desktop)")
+    except Exception:
+        pass
+
+    print(f"  Dashboard: http://127.0.0.1:{DEFAULT_PORT}")
+
+
 # ── CLI ────────────────────────────────────────────────────────────────
 
 def main():
@@ -359,7 +467,8 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="KALKI — Local WAF Stack")
     parser.add_argument("mode", nargs="?",
-                        choices=["start", "server", "desktop", "stop"],
+                        choices=["start", "server", "desktop", "stop",
+                                 "install", "uninstall", "status"],
                         default="start",
                         help="start (default): backend + desktop + browser")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT,
@@ -371,6 +480,20 @@ def main():
     parser.add_argument("--force", "-f", action="store_true",
                         help="Kill existing process on port and restart")
     args = parser.parse_args()
+
+    if args.mode == "install":
+        _ensure_venv()
+        _do_install()
+        return
+
+    if args.mode == "uninstall":
+        stop_all()
+        _do_uninstall()
+        return
+
+    if args.mode == "status":
+        _do_status()
+        return
 
     if args.mode == "stop":
         stop_all()
