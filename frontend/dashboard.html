@@ -427,7 +427,7 @@ td{
 /* Globe */
 .globe-card{overflow:hidden;min-height:420px}
 .globe-container{position:relative;width:100%;height:420px;display:flex;align-items:center;justify-content:center}
-.globe-canvas-wrapper{width:100%;height:100%;position:relative}
+.globe-canvas-wrapper{width:100%;height:100%;position:relative;background:#000}
 #globe-canvas{width:100%!important;height:100%!important;display:block}
 .globe-loading{color:var(--text-dim);font-size:14px;position:absolute}
 .globe-stats{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:24px;background:rgba(10,10,15,0.8);backdrop-filter:blur(12px);padding:12px 24px;border-radius:14px;border:1px solid var(--border);z-index:10}
@@ -1741,21 +1741,17 @@ const OrbitControls = THREE.OrbitControls;
 const GLTFLoader = THREE.GLTFLoader;
 
 let scene, camera, renderer, controls, earthGroup, glowMesh, markersGroup;
-let hologramMaterial, hologramUniforms;
+let hologramUniforms;
 let globeInitialized = false;
 let autoRotate = true;
 let markerData = [];
 
 const HOLO_COLOR = new THREE.Color(0.659, 0.333, 0.969);
 
-function createHologramMaterial() {
+function makeHologramShader() {
   hologramUniforms = {
     uTime: { value: 0.0 },
     uColor: { value: HOLO_COLOR },
-    uOpacity: { value: 0.55 },
-    uFresnelPower: { value: 2.5 },
-    uScanSpeed: { value: 0.8 },
-    uScanWidth: { value: 0.06 },
   };
   return new THREE.ShaderMaterial({
     uniforms: hologramUniforms,
@@ -1763,34 +1759,25 @@ function createHologramMaterial() {
       varying vec3 vNormal;
       varying vec3 vWorldPos;
       varying vec3 vViewPos;
-      varying vec2 vUv;
       void main() {
         vNormal = normalize(normalMatrix * normal);
-        vec4 worldPos = modelMatrix * vec4(position, 1.0);
-        vWorldPos = worldPos.xyz;
+        vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
         vViewPos = (modelViewMatrix * vec4(position, 1.0)).xyz;
-        vUv = uv;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
     fragmentShader: `
       uniform float uTime;
       uniform vec3 uColor;
-      uniform float uOpacity;
-      uniform float uFresnelPower;
-      uniform float uScanSpeed;
-      uniform float uScanWidth;
       varying vec3 vNormal;
       varying vec3 vWorldPos;
       varying vec3 vViewPos;
-      varying vec2 vUv;
       void main() {
         vec3 viewDir = normalize(-vViewPos);
-        float fresnel = pow(1.0 - abs(dot(vNormal, viewDir)), uFresnelPower);
-        float scan = smoothstep(0.0, uScanWidth, abs(fract(vWorldPos.y * 2.5 - uTime * uScanSpeed) - 0.5));
-        scan = 1.0 - scan;
+        float fresnel = pow(1.0 - abs(dot(vNormal, viewDir)), 2.5);
+        float scan = 1.0 - smoothstep(0.0, 0.06, abs(fract(vWorldPos.y * 2.5 - uTime * 0.8) - 0.5));
         float flicker = 0.92 + 0.08 * sin(uTime * 12.0 + vWorldPos.y * 8.0);
-        float alpha = (uOpacity + fresnel * 0.85 + scan * 0.35) * flicker;
+        float alpha = (0.55 + fresnel * 0.85 + scan * 0.35) * flicker;
         vec3 col = uColor * (1.0 + fresnel * 1.8 + scan * 0.5);
         gl_FragColor = vec4(col, alpha);
       }
@@ -1798,8 +1785,65 @@ function createHologramMaterial() {
     transparent: true,
     side: THREE.DoubleSide,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.NormalBlending,
   });
+}
+
+function makeGlowMesh(radius) {
+  const geo = new THREE.SphereGeometry(radius, 64, 64);
+  const mat = new THREE.ShaderMaterial({
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewPos;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vViewPos = (modelViewMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewPos;
+      void main() {
+        vec3 viewDir = normalize(-vViewPos);
+        float rim = pow(1.0 - abs(dot(vNormal, viewDir)), 3.0);
+        gl_FragColor = vec4(0.659, 0.333, 0.969, rim * 0.7);
+      }
+    `,
+    side: THREE.BackSide,
+    blending: THREE.NormalBlending,
+    transparent: true,
+    depthWrite: false,
+  });
+  return new THREE.Mesh(geo, mat);
+}
+
+function applyHologramToMesh(mesh, holoMat) {
+  mesh.material = holoMat;
+  const wireGeo = new THREE.WireframeGeometry(mesh.geometry);
+  const wireMat = new THREE.LineBasicMaterial({
+    color: HOLO_COLOR, transparent: true, opacity: 0.25, depthWrite: false,
+  });
+  mesh.add(new THREE.LineSegments(wireGeo, wireMat));
+  const edgeGeo = new THREE.EdgesGeometry(mesh.geometry, 15);
+  const edgeMat = new THREE.LineBasicMaterial({
+    color: HOLO_COLOR, transparent: true, opacity: 0.55, depthWrite: false,
+  });
+  mesh.add(new THREE.LineSegments(edgeGeo, edgeMat));
+}
+
+function addFallbackSphere(group, holoMat) {
+  const geo = new THREE.SphereGeometry(1, 64, 64);
+  const mesh = new THREE.Mesh(geo, holoMat);
+  applyHologramToMesh(mesh, holoMat);
+  group.add(mesh);
+}
+
+function showGlobe() {
+  document.getElementById('globe-loading').style.display = 'none';
+  document.getElementById('globe-canvas-wrapper').style.display = 'block';
+  globeInitialized = true;
+  animate();
 }
 
 function initGlobe() {
@@ -1812,11 +1856,11 @@ function initGlobe() {
   if (w < 10 || h < 10) return;
 
   scene = new THREE.Scene();
-
   camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
   camera.position.set(0, 1.0, 3.0);
 
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.setClearColor(0x000000, 1);
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1836,86 +1880,7 @@ function initGlobe() {
   earthGroup = new THREE.Group();
   scene.add(earthGroup);
 
-  hologramMaterial = createHologramMaterial();
-
-  const loader = new GLTFLoader();
-  loader.load('/static/earth.glb', (gltf) => {
-    const model = gltf.scene;
-    const box = new THREE.Box3().setFromObject(model);
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(center);
-
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 2.0 / maxDim;
-    model.scale.setScalar(scale);
-    model.position.sub(center.multiplyScalar(scale));
-
-    model.traverse((child) => {
-      if (child.isMesh) {
-        child.material = hologramMaterial;
-
-        const wireGeo = new THREE.WireframeGeometry(child.geometry);
-        const wireMat = new THREE.LineBasicMaterial({
-          color: HOLO_COLOR,
-          transparent: true,
-          opacity: 0.22,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        });
-        child.add(new THREE.LineSegments(wireGeo, wireMat));
-
-        const edgeGeo = new THREE.EdgesGeometry(child.geometry, 15);
-        const edgeMat = new THREE.LineBasicMaterial({
-          color: HOLO_COLOR,
-          transparent: true,
-          opacity: 0.50,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        });
-        child.add(new THREE.LineSegments(edgeGeo, edgeMat));
-      }
-    });
-
-    earthGroup.add(model);
-
-    const glowGeo = new THREE.SphereGeometry(1.08, 64, 64);
-    const glowMat = new THREE.ShaderMaterial({
-      vertexShader: `
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        void main() {
-          vec3 viewDir = normalize(-vPosition);
-          float intensity = pow(1.0 - abs(dot(vNormal, viewDir)), 3.0);
-          gl_FragColor = vec4(0.659, 0.333, 0.969, intensity * 0.7);
-        }
-      `,
-      side: THREE.FrontSide,
-      blending: THREE.AdditiveBlending,
-      transparent: true,
-      depthWrite: false,
-    });
-    glowMesh = new THREE.Mesh(glowGeo, glowMat);
-    scene.add(glowMesh);
-
-    document.getElementById('globe-loading').style.display = 'none';
-    document.getElementById('globe-canvas-wrapper').style.display = 'block';
-    globeInitialized = true;
-    animate();
-  }, undefined, (err) => {
-    console.error('GLB load error:', err);
-    document.getElementById('globe-loading').textContent = 'Failed to load 3D model';
-  });
+  const holoMat = makeHologramShader();
 
   const sunLight = new THREE.DirectionalLight(0xffffff, 0.6);
   sunLight.position.set(5, 3, 5);
@@ -1923,7 +1888,7 @@ function initGlobe() {
   const fillLight = new THREE.DirectionalLight(0x8888ff, 0.3);
   fillLight.position.set(-3, -1, -3);
   scene.add(fillLight);
-  const ambientLight = new THREE.AmbientLight(0x111122, 0.5);
+  const ambientLight = new THREE.AmbientLight(0x222244, 0.6);
   scene.add(ambientLight);
 
   const starGeo = new THREE.BufferGeometry();
@@ -1933,16 +1898,56 @@ function initGlobe() {
     starPos[i] = (Math.random() - 0.5) * 200;
   }
   starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-  const starMat = new THREE.PointsMaterial({
-    color: 0xffffff,
-    size: 0.12,
-    transparent: true,
-    opacity: 0.8,
-  });
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.8 });
   scene.add(new THREE.Points(starGeo, starMat));
 
   markersGroup = new THREE.Group();
   scene.add(markersGroup);
+
+  const hasGLTFLoader = typeof GLTFLoader !== 'undefined';
+
+  if (hasGLTFLoader) {
+    const loader = new GLTFLoader();
+    loader.load('/static/earth.glb', (gltf) => {
+      const model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const s = 2.0 / maxDim;
+      model.scale.setScalar(s);
+      model.position.sub(center.multiplyScalar(s));
+
+      model.traverse((child) => {
+        if (child.isMesh) applyHologramToMesh(child, holoMat);
+      });
+      earthGroup.add(model);
+
+      glowMesh = makeGlowMesh(1.08);
+      scene.add(glowMesh);
+
+      showGlobe();
+    }, (progress) => {
+      if (progress.total > 0) {
+        const pct = Math.round((progress.loaded / progress.total) * 100);
+        document.getElementById('globe-loading').textContent = 'Loading 3D model... ' + pct + '%';
+      }
+    }, (err) => {
+      console.warn('GLB load failed, using fallback sphere:', err);
+      addFallbackSphere(earthGroup, holoMat);
+      glowMesh = makeGlowMesh(1.08);
+      scene.add(glowMesh);
+      showGlobe();
+    });
+  } else {
+    console.warn('GLTFLoader not available, using fallback sphere');
+    addFallbackSphere(earthGroup, holoMat);
+    glowMesh = makeGlowMesh(1.08);
+    scene.add(glowMesh);
+    showGlobe();
+  }
 }
 
 function latLonToPos(lat, lon, radius) {
