@@ -323,6 +323,11 @@ body{
   position:relative;height:220px;
   display:flex;align-items:center;justify-content:center;
 }
+.chart-container{
+  position:relative;
+  width:100%;
+  height:220px;
+}
 .donut-center{
   position:absolute;
   display:flex;flex-direction:column;
@@ -569,7 +574,7 @@ Settings
 </div>
 </div>
 <div class="row">
-<div class="col-2">
+<div class="col">
 <div class="card">
 <div class="card-header">
 <div class="card-title">
@@ -590,7 +595,9 @@ Threat Distribution
 Activity Timeline
 </div>
 </div>
-<canvas id="chart-timeline" style="height:220px"></canvas>
+<div class="chart-container">
+<canvas id="chart-timeline"></canvas>
+</div>
 </div>
 </div>
 </div>
@@ -1187,7 +1194,8 @@ function createLineChart(canvasId, data, labels) {
   
   if (charts[canvasId]) charts[canvasId].destroy();
   
-  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 220);
+  const canvasHeight = ctx.parentElement ? ctx.parentElement.clientHeight : 220;
+  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, canvasHeight);
   gradient.addColorStop(0, 'rgba(168,85,247,0.3)');
   gradient.addColorStop(1, 'rgba(168,85,247,0)');
   
