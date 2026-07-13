@@ -387,7 +387,7 @@ const server = http.createServer((req, res) => {
   }
 
   // Vulnerability management (real dpkg/apt scan)
-  if (pathname === '/api/vulns/stats' && method === 'GET') {
+  if (pathname === '/api/vulns/stats' && req.method === 'GET') {
     runLocalScan().then(scan => {
       const stats = {
         total_cves: scan.findings.length,
@@ -405,14 +405,14 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (pathname === '/api/vulns' && method === 'GET') {
+  if (pathname === '/api/vulns' && req.method === 'GET') {
     runLocalScan().then(scan => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(scan.findings));
     });
     return;
   }
-  if (pathname === '/api/vulns/scan' && method === 'POST') {
+  if (pathname === '/api/vulns/scan' && req.method === 'POST') {
     runLocalScan().then(scan => {
       res.writeHead(202, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ scan_id: scan.id, status: scan.status }));

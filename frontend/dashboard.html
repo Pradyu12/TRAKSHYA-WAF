@@ -257,7 +257,7 @@ body::after{
 #conn-dot-cmon{}
 
 /* Content */
-.content{flex:1;overflow-y:auto;padding:24px 28px;position:relative;z-index:1}
+.content{flex:1;overflow-y:auto;padding:24px 28px 40px;position:relative;z-index:1}
 .content::-webkit-scrollbar{width:6px}
 .content::-webkit-scrollbar-track{background:transparent}
 .content::-webkit-scrollbar-thumb{background:var(--neon-purple-dim);border-radius:3px}
@@ -469,10 +469,12 @@ option{background:var(--bg-dark);color:var(--text)}
 .empty-subtext{font-size:12px;opacity:0.5}
 
 /* ============ RESPONSIVE ============ */
-@media(max-width:1024px){
+@media(max-width:1200px){
   .sidebar{width:220px;min-width:220px}
   .header{padding:0 20px}
   .content{padding:20px}
+  .col-2{min-width:300px}
+  .col-3{min-width:400px}
 }
 @media(max-width:768px){
   .app{flex-direction:column}
@@ -481,10 +483,65 @@ option{background:var(--bg-dark);color:var(--text)}
   .nav-item{margin:0 4px 0 0;white-space:nowrap}
   .sidebar-status,.sidebar-footer{display:none}
   .footer-bar{left:0}
-  .row{flex-direction:column}
-  .metric-grid{grid-template-columns:repeat(2,1fr)}
+  .header{padding:0 16px;height:56px}
+  .header-title{font-size:14px}
+  .header-subtitle{display:none}
+  .search-box{display:none}
+  .content{padding:16px}
+  .row{flex-direction:column;gap:12px}
+  .col,.col-2,.col-3{min-width:0;flex:none}
+  .metric-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .metric-card{padding:16px}
+  .metric-value{font-size:22px}
+  .card{padding:16px}
+  .card-header{margin-bottom:12px}
+  .card-title{font-size:13px}
+  .globe-container{height:280px}
+  .globe-card{min-height:280px}
+  .donut-container{height:180px}
+  .heatmap-grid{grid-template-columns:repeat(12,1fr)!important}
+  .heatmap-cell{border-radius:3px}
+  .timeline-playback input[type=range]{height:3px}
+  #section-siem .metric-grid{grid-template-columns:repeat(2,1fr)!important}
+  #section-vulnerabilities .metric-grid{grid-template-columns:repeat(2,1fr)!important}
+  .attack-sim-grid{grid-template-columns:repeat(4,1fr)!important}
+  .rules-create-grid{grid-template-columns:1fr!important}
+  .settings-posture-grid{grid-template-columns:repeat(2,1fr)!important}
   :root{--sidebar-w:0px}
   .grid-bg{left:0}
+  .drawer{width:100%}
+}
+@media(max-width:480px){
+  .header{padding:0 12px;height:48px}
+  .header-actions{gap:6px}
+  .content{padding:12px}
+  .metric-grid{grid-template-columns:1fr}
+  .metric-card{padding:14px}
+  .metric-value{font-size:20px}
+  .metric-label{font-size:10px}
+  .card{padding:14px;border-radius:10px}
+  .globe-container{height:200px}
+  .globe-card{min-height:200px}
+  .globe-controls{display:none}
+  .globe-stats{display:none}
+  .donut-container{height:160px}
+  .heatmap-grid{grid-template-columns:repeat(8,1fr)!important}
+  .heatmap-cell{border-radius:2px}
+  .heatmap-labels{font-size:8px}
+  .timeline-playback{gap:8px}
+  .timeline-label{font-size:9px;min-width:60px}
+  .timeline-play-btn{width:28px;height:28px}
+  .table-container{font-size:12px}
+  th,td{padding:10px 12px}
+  .btn-sm{padding:6px 10px;font-size:11px}
+  .gauge-wrapper{max-width:280px}
+  .gauge-value{font-size:22px}
+  .health-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .health-card{padding:10px}
+  #section-siem .metric-grid{grid-template-columns:1fr!important}
+  #section-vulnerabilities .metric-grid{grid-template-columns:1fr!important}
+  .attack-sim-grid{grid-template-columns:repeat(3,1fr)!important}
+  .settings-posture-grid{grid-template-columns:1fr!important}
 }
 
 /* ============ KEYBOARD SHORTCUTS MODAL ============ */
@@ -530,10 +587,10 @@ option{background:var(--bg-dark);color:var(--text)}
 .skeleton{background:linear-gradient(90deg,var(--bg-card) 25%,var(--bg-elevated) 50%,var(--bg-card) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
 
 /* ============ FEATURE: TRAFFIC GAUGE ============ */
-.gauge-wrapper{position:relative;width:100%;max-width:200px;margin:0 auto}
+.gauge-wrapper{position:relative;width:100%;max-width:400px;margin:0 auto}
 .gauge-canvas{width:100%;height:auto;display:block}
-.gauge-value{position:absolute;bottom:24%;left:50%;transform:translateX(-50%);font-family:'Orbitron',monospace;font-size:28px;font-weight:700;color:var(--neon-pink);text-shadow:0 0 20px rgba(255,41,117,0.6);line-height:1}
-.gauge-label{position:absolute;bottom:16%;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px}
+.gauge-value{position:absolute;bottom:43%;left:50%;transform:translateX(-50%);font-family:'Orbitron',monospace;font-size:28px;font-weight:700;color:var(--neon-pink);text-shadow:0 0 20px rgba(255,41,117,0.6);line-height:1}
+.gauge-label{position:absolute;bottom:36%;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px}
 
 /* ============ FEATURE: TIMELINE PLAYBACK ============ */
 .timeline-playback{display:flex;align-items:center;gap:14px;padding:8px 0}
@@ -709,6 +766,10 @@ option{background:var(--bg-dark);color:var(--text)}
   </header>
 
   <div class="content" id="content-area">
+    <div id="demo-banner" style="background:linear-gradient(90deg,rgba(255,41,117,0.15),rgba(176,38,255,0.15));border:1px solid rgba(255,41,117,0.3);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text-dim);display:none;align-items:center;gap:8px">
+      <span class="material-symbols-rounded" style="color:var(--neon-pink);font-size:16px">info</span>
+      <span>Demo Mode — Showing sample data. Connect to the backend for live traffic.</span>
+    </div>
     <!-- ===== OVERVIEW ===== -->
     <div class="section active" id="section-overview">
       <div class="health-grid" id="health-panel"></div>
@@ -830,7 +891,7 @@ option{background:var(--bg-dark);color:var(--text)}
       </div>
       <div class="card" style="margin-bottom:20px">
         <div class="card-header"><div class="card-title"><span class="material-symbols-rounded">flash_on</span>Attack Simulator</div></div>
-        <div style="display:grid;grid-template-columns:repeat(5,auto);gap:10px;flex-wrap:wrap">
+        <div style="display:grid;grid-template-columns:repeat(5,auto);gap:10px;flex-wrap:wrap" class="attack-sim-grid">
           <button class="btn btn-sm btn-secondary" onclick="simulateAttack('sql_injection','/?id=1%27+OR+1%3D1--')">SQLi</button>
           <button class="btn btn-sm btn-secondary" onclick="simulateAttack('xss','/?q=%3Cscript%3Ealert(1)%3C/script%3E')">XSS</button>
           <button class="btn btn-sm btn-secondary" onclick="simulateAttack('path_traversal','/../../../etc/passwd')">Path Trav</button>
@@ -939,7 +1000,7 @@ option{background:var(--bg-dark);color:var(--text)}
     <div class="section" id="section-rules">
       <div class="card" style="margin-bottom:20px">
         <div class="card-header"><div class="card-title"><span class="material-symbols-rounded">add_circle</span>Create New Rule</div></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px" class="rules-create-grid">
           <input class="input" type="text" id="rule-id" placeholder="Identifier">
           <input class="input" type="text" id="rule-pattern" placeholder="Regex Pattern" style="font-family:monospace">
           <select class="input" id="rule-severity">
@@ -994,7 +1055,7 @@ option{background:var(--bg-dark);color:var(--text)}
 
       <div class="card" style="margin-bottom:20px">
         <div class="card-header"><div class="card-title"><span class="material-symbols-rounded">tune</span>Mitigation Posture</div></div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" class="settings-posture-grid">
           <button class="btn btn-secondary posture-btn" data-posture="monitor"><span class="material-symbols-rounded">visibility</span>Monitor Only</button>
           <button class="btn btn-secondary posture-btn active" data-posture="standard"><span class="material-symbols-rounded">shield</span>Standard</button>
           <button class="btn btn-secondary posture-btn" data-posture="attack"><span class="material-symbols-rounded">gpp_maybe</span>Under Attack</button>
@@ -1130,7 +1191,83 @@ let evtSource = null;
 let markerData = [];
 
 // ============ API ============
+const DEMO_MODE = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+
+function demoIncidents(n) {
+  const types = ['sql_injection','xss','path_traversal','cmd_injection','brute_force','scanner','lfi','rfi'];
+  const ips = ['192.168.1.105','10.0.0.42','172.16.0.8','203.0.113.50','198.51.100.23','45.33.32.156','104.236.228.48','185.220.101.34'];
+  const paths = ['/api/login','/admin','/wp-admin','/api/users','/index.php','/search','/api/auth','/../../../etc/passwd','/ping','/shell.php'];
+  const arr = [];
+  for (let i = 0; i < n; i++) {
+    const t = types[Math.floor(Math.random()*types.length)];
+    const sev = (t==='sql_injection'||t==='xss')?'critical':t==='scanner'||t==='lfi'?'low':'high';
+    arr.push({
+      id:'inc-'+i, type:'attack_blocked', rule_id:'RULE-'+(100+i), attack_type:t,
+      client_ip:ips[Math.floor(Math.random()*ips.length)],
+      path:paths[Math.floor(Math.random()*paths.length)],
+      method:'GET', severity:sev,
+      message:t+' detected', source:'kalki-proxy',
+      timestamp:new Date(Date.now()-Math.random()*86400000).toISOString(),
+      acknowledged:Math.random()>0.7
+    });
+  }
+  return arr;
+}
+
+const DEMO_DATA = {
+  '/api/dashboard/stats': {
+    total_requests:1847, blocked_requests:342, active_ips:28, incidents_today:89,
+    posture:'monitor', uptime_seconds:82400,
+    top_attacks:[
+      {attack_type:'sql_injection',count:87},{attack_type:'xss',count:65},
+      {attack_type:'path_traversal',count:42},{attack_type:'cmd_injection',count:38},
+      {attack_type:'scanner',count:56},{attack_type:'brute_force',count:31},
+      {attack_type:'lfi',count:15},{attack_type:'rfi',count:8}
+    ],
+    recent_incidents:demoIncidents(20),
+    agents_online:3, rule_count:12
+  },
+  '/api/geo': {
+    total_ips:156, total_countries:15,
+    locations:[
+      {country_code:'US',count:45,lat:40.7,lng:-74},{country_code:'DE',count:23,lat:52.5,lng:13.4},
+      {country_code:'IN',count:18,lat:28.6,lng:77.2},{country_code:'RU',count:15,lat:55.7,lng:37.6},
+      {country_code:'CN',count:12,lat:39.9,lng:116.4},{country_code:'BR',count:8,lat:-15.8,lng:-47.9},
+      {country_code:'GB',count:7,lat:51.5,lng:-0.1},{country_code:'FR',count:6,lat:48.9,lng:2.3},
+      {country_code:'JP',count:5,lat:35.7,lng:139.7},{country_code:'AU',count:4,lat:-33.9,lng:151.2}
+    ]
+  },
+  '/api/siem/stats':{total:156,critical:23,high:45,medium:67,low:21,unacknowledged:34},
+  '/api/siem/alerts': demoIncidents(15).map(a=>({...a,type:'siem_alert'})),
+  '/api/rules':[
+    {id:'SQLI-001',pattern:"(\\bunion\\b.*\\bselect\\b|\\bdrop\\b.*\\btable\\b)",severity:'critical',category:'sqli',description:'SQL Injection',enabled:true},
+    {id:'XSS-001',pattern:'(<script|javascript:|onerror=|onload=)',severity:'high',category:'xss',description:'Cross-Site Scripting',enabled:true},
+    {id:'TRAV-001',pattern:'(\\.\\./|\\.\\.\\\\|%2e%2e)',severity:'high',category:'path_traversal',description:'Path Traversal',enabled:true},
+    {id:'CMDI-001',pattern:'(;\\s*(cat|ls|rm|sh|bash)|`.*`|\\$\\()',severity:'critical',category:'cmd_injection',description:'Command Injection',enabled:true},
+    {id:'RFI-001',pattern:'(include=|require=|file=.*http)',severity:'medium',category:'rfi',description:'Remote File Inclusion',enabled:true},
+    {id:'LFI-001',pattern:'(\\.\\./etc/passwd|/proc/self)',severity:'high',category:'lfi',description:'Local File Inclusion',enabled:true},
+    {id:'SCANNER-001',pattern:'(wp-admin|phpmyadmin|/manager)',severity:'low',category:'scanner',description:'Scanner Detection',enabled:true},
+    {id:'BRUTE-001',pattern:'(/api/auth/login.*POST)',severity:'medium',category:'brute_force',description:'Brute Force',enabled:true}
+  ],
+  '/api/vulns/stats':{total_cves:12,avg_cvss:6.8,total_packages:342,by_severity:{critical:2,high:4,medium:5,low:1},last_scan_status:'completed'},
+  '/api/vulns':[
+    {id:'v1',package:'openssl',installed_version:'3.0.10',available_version:'3.0.13',severity:'critical',cve:'CVE-2024-0727',description:'Critical security update for openssl'},
+    {id:'v2',package:'libssl3',installed_version:'3.0.10',available_version:'3.0.13',severity:'critical',cve:'CVE-2024-2511',description:'Critical security update for libssl3'},
+    {id:'v3',package:'curl',installed_version:'7.88.1',available_version:'8.4.0',severity:'high',cve:'CVE-2024-2004',description:'Security update available for curl'},
+    {id:'v4',package:'systemd',installed_version:'252.19',available_version:'252.22',severity:'high',cve:'CVE-2024-2883',description:'Security update available for systemd'},
+    {id:'v5',package:'sudo',installed_version:'1.9.13',available_version:'1.9.15',severity:'high',cve:'CVE-2024-2883',description:'Security update available for sudo'},
+    {id:'v6',package:'bash',installed_version:'5.2.15',available_version:'5.2.21',severity:'medium',cve:'CVE-2024-2883',description:'Package bash has an update available'}
+  ],
+  '/api/config':{proxy_port:8080,api_port:8000,log_level:'info',posture:'monitor',waf_enabled:true,rate_limit:1000},
+  '/api/blacklist':['45.33.32.156','185.220.101.34']
+};
+
 async function api(endpoint, options = {}) {
+  if (DEMO_MODE) {
+    const base = endpoint.split('?')[0].replace(/\/\d+$/,'');
+    if (DEMO_DATA[base]) return JSON.parse(JSON.stringify(DEMO_DATA[base]));
+    return null;
+  }
   try {
     const res = await fetch(endpoint, options);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1611,6 +1748,14 @@ function closeDrawer() {
 
 // ============ CONNECTION CHECK ============
 async function checkConnections() {
+  if (DEMO_MODE) {
+    ['conn-dot-api','conn-dot-proxy','conn-dot-cmon'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = 'conn-dot online';
+    });
+    document.getElementById('system-status').textContent = 'Demo Mode';
+    return;
+  }
   const results = await Promise.allSettled([
     fetch('http://localhost:8000/health', { signal: AbortSignal.timeout(2000) }),
     fetch('http://localhost:8080', { signal: AbortSignal.timeout(2000) }),
@@ -1642,6 +1787,16 @@ function refreshAll() {
 // ============ SSE ============
 function connectSSE() {
   if (evtSource) evtSource.close();
+  if (DEMO_MODE) {
+    setInterval(function() {
+      const cpu = (Math.random()*15+3).toFixed(1);
+      const mem = Math.floor(Math.random()*200+800);
+      document.getElementById('cpu-usage').textContent = cpu + '%';
+      document.getElementById('memory-usage').textContent = mem + 'MB';
+      document.getElementById('footer-last-update').textContent = new Date().toLocaleTimeString();
+    }, 3000);
+    return;
+  }
   try {
     evtSource = new EventSource('/api/stream');
     evtSource.onmessage = function(e) {
@@ -2009,6 +2164,10 @@ async function loadGeoData() {
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', function() {
+  if (DEMO_MODE) {
+    var banner = document.getElementById('demo-banner');
+    if (banner) banner.style.display = 'flex';
+  }
   loadOverview();
   connectSSE();
   initParticles();
