@@ -1,82 +1,90 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  waf:
-    build: ./backend
-    restart: always
+  kalki-proxy:
+    build:
+      context: ./rust
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - KALKI_CONFIG=/etc/kalki/config.yaml
+      - KALKI_PROXY_PORT=8080
+      - KALKI_UPSTREAM_URL=http://upstream:3000
+      - KALKI_MGMT_API_URL=http://kalki-api:8000
+      - RUST_LOG=info
+    volumes:
+      - ./config/kalki.yaml:/etc/kalki/config.yaml:ro
+      - kalki-data:/var/lib/kalki
+    depends_on:
+      - kalki-api
+    networks:
+      - kalki-net
+    restart: unless-stopped
+
+  kalki-api:
+    build:
+      context: ./go
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
-      - UPSTREAM_SERVER_URL=http://upstream:8080
-      # Datadog / OpenTelemetry configuration
-      - DD_AGENT_HOST=datadog-agent
-      - DD_SERVICE=kalki-waf
-      - DD_ENV=${DD_ENV:-production}
-      - DD_VERSION=${CI_COMMIT_SHORT_SHA:-latest}
-      - DD_LOGS_INJECTION=true
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://datadog-agent:4317
-      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-      - OTEL_TRACES_EXPORTER=otlp
-      - OTEL_SERVICE_NAME=kalki-waf
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=kalki-waf,service.version=${CI_COMMIT_SHORT_SHA:-latest},deployment.environment=${DD_ENV:-production}
-    depends_on:
-      - upstream
-      - datadog-agent
+      - KALKI_MGMT_PORT=8000
+      - KALKI_DB_PATH=/var/lib/kalki/kalki.db
+      - KALKI_FRONTEND_DIR=/opt/kalki/frontend
+      - KALKI_API_KEY=${KALKI_API_KEY:-}
     volumes:
-      - ./backend/firebase-credentials.json:/app/firebase-credentials.json:ro
-    labels:
-      com.datadoghq.ad.logs: '[{"source": "python", "service": "kalki-waf"}]'
-      com.datadoghq.tags.env: ${DD_ENV:-production}
-      com.datadoghq.tags.service: kalki-waf
+      - kalki-data:/var/lib/kalki
+      - ./frontend:/opt/kalki/frontend:ro
+    networks:
+      - kalki-net
+    restart: unless-stopped
+
+  kalki-systemd:
+    build:
+      context: ./c
+      dockerfile: Dockerfile
+    ports:
+      - "9001:9001"
+    volumes:
+      - /var/log:/var/log:ro
+      - /etc:/etc:ro
+      - kalki-data:/var/lib/kalki
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    privileged: true
+    networks:
+      - kalki-net
+    restart: unless-stopped
 
   upstream:
     build:
       context: ./backend/upstream
       dockerfile: Dockerfile
-    restart: always
     ports:
-      - "8080:8080"
-    environment:
-      - PORT=8080
+      - "3000:3000"
+    networks:
+      - kalki-net
+    restart: unless-stopped
 
   datadog-agent:
-    image: gcr.io/datadoghq/agent:7
-    restart: always
+    image: gcr.io/datadoghq/agent:latest
     environment:
-      - DD_API_KEY=${DD_API_KEY:?Datadog API key is required}
-      - DD_SITE=${DD_SITE:-datadoghq.com}
-      - DD_HOSTNAME=kalki-waf
-      - DD_ENV=${DD_ENV:-production}
-      - DD_SERVICE=kalki-waf
-      - DD_VERSION=${CI_COMMIT_SHORT_SHA:-latest}
-      - DD_TAGS=team:security app:kalki-waf service:kalki-waf
-      # OTLP ingest
-      - DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENABLED=true
-      - DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENABLED=true
-      - DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT=0.0.0.0:4318
-      # Log collection
-      - DD_LOGS_ENABLED=true
-      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
-      - DD_CONTAINER_EXCLUDE=name:datadog-agent
-      - DD_AC_EXCLUDE=name:datadog-agent
-      # Prometheus / OpenMetrics autodiscovery
-      # APM
-      - DD_APM_ENABLED=true
-      - DD_APM_NON_LOCAL_TRAFFIC=true
-      # Health
-      - DD_HEALTH_PORT=5555
+      - DD_API_KEY=${DD_API_KEY:-}
+      - DD_SITE=datadoghq.com
+      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc/:/host/proc/:ro
-      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
-      - ./datadog/conf.d:/etc/datadog-agent/conf.d:ro
-    ports:
-      - "4317:4317"
-      - "4318:4318"
-    healthcheck:
-      test: ["CMD", "agent", "health"]
-      interval: 30s
-      retries: 3
-      start_period: 20s
+      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+    networks:
+      - kalki-net
+    restart: unless-stopped
+
+networks:
+  kalki-net:
+    driver: bridge
+
+volumes:
+  kalki-data:

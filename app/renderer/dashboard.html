@@ -657,9 +657,6 @@ option{background:var(--bg-dark);color:var(--text)}
       <span class="material-symbols-rounded">security</span>SIEM
       <span class="badge" id="siem-badge">0</span>
     </div>
-    <div class="nav-item" data-section="vulnerabilities">
-      <span class="material-symbols-rounded">bug_report</span>Vulnerabilities
-    </div>
     <div class="nav-item" data-section="rules">
       <span class="material-symbols-rounded">rule</span>Rules
     </div>
@@ -884,53 +881,6 @@ option{background:var(--bg-dark);color:var(--text)}
         </div>
         <div class="table-container" id="siem-table">
           <div class="empty"><span class="material-symbols-rounded">inbox</span><div class="empty-text">No alerts</div><div class="empty-subtext">All systems nominal</div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== VULNERABILITIES ===== -->
-    <div class="section" id="section-vulnerabilities">
-      <div class="metric-grid" style="grid-template-columns:repeat(4,1fr)">
-        <div class="metric-card">
-          <div class="metric-icon" style="background:rgba(239,68,68,0.15)"><span class="material-symbols-rounded" style="color:var(--neon-red)">bug_report</span></div>
-          <div class="metric-value" id="vuln-total">0</div>
-          <div class="metric-label">Total CVEs</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-icon yellow"><span class="material-symbols-rounded">speed</span></div>
-          <div class="metric-value" id="vuln-cvss">0.0</div>
-          <div class="metric-label">Avg CVSS</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-icon green"><span class="material-symbols-rounded">inventory</span></div>
-          <div class="metric-value" id="vuln-packages">0</div>
-          <div class="metric-label">Packages Scanned</div>
-        </div>
-        <div class="metric-card">
-          <button class="btn btn-primary" onclick="runVulnScan()" style="margin-top:20px;width:100%">
-            <span class="material-symbols-rounded">play_arrow</span>Run Scan
-          </button>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-2">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title"><span class="material-symbols-rounded">list</span>Vulnerability Findings</div>
-              <div class="card-badge" id="vuln-scan-status">—</div>
-            </div>
-            <div class="table-container" id="vuln-table">
-              <div class="empty"><span class="material-symbols-rounded">security</span><div class="empty-text">No scan results</div><div class="empty-subtext">Click "Run Scan" to check for vulnerabilities</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="col">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title"><span class="material-symbols-rounded">pie_chart</span>By Severity</div>
-            </div>
-            <div class="donut-container"><canvas id="chart-vuln"></canvas></div>
-          </div>
         </div>
       </div>
     </div>
@@ -1172,7 +1122,6 @@ function navigateTo(section) {
     overview: ['SECURITY OVERVIEW', 'Real-time threat monitoring and analysis'],
     threats: ['THREAT ANALYSIS', 'Attack patterns and severity breakdown'],
     siem: ['SECURITY INFORMATION & EVENT MANAGEMENT', 'Alert correlation and incident tracking'],
-    vulnerabilities: ['VULNERABILITY MANAGEMENT', 'System package vulnerabilities and CVE tracking'],
     rules: ['SECURITY RULES', 'Create and manage WAF rules'],
     settings: ['SETTINGS', 'System configuration and posture control'],
   };
@@ -1183,7 +1132,6 @@ function navigateTo(section) {
   if (section === 'overview') { loadOverview(); loadGeoData(); }
   if (section === 'threats') loadThreats();
   if (section === 'siem') loadSiem();
-  if (section === 'vulnerabilities') loadVuln();
   if (section === 'rules') loadRules();
   if (section === 'settings') loadSettings();
 }
@@ -1441,51 +1389,6 @@ async function loadRules() {
   } else {
     count.textContent = '0 rules';
     table.innerHTML = '<div class="empty"><span class="material-symbols-rounded">shield</span><div class="empty-text">No rules configured</div><div class="empty-subtext">Deploy your first rule above</div></div>';
-  }
-}
-
-// ============ VULNERABILITIES ============
-async function loadVuln() {
-  const stats = await api('/api/vulns/stats');
-  const findings = await api('/api/vulns');
-  if (stats) {
-    document.getElementById('vuln-total').textContent = stats.total_cves || 0;
-    document.getElementById('vuln-cvss').textContent = (stats.avg_cvss || 0).toFixed(1);
-    document.getElementById('vuln-packages').textContent = stats.total_packages || 0;
-  }
-  const table = document.getElementById('vuln-table');
-  if (findings && findings.length > 0) {
-    table.innerHTML = '<table><thead><tr><th>Severity</th><th>Package</th><th>Installed</th><th>Available</th><th>CVE</th><th>Description</th></tr></thead><tbody>' +
-      findings.map(f =>
-        '<tr><td>' + getBadge(f.severity) + '</td>' +
-        '<td style="font-family:monospace;color:var(--neon-cyan)">' + (f.package || '') + '</td>' +
-        '<td style="font-family:monospace;font-size:12px">' + (f.installed_version || '—') + '</td>' +
-        '<td style="font-family:monospace;font-size:12px;color:var(--neon-green)">' + (f.available_version || '—') + '</td>' +
-        '<td style="font-size:12px;color:var(--neon-yellow)">' + (f.cve || '—') + '</td>' +
-        '<td style="font-size:12px">' + (f.description || '') + '</td></tr>'
-      ).join('') + '</tbody></table>';
-  } else {
-    table.innerHTML = '<div class="empty"><span class="material-symbols-rounded">security</span><div class="empty-text">No vulnerabilities found</div><div class="empty-subtext">System packages appear up to date</div></div>';
-  }
-}
-
-async function runVulnScan() {
-  document.getElementById('vuln-scan-status').textContent = 'Scanning...';
-  const res = await api('/api/vulns/scan', { method: 'POST' });
-  if (res && res.id) {
-    // poll for completion
-    let attempts = 0;
-    const poll = setInterval(async () => {
-      const scan = await api('/api/vulns/scan/' + res.id);
-      if (scan && scan.status === 'completed') {
-        clearInterval(poll);
-        document.getElementById('vuln-scan-status').textContent = 'Completed';
-        loadVuln();
-      }
-      if (++attempts > 30) { clearInterval(poll); document.getElementById('vuln-scan-status').textContent = 'Timeout'; }
-    }, 1000);
-  } else {
-    document.getElementById('vuln-scan-status').textContent = 'Error';
   }
 }
 

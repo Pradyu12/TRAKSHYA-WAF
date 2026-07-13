@@ -1,0 +1,30 @@
+{
+  "name": "trakshya-waf",
+  "version": "2.0.0",
+  "description": "Trakshya WAF — Desktop Security Dashboard",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:linux": "electron-builder --linux AppImage"
+  },
+  "build": {
+    "appId": "com.trakshya.waf",
+    "productName": "Trakshya WAF",
+    "linux": {
+      "category": "Security",
+      "target": ["AppImage"],
+      "icon": "assets/icon.png"
+    },
+    "files": [
+      "main.js", "preload.js",
+      "renderer/**/*",
+      "assets/**/*",
+      "bin/**/*",
+      "scripts/**/*"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

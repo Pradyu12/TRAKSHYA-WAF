@@ -1,97 +1,138 @@
-# KALKI WAF - Web Application Firewall
+# KALKI-WAF — Web Application Firewall
 
-A high-performance Web Application Firewall built with FastAPI that protects your upstream applications from common web attacks including SQLi, XSS, RFI, CMDi, and more.
+![Deploy Dashboard](https://github.com/Pradyu12/KALKI-WAF/actions/workflows/deploy-dashboard.yml/badge.svg)
+
+**Live Dashboard:** [GitHub Pages](https://pradyu12.github.io/KALKI-WAF/)
+
+A high-performance polyglot Web Application Firewall with integrated SIEM/XDR capabilities.
+Built with **Rust** (core proxy), **Go** (management API), and **C** (system monitoring).
+
+## Architecture
+
+```
+Internet → [Rust Proxy :8080] → Upstream Web App
+               │
+        (reports incidents via REST/JSON)
+               ↓
+         [Go API :8000] ←→ SQLite
+               ↑
+        (C daemon reports via HTTP)
+               │
+         [C Daemon :9001]
+```
+
+## Language Breakdown
+
+| Language | Component | Role |
+|----------|-----------|------|
+| **Rust** | Proxy, Rules Engine, Rate Limiter, Circuit Breaker, GeoIP, JWT | Performance-critical request pipeline |
+| **Go** | Management API, SIEM, Agents, Webhooks, Telemetry, WebSocket | Orchestration, API, observability |
+| **C** | HIDS, FIM, SCA, Vulnerability Scanner, Active Response | System-level monitoring & response |
 
 ## Features
 
-- **Real-time threat detection** - Blocks SQL injection, XSS, RFI, command injection, path traversal, and more
-- **Dynamic rule management** - Create, update, and toggle security rules via REST API
-- **Rate limiting** - Automatic protection against DDoS and brute force attacks
-- **Multiple mitigation postures** - Monitor Only, Standard Posture, Under Attack
+- **Real-time threat detection** — Blocks SQLi, XSS, RFI, CMDi, path traversal, LFI, XXE, SSTI
+- **Multi-language architecture** — Each component in its best-fit language, communicating via REST/JSON
+- **Rate limiting** — Token bucket algorithm, per-IP sliding window
+- **Circuit breaker** — Automatic upstream health monitoring with half-open recovery
+- **SIEM correlation engine** — 7 detection rules (brute force, port scan, XSS/SQLi waves, etc.)
+- **HIDS** — Parses auth logs, detects SSH brute force, sudo abuse
+- **FIM** — SHA-256 file integrity monitoring for critical system files
+- **SCA** — CIS benchmark compliance checks (file perms, SSH config, password policy)
+- **Vulnerability scanner** — CVE matching against installed packages
+- **Active response** — iptables/nftables IP blocking, UFW, systemd posture lockdown
+- **Multiple postures** — Monitor, Standard, Under Attack
+- **GeoIP blocking** — MaxMind GeoLite2 country-based blocking
+- **JWT validation** — Token-based auth for management API
+- **Remote agents** — Fleet management for distributed sensors
+- **Webhook alerts** — Slack and Discord notification channels
+- **Prometheus metrics** — Exposed at `/metrics`
+- **OpenTelemetry** — Distributed tracing via OTLP exporter
+- **WebSocket/SSE** — Real-time dashboard events
 - **Firebase Firestore backend** - Scalable, serverless database for rules and security events
 - **Dashboard UI** - Real-time telemetry and incident monitoring
 - **Docker ready** - Containerized deployment with docker-compose
+
+## Dashboard Themes
+
+The dashboard includes 7 cyber-themed color palettes that users can switch between:
+
+| Theme | Color | Vibe |
+|-------|-------|------|
+| **Cyber Violet** (default) | `#a855f7` | Holographic purple |
+| **Matrix Green** | `#22c55e` | Terminal/hacker |
+| **Neon Cyan** | `#06b6d4` | TRON-style ice |
+| **Blood Red** | `#ef4444` | Aggressive/under-attack |
+| **Electric Blue** | `#3b82f6` | Professional/clean |
+| **Synthwave Pink** | `#ec4899` | Retro-wave neon |
+| **Toxic Amber** | `#f59e0b` | Warning/radiation |
+
+Theme preference is saved in `localStorage` and persists across sessions.
+
+## Dashboard Features
+
+- **Hologram 3D Globe** — Custom GLSL shader with Fresnel effects, scan lines, and flicker animation
+- **Demo Mode** — Full functionality on GitHub Pages with embedded realistic mock data
+- **Keyboard Shortcuts** — `Ctrl+K` search, `1-9` navigation, `F` fullscreen, `?` help
+- **Quick Actions FAB** — Floating action button with refresh, export, theme, fullscreen
+- **Attack Heatmap** — 24x7 grid showing attack density by hour/day
+- **System Health Panel** — Real-time component status for all WAF services
+- **Export Reports** — Download dashboard state as JSON
+- **Particle Background** — Animated constellation network effect
+- **Footer Status Bar** — Connection status, last update, current theme
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.11+
-- Firebase project with Firestore enabled
+- Rust 1.75+ (Cargo)
+- Go 1.22+
+- CMake 3.20+, C11 compiler (gcc/clang)
+- libmicrohttpd, libcurl, libssl (for C daemon)
 - Docker & Docker Compose (optional)
 
-### Installation
-
-#### Option 1: Direct Installation
+### Building
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/kalki-waf.git
-cd kalki-waf
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate  # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Create Firebase credentials file
-# Download service account key from Firebase Console
-# Save as firebase-credentials.json in the project root
-
-# Set environment variables
-export FIREBASE_PROJECT_ID=your-project-id
-export UPSTREAM_SERVER_URL=http://localhost:8080
-
-# Run the application
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# Build all components
+./scripts/build-all.sh
 ```
 
-#### Option 2: Docker Deployment
+### Running (Development)
 
 ```bash
-# Copy your Firebase credentials to the project root
-cp /path/to/firebase-credentials.json .
-
-# Create .env file
-cp .env.example .env
-# Edit .env with your Firebase project ID
-
-# Build and run
-docker-compose up --build
-
-# Or run in detached mode
-docker-compose up -d --build
+# Start all components locally
+./scripts/run-all.sh
 ```
 
-### Firebase Setup
+### Running (Docker)
 
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create a new project or select existing one
-3. Enable Firestore Database
-4. Create a service account:
-   - Project Settings → Service Accounts
-   - Generate new private key
-   - Download JSON file as `firebase-credentials.json`
-5. Place the file in your project root
+```bash
+# Build and run all services
+docker compose up --build
+
+# Or in detached mode
+docker compose up -d --build
+```
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Dashboard UI |
-| GET | `/api/v1/threat-intel/alerts` | Telemetry data |
-| GET | `/api/v1/rules` | List all rules |
-| POST | `/api/v1/rules` | Create new rule |
-| PUT | `/api/v1/rules/{id}/toggle` | Toggle rule active state |
-| DELETE | `/api/v1/rules/{id}` | Delete rule |
-| GET | `/api/v1/mitigation-posture` | Get current posture |
-| POST | `/api/v1/mitigation-posture` | Update posture |
-| POST | `/api/v1/rules/test-sandbox` | Test regex against payload |
-| GET | `/api/v1/stream` | SSE real-time events |
+| GET | `/health` | Health check |
+| GET | `/api/dashboard/stats` | Dashboard statistics |
+| GET | `/api/incidents` | List recent incidents |
+| POST | `/api/incidents` | Report an incident |
+| PUT | `/api/incidents/{id}/acknowledge` | Acknowledge incident |
+| GET | `/api/config` | Get proxy config |
+| PUT | `/api/config` | Update proxy config |
+| GET | `/api/posture` | Get current posture |
+| PUT | `/api/posture` | Set posture (monitor/standard/under_attack) |
+| GET | `/api/agents` | List registered agents |
+| POST | `/api/agents/register` | Register new agent |
+| GET | `/api/metrics` | Prometheus metrics |
+| GET | `/ws` | WebSocket real-time events |
+| GET | `/api/reload-rules` | Reload rule definitions |
 
 ## Mitigation Postures
 
@@ -114,16 +155,40 @@ docker-compose up -d --build
 
 ```
 KALKI-WAF/
-├── main.py              # WAF core engine
-├── requirements.txt     # Python dependencies
-├── Dockerfile           # Docker image definition
-├── docker-compose.yml   # Multi-container setup
-├── schema.sql           # Database schema (for reference)
-├── dashboard.html       # Web UI
-├── tests/
-│   └── test_waf.py      # Test suite
-├── upstream/            # Sample upstream server
-└── firebase-credentials.json  # Firebase config (not included)
+├── rust/                    # Rust workspace (performance-critical)
+│   ├── kalki-proxy/         # HTTP reverse proxy + request pipeline
+│   ├── kalki-rules/         # Regex-based attack detection engine
+│   ├── kalki-rate-limiter/  # Token bucket rate limiter
+│   ├── kalki-circuit-breaker/ # Upstream health monitoring
+│   ├── kalki-geoip/         # MaxMind GeoIP country blocking
+│   └── kalki-jwt/           # JWT token validation
+├── go/                      # Go module (orchestration & API)
+│   ├── cmd/kalki-api/       # Management API server
+│   └── internal/
+│       ├── api/             # REST handlers, auth, router
+│       ├── siem/            # SIEM correlation engine (7 rules)
+│       ├── agents/          # Remote agent fleet management
+│       ├── webhooks/        # Slack/Discord notification dispatcher
+│       ├── telemetry/       # Prometheus metrics + OTLP tracing
+│       ├── ws/              # WebSocket & SSE real-time events
+│       └── db/              # SQLite database layer
+├── c/                       # C project (system-level monitoring)
+│   ├── include/kalki.h      # Shared header
+│   ├── src/
+│   │   ├── hids/            # Host-based intrusion detection
+│   │   ├── fim/             # File integrity monitoring (SHA-256)
+│   │   ├── sca/             # Security configuration assessment
+│   │   ├── vuln/            # CVE vulnerability scanning
+│   │   └── active_response/ # iptables/UFW blocking, posture
+│   └── tests/
+├── config/kalki.yaml        # Shared configuration
+├── frontend/dashboard.html  # Web dashboard (static HTML)
+├── scripts/
+│   ├── build-all.sh         # Build all 3 languages
+│   └── run-all.sh           # Start all 3 daemons
+├── docker-compose.yml       # Multi-service orchestration
+├── datadog/                 # Datadog monitoring configs
+└── .env.example             # Environment template
 ```
 
 ## CI/CD
@@ -132,6 +197,29 @@ The project includes GitHub Actions CI/CD pipeline:
 - Automated testing on PRs
 - Docker image build and push on main branch
 - GitHub Container Registry integration
+
+## Dashboard Deployment
+
+### GitHub Pages (Recommended)
+
+The dashboard is deployed automatically to GitHub Pages on every push to `main`:
+
+1. The `deploy-dashboard.yml` workflow builds and deploys the `frontend/` directory
+2. The dashboard runs in **Demo Mode** with embedded realistic data
+3. All visualizations, charts, and the 3D hologram globe work fully
+
+To enable GitHub Pages:
+1. Go to Repository Settings → Pages
+2. Set Source to "GitHub Actions"
+3. Push to `main` — deployment happens automatically
+
+### Local Development
+
+```bash
+# Start the mock server with live API
+node server.js
+# Dashboard at http://localhost:8000
+```
 
 ## Contributing
 

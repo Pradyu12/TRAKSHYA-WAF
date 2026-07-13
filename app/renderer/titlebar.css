@@ -1,0 +1,9 @@
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:transparent}
+.titlebar{display:flex;align-items:center;height:40px;background:#0a0015;border-bottom:1px solid rgba(176,38,255,0.12);user-select:none;font-family:'Orbitron',monospace}
+.titlebar-app-name{padding:0 16px;font-size:11px;font-weight:700;color:#ff2975;letter-spacing:2px;text-shadow:0 0 12px rgba(255,41,117,0.4);white-space:nowrap}
+.titlebar-drag-zone{flex:1;-webkit-app-region:drag;height:100%}
+.titlebar-controls{display:flex;gap:4px;padding:0 12px}
+.titlebar-btn{width:36px;height:28px;border:none;background:transparent;color:#808090;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.15s}
+.titlebar-btn:hover{background:rgba(176,38,255,0.1);color:#fff}
+.titlebar-close:hover{background:rgba(255,0,85,0.2);color:#ff0055}

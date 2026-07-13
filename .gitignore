@@ -1,46 +1,54 @@
-# ─── Python ───────────────────────────────────────────────────────────
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.venv/
-venv/
-.env
-.env.*
-!requirements*.txt
+# Rust
+rust/target/
+**/*.rs.bk
 
-# ─── Database & Data ─────────────────────────────────────────────────
+# Go
+go/vendor/
+go/*.exe
+go/kalki-api
+
+# C build
+c/build/
+c/cmake-build-*/
+*.o
+*.so
+*.a
+
+# Build output
+build/
+
+# KALKI data
 *.db
 *.db-shm
 *.db-wal
-*.sqlite3
 
-# ─── Credentials & Secrets ───────────────────────────────────────────
-firebase-credentials.json
-*.pem
-*.p12
-.cer
+# Environment
+.env
+.env.example
 
-# ─── OS / Editor ─────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# ─── Tests ────────────────────────────────────────────────────────────
-.pytest_cache/
-.coverage
-htmlcov/
+# OS
+.DS_Store
+Thumbs.db
 
-# ─── Firebase Logs ────────────────────────────────────────────────
-.firebase/logs/
+# Logs
+*.log
 
-# ─── Backups ─────────────────────────────────────────────────────────
-*.backup
-*.bak
+# App binaries
+app/bin/
 
-# ─── Other ───────────────────────────────────────────────────────────
-.kilo/
+# Opencode
+.agent-id
 .agents/
 
-dist/
+# Duplicates
+globe.glb
+*.datadog.yml
+
+# Node
+node_modules/

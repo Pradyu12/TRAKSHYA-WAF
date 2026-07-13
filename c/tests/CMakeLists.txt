@@ -1,0 +1,8 @@
+if(BUILD_TESTING)
+    enable_testing()
+    add_test(NAME test_utils COMMAND ${CMAKE_SOURCE_DIR}/tests/test_runner.sh -utils)
+    add_test(NAME test_fim COMMAND ${CMAKE_SOURCE_DIR}/tests/test_runner.sh -fim)
+    add_test(NAME test_hids COMMAND ${CMAKE_SOURCE_DIR}/tests/test_runner.sh -hids)
+    add_test(NAME test_sca COMMAND ${CMAKE_SOURCE_DIR}/tests/test_runner.sh -sca)
+    add_test(NAME test_vuln COMMAND ${CMAKE_SOURCE_DIR}/tests/test_runner.sh -vuln)
+endif()

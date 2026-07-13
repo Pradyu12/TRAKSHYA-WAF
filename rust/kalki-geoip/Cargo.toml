@@ -1,0 +1,9 @@
+[package]
+name = "kalki-geoip"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+maxminddb = "0.24"
+tracing.workspace = true

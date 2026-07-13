@@ -1,0 +1,10 @@
+[package]
+name = "kalki-rules"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+regex = "1"
+once_cell = "1"
