@@ -66,6 +66,23 @@ section{padding:80px 40px;position:relative;z-index:1}
 .deep-dive-card code{font-family:monospace;font-size:12px;color:var(--neon-cyan);line-height:1.7}
 .deep-dive-card p{font-size:12px;color:var(--text-secondary);line-height:1.7}
 
+/* Install section */
+.install-tabs{display:flex;gap:4px;margin-bottom:32px;background:var(--bg-card);padding:4px;border-radius:10px;border:1px solid var(--border);max-width:fit-content}
+.install-tab{padding:10px 24px;border-radius:8px;border:none;background:transparent;color:var(--text-dim);font-size:13px;font-weight:500;cursor:pointer;transition:0.2s;font-family:inherit}
+.install-tab.active{background:var(--bg-elevated);color:var(--neon-cyan);border:1px solid var(--border)}
+.install-tab:hover:not(.active){color:var(--text-secondary)}
+.install-panel{display:none;max-width:700px;margin:0 auto}
+.install-panel.active{display:block}
+.code-block{background:#0a0015;border:1px solid var(--border);border-radius:10px;padding:20px;font-family:monospace;font-size:14px;line-height:1.8;overflow-x:auto;position:relative;margin-bottom:16px}
+.code-block .copy-btn{position:absolute;top:12px;right:12px;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;transition:0.2s}
+.code-block .copy-btn:hover{background:var(--neon-pink-dim);color:var(--neon-pink);border-color:rgba(255,41,117,0.3)}
+.code-comment{color:var(--text-dim)}.code-prompt{color:var(--neon-cyan)}.code-string{color:var(--neon-yellow)}.code-cmd{color:#fff}
+
+/* One-liner install highlight */
+.install-oneliner{margin-bottom:24px;padding:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)}
+.install-oneliner .code-block{margin-bottom:0}
+.install-oneliner code{font-size:14px}
+
 /* Demo section */
 .demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;max-width:1100px;margin:0 auto}
 .demo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:0.3s}

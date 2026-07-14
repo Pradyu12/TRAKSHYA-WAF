@@ -309,6 +309,16 @@ Active  → iptables/nftables/UFW</code></pre>
     <div class="divider"></div>
   </div>
 
+  <!-- One-liner install -->
+  <div class="install-oneliner">
+    <div class="code-block" style="max-width:700px;margin:0 auto 32px">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <code><span class="code-comment"># One-liner install (Linux/macOS)</span>
+<span class="code-prompt">$</span> <span class="code-cmd">curl -fsSL https://github.com/Pradyu12/KALKI-WAF/releases/latest/download/install.sh | bash</span></code>
+    </div>
+    <p style="color:var(--text-dim);font-size:13px;text-align:center">Downloads the latest AppImage, installs to ~/.local/bin, adds to PATH. <strong>~75MB.</strong></p>
+  </div>
+
   <div style="max-width:800px;margin:0 auto" data-tabs>
     <div class="install-tabs">
       <button class="install-tab active" data-panel="panel-npm" onclick="switchTab(this,this)">npm</button>
@@ -332,7 +342,7 @@ Active  → iptables/nftables/UFW</code></pre>
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
         <code><span class="code-comment"># One-liner install</span>
-<span class="code-prompt">$</span> <span class="code-cmd">curl -fsSL https://trakshya.waf/install.sh | bash</span>
+<span class="code-prompt">$</span> <span class="code-cmd">curl -fsSL https://github.com/Pradyu12/KALKI-WAF/releases/latest/download/install.sh | bash</span>
 <span class="code-comment"># Launch</span>
 <span class="code-prompt">$</span> <span class="code-cmd">trakshya-waf</span></code>
       </div>
