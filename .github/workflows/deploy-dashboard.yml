@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "landing/**"
+      - "frontend/dashboard.html"
   workflow_dispatch:
 
 permissions:
@@ -28,6 +29,8 @@ jobs:
         run: |
           mkdir -p _site
           cp -r landing/* _site/
+          # Copy dashboard for demo mode
+          cp frontend/dashboard.html _site/dashboard.html
           touch _site/.nojekyll
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
