@@ -1,10 +1,10 @@
-name: Deploy Dashboard to GitHub Pages
+name: Deploy Landing Page to GitHub Pages
 
 on:
   push:
     branches: ["main"]
     paths:
-      - "frontend/**"
+      - "landing/**"
   workflow_dispatch:
 
 permissions:
@@ -22,23 +22,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
       - name: Prepare deploy artifact
         run: |
           mkdir -p _site
-          cp -r frontend/* _site/
+          cp -r landing/* _site/
           touch _site/.nojekyll
-          echo "Deployed files:"
-          find _site -type f | head -20
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
-
   deploy:
     environment:
       name: github-pages

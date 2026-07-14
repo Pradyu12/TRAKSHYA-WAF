@@ -1,0 +1,26 @@
+{
+  "name": "trakshya-waf",
+  "version": "2.0.0",
+  "description": "Trakshya WAF — Desktop Security Dashboard. Install once, run locally. No cloud, no data leaks.",
+  "main": "index.js",
+  "bin": {
+    "trakshya-waf": "bin/trakshya-waf.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js",
+    "start": "node bin/trakshya-waf.js"
+  },
+  "keywords": ["waf", "firewall", "security", "siem", "xdr", "dashboard", "synthwave"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pradyu12/KALKI-WAF.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Pradyu12/KALKI-WAF/issues"
+  },
+  "homepage": "https://pradyu12.github.io/KALKI-WAF",
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "preferUnplugged": true
+}

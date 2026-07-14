@@ -1,11 +1,30 @@
-# KALKI-WAF — Web Application Firewall
+# TRAKSHYA WAF — Desktop Web Application Firewall
 
-![Deploy Dashboard](https://github.com/Pradyu12/KALKI-WAF/actions/workflows/deploy-dashboard.yml/badge.svg)
+![Deploy Landing Page](https://github.com/Pradyu12/KALKI-WAF/actions/workflows/deploy-dashboard.yml/badge.svg)
 
-**Live Dashboard:** [GitHub Pages](https://pradyu12.github.io/KALKI-WAF/)
+**Landing Page:** [GitHub Pages](https://pradyu12.github.io/KALKI-WAF/)
 
 A high-performance polyglot Web Application Firewall with integrated SIEM/XDR capabilities.
 Built with **Rust** (core proxy), **Go** (management API), and **C** (system monitoring).
+Runs entirely on your machine via an Electron desktop app. No cloud dependency.
+
+## Quick Install
+
+```bash
+# Option 1: npm (recommended)
+npm install -g trakshya-waf
+trakshya-waf
+
+# Option 2: curl one-liner
+curl -fsSL https://pradyu12.github.io/KALKI-WAF/install.sh | bash
+trakshya-waf
+
+# Option 3: Docker
+git clone https://github.com/Pradyu12/KALKI-WAF.git
+cd KALKI-WAF
+docker compose up --build
+# Dashboard at http://localhost:8000
+```
 
 ## Architecture
 
@@ -198,26 +217,27 @@ The project includes GitHub Actions CI/CD pipeline:
 - Docker image build and push on main branch
 - GitHub Container Registry integration
 
-## Dashboard Deployment
+## Deployment
 
-### GitHub Pages (Recommended)
+### GitHub Pages (Landing Page)
 
-The dashboard is deployed automatically to GitHub Pages on every push to `main`:
+The landing page is deployed automatically to GitHub Pages on every push to `main` via the `deploy-dashboard.yml` workflow. It deploys the `landing/` directory.
 
-1. The `deploy-dashboard.yml` workflow builds and deploys the `frontend/` directory
-2. The dashboard runs in **Demo Mode** with embedded realistic data
-3. All visualizations, charts, and the 3D hologram globe work fully
+### Local Installation
 
-To enable GitHub Pages:
-1. Go to Repository Settings → Pages
-2. Set Source to "GitHub Actions"
-3. Push to `main` — deployment happens automatically
+The full WAF dashboard runs locally on your machine:
+
+1. **AppImage** — Single file, no dependencies. Download from GitHub Releases.
+2. **npm** — `npm install -g trakshya-waf` downloads and installs the AppImage automatically.
+3. **Docker** — `docker compose up --build` runs all services in containers.
 
 ### Local Development
 
 ```bash
-# Start the mock server with live API
-node server.js
+# Start the Go API server with dashboard
+cd go && CGO_ENABLED=1 go build -o ../build/kalki-api ./cmd/kalki-api/
+cd ..
+KALKI_FRONTEND_DIR="$(pwd)/frontend" ./build/kalki-api --config config/kalki.yaml
 # Dashboard at http://localhost:8000
 ```
 

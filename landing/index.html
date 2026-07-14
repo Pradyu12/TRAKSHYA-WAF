@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRAKSHYA WAF — Divine Eagle Guardian for Your Web Applications</title>
+<meta name="description" content="Trakshya WAF is a high-performance polyglot Web Application Firewall with SIEM/XDR. Built with Rust, Go, and C. Desktop dashboard with synthwave UI.">
+<meta name="theme-color" content="#050010">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#x1f6e1;</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- Navigation -->
+<nav>
+  <a href="#" class="nav-logo">
+    <svg viewBox="0 0 100 100" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="lGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.3"/>
+          <stop offset="60%" stop-color="#ff2975" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </radialGradient>
+        <radialGradient id="lGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.5"/>
+          <stop offset="40%" stop-color="#00f0ff" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="#00f0ff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="48" fill="url(#lGrad)"/>
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#ff2975" stroke-width="1.5" opacity="0.35"/>
+      <circle cx="50" cy="50" r="43" fill="none" stroke="#ff2975" stroke-width="0.8" opacity="0.2"/>
+      <g fill="none" stroke="#ff2975" stroke-width="0.6" opacity="0.2">
+        <path d="M50,7 Q56,18 50,26 Q44,18 50,7"/>
+        <path d="M50,93 Q56,82 50,74 Q44,82 50,93"/>
+        <path d="M7,50 Q18,56 26,50 Q18,44 7,50"/>
+        <path d="M93,50 Q82,56 74,50 Q82,44 93,50"/>
+        <path d="M15,15 Q26,20 30,30 Q20,26 15,15"/>
+        <path d="M85,15 Q74,20 70,30 Q80,26 85,15"/>
+        <path d="M15,85 Q26,80 30,70 Q20,74 15,85"/>
+        <path d="M85,85 Q74,80 70,70 Q80,74 85,85"/>
+      </g>
+      <g fill="none" stroke="#ff2975" stroke-width="0.8" opacity="0.35">
+        <path d="M50,16 Q54,24 50,30 Q46,24 50,16"/>
+        <path d="M50,84 Q54,76 50,70 Q46,76 50,84"/>
+        <path d="M16,50 Q24,54 30,50 Q24,46 16,50"/>
+        <path d="M84,50 Q76,54 70,50 Q76,46 84,50"/>
+      </g>
+      <polygon points="50,22 74,68 26,68" fill="none" stroke="#ff2975" stroke-width="1.8" opacity="0.85"/>
+      <polygon points="50,30 68,64 32,64" fill="none" stroke="#ff2975" stroke-width="1.4" opacity="0.65"/>
+      <polygon points="50,36 62,60 38,60" fill="none" stroke="#ff2975" stroke-width="1" opacity="0.5"/>
+      <polygon points="50,42 56,56 44,56" fill="none" stroke="#ff2975" stroke-width="0.8" opacity="0.35"/>
+      <polygon points="50,78 24,32 76,32" fill="none" stroke="#00f0ff" stroke-width="1.8" opacity="0.85"/>
+      <polygon points="50,72 32,36 68,36" fill="none" stroke="#00f0ff" stroke-width="1.4" opacity="0.65"/>
+      <polygon points="50,66 38,40 62,40" fill="none" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+      <polygon points="50,60 44,44 56,44" fill="none" stroke="#00f0ff" stroke-width="0.8" opacity="0.35"/>
+      <polygon points="50,56 48,46 52,46" fill="none" stroke="#00f0ff" stroke-width="0.6" opacity="0.25"/>
+      <circle cx="50" cy="50" r="7" fill="url(#lGlow)"/>
+      <circle cx="50" cy="50" r="3" fill="#00f0ff" opacity="0.9"/>
+    </svg>
+    TRAKSHYA
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#docs">Docs</a></li>
+    <li><a href="https://github.com/Pradyu12/KALKI-WAF" target="_blank">GitHub</a></li>
+    <li><a href="#install" class="nav-cta">Get Started</a></li>
+  </ul>
+  <button class="btn btn-ghost" style="display:none;padding:8px" onclick="toggleMobileNav()" aria-label="Menu">&#9776;</button>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-logo">
+    <svg viewBox="0 0 100 100" width="96" height="96" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="hGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.3"/>
+          <stop offset="60%" stop-color="#ff2975" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </radialGradient>
+        <radialGradient id="hGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.5"/>
+          <stop offset="40%" stop-color="#00f0ff" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="#00f0ff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="48" fill="url(#hGrad)"/>
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#ff2975" stroke-width="1.5" opacity="0.35"/>
+      <circle cx="50" cy="50" r="43" fill="none" stroke="#ff2975" stroke-width="0.8" opacity="0.2"/>
+      <g fill="none" stroke="#ff2975" stroke-width="0.6" opacity="0.2">
+        <path d="M50,7 Q56,18 50,26 Q44,18 50,7"/>
+        <path d="M50,93 Q56,82 50,74 Q44,82 50,93"/>
+        <path d="M7,50 Q18,56 26,50 Q18,44 7,50"/>
+        <path d="M93,50 Q82,56 74,50 Q82,44 93,50"/>
+        <path d="M15,15 Q26,20 30,30 Q20,26 15,15"/>
+        <path d="M85,15 Q74,20 70,30 Q80,26 85,15"/>
+        <path d="M15,85 Q26,80 30,70 Q20,74 15,85"/>
+        <path d="M85,85 Q74,80 70,70 Q80,74 85,85"/>
+      </g>
+      <g fill="none" stroke="#ff2975" stroke-width="0.8" opacity="0.35">
+        <path d="M50,16 Q54,24 50,30 Q46,24 50,16"/>
+        <path d="M50,84 Q54,76 50,70 Q46,76 50,84"/>
+        <path d="M16,50 Q24,54 30,50 Q24,46 16,50"/>
+        <path d="M84,50 Q76,54 70,50 Q76,46 84,50"/>
+      </g>
+      <polygon points="50,22 74,68 26,68" fill="none" stroke="#ff2975" stroke-width="1.8" opacity="0.85"/>
+      <polygon points="50,30 68,64 32,64" fill="none" stroke="#ff2975" stroke-width="1.4" opacity="0.65"/>
+      <polygon points="50,36 62,60 38,60" fill="none" stroke="#ff2975" stroke-width="1" opacity="0.5"/>
+      <polygon points="50,42 56,56 44,56" fill="none" stroke="#ff2975" stroke-width="0.8" opacity="0.35"/>
+      <polygon points="50,78 24,32 76,32" fill="none" stroke="#00f0ff" stroke-width="1.8" opacity="0.85"/>
+      <polygon points="50,72 32,36 68,36" fill="none" stroke="#00f0ff" stroke-width="1.4" opacity="0.65"/>
+      <polygon points="50,66 38,40 62,40" fill="none" stroke="#00f0ff" stroke-width="1" opacity="0.5"/>
+      <polygon points="50,60 44,44 56,44" fill="none" stroke="#00f0ff" stroke-width="0.8" opacity="0.35"/>
+      <polygon points="50,56 48,46 52,46" fill="none" stroke="#00f0ff" stroke-width="0.6" opacity="0.25"/>
+      <circle cx="50" cy="50" r="7" fill="url(#hGlow)"/>
+      <circle cx="50" cy="50" r="3" fill="#00f0ff" opacity="0.9"/>
+    </svg>
+  </div>
+  <div class="hero-badge">v2.0.0 &middot; WAF + SIEM/XDR</div>
+  <h1>TRAKSHYA WAF</h1>
+  <p>The desktop WAF that runs entirely on your machine. Real-time threat detection powered by Rust, Go, and C. Zero cloud dependency. Full synthwave dashboard included.</p>
+  <div class="hero-actions">
+    <a href="#install" class="btn btn-primary"><span>&#11088;</span> Get Started</a>
+    <a href="https://github.com/Pradyu12/KALKI-WAF" target="_blank" class="btn btn-secondary"><span>&#128190;</span> GitHub</a>
+    <a href="#features" class="btn btn-ghost">Learn More &darr;</a>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div style="text-align:center">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Enterprise-Grade Protection</h2>
+    <p class="section-subtitle" style="margin:0 auto">Every feature runs locally on your machine. No data leaves your network.</p>
+    <div class="divider"></div>
+  </div>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon"><span>&#128737;</span></div>
+      <h3>Attack Detection</h3>
+      <p>SQLi, XSS, RFI, CMDi, path traversal, LFI, XXE, SSTI — 8 attack vectors detected by the Rust proxy in real time.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon cyan"><span>&#127758;</span></div>
+      <h3>3D Hologram Globe</h3>
+      <p>Wireframe GeoJSON country outlines with animated attack markers, red bezier arcs, and atmospheric glow shaders.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon purple"><span>&#128200;</span></div>
+      <h3>Live Traffic Gauge</h3>
+      <p>Circular synthwave speedometer showing requests/sec with color shifts from green to yellow to red as load increases.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon green"><span>&#128270;</span></div>
+      <h3>SIEM Correlation</h3>
+      <p>7 detection rules: brute force, port scanning, XSS/SQLi waves, geo anomaly, beaconing, data exfiltration, lateral movement.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon yellow"><span>&#9888;</span></div>
+      <h3>HIDS + FIM + SCA</h3>
+      <p>Host-based intrusion detection via auth log parsing, SHA-256 file integrity monitoring, and CIS benchmark compliance checks.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon red"><span>&#128161;</span></div>
+      <h3>Active Response</h3>
+      <p>iptables/nftables IP blocking, UFW integration, systemd posture lockdown (Monitor / Standard / Under Attack).</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><span>&#128269;</span></div>
+      <h3>Rule Engine</h3>
+      <p>Regex-based rule tester with export/import via JSON. Create, test, and deploy custom WAF rules in seconds.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon cyan"><span>&#128200;</span></div>
+      <h3>Attack Simulator</h3>
+      <p>8 built-in attack buttons that fire real HTTP requests to test your proxy. See results instantly in the SIEM dashboard.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon purple"><span>&#127912;</span></div>
+      <h3>Synthwave UI</h3>
+      <p>Two theme variants (Deep Void / Neon Storm), custom frameless title bar, reactive particles, and fullscreen globe mode.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section id="architecture">
+  <div style="text-align:center">
+    <div class="section-label">Architecture</div>
+    <h2 class="section-title">Polyglot by Design</h2>
+    <p class="section-subtitle" style="margin:0 auto">Each component in its best-fit language, communicating via REST/JSON.</p>
+    <div class="divider"></div>
+  </div>
+  <div class="diagram">
+    <div class="diagram-row">
+      <div class="diagram-box rust"><div class="diagram-label">Rust</div><div class="diagram-value">Proxy :8080</div></div>
+      <span class="diagram-arrow">&#8594;</span>
+      <div class="diagram-box"><div class="diagram-label">Upstream</div><div class="diagram-value">Web App</div></div>
+    </div>
+    <div class="diagram-row" style="justify-content:center;gap:40px">
+      <div class="diagram-box go"><div class="diagram-label">Go</div><div class="diagram-value">API :8000</div></div>
+      <span class="diagram-arrow">&#8596;</span>
+      <div class="diagram-box c"><div class="diagram-label">C</div><div class="diagram-value">Monitor :9001</div></div>
+    </div>
+    <div class="badges">
+      <span class="badge-tech">&#127760; Rust 1.96</span>
+      <span class="badge-tech">&#127760; Go 1.26</span>
+      <span class="badge-tech">&#127760; C11 (GCC 15)</span>
+      <span class="badge-tech">&#127760; SQLite</span>
+      <span class="badge-tech">&#127760; Three.js Globe</span>
+      <span class="badge-tech">&#127760; Chart.js</span>
+    </div>
+  </div>
+</section>
+
+<!-- Install -->
+<section id="install">
+  <div style="text-align:center">
+    <div class="section-label">Install</div>
+    <h2 class="section-title">Run Locally in Minutes</h2>
+    <p class="section-subtitle" style="margin:0 auto">No cloud accounts, no API keys, no data leaks. Pick your method.</p>
+    <div class="divider"></div>
+  </div>
+
+  <div style="max-width:800px;margin:0 auto" data-tabs>
+    <div class="install-tabs">
+      <button class="install-tab active" data-panel="panel-npm" onclick="switchTab(this,this)">npm</button>
+      <button class="install-tab" data-panel="panel-curl" onclick="switchTab(this,this)">curl</button>
+      <button class="install-tab" data-panel="panel-manual" onclick="switchTab(this,this)">Manual</button>
+      <button class="install-tab" data-panel="panel-docker" onclick="switchTab(this,this)">Docker</button>
+    </div>
+
+    <div class="install-panel active" id="panel-npm">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># Install globally</span>
+<span class="code-prompt">$</span> <span class="code-cmd">npm install -g trakshya-waf</span>
+<span class="code-comment"># Launch the dashboard</span>
+<span class="code-prompt">$</span> <span class="code-cmd">trakshya-waf</span></code>
+      </div>
+      <p style="color:var(--text-dim);font-size:13px">Requires Node.js 18+. The package downloads the latest AppImage on install. <strong>~75MB download.</strong></p>
+    </div>
+
+    <div class="install-panel" id="panel-curl">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># One-liner install</span>
+<span class="code-prompt">$</span> <span class="code-cmd">curl -fsSL https://trakshya.waf/install.sh | bash</span>
+<span class="code-comment"># Launch</span>
+<span class="code-prompt">$</span> <span class="code-cmd">trakshya-waf</span></code>
+      </div>
+      <p style="color:var(--text-dim);font-size:13px">The install script detects your OS/arch and downloads the correct AppImage from GitHub Releases. <strong>~75MB download.</strong></p>
+    </div>
+
+    <div class="install-panel" id="panel-manual">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># Download from GitHub Releases</span>
+<span class="code-prompt">$</span> <span class="code-cmd">curl -L https://github.com/Pradyu12/KALKI-WAF/releases/latest/download/Trakshya-WAF-x86_64.AppImage -o trakshya-waf.AppImage</span>
+<span class="code-prompt">$</span> <span class="code-cmd">chmod +x trakshya-waf.AppImage</span>
+<span class="code-comment"># Run</span>
+<span class="code-prompt">$</span> <span class="code-cmd">./trakshya-waf.AppImage</span></code>
+      </div>
+      <p style="color:var(--text-dim);font-size:13px">Distributed as a single AppImage. No dependencies required. Works on Ubuntu 22.04+, Fedora 38+, Debian 12+.</p>
+    </div>
+
+    <div class="install-panel" id="panel-docker">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># Clone the repo</span>
+<span class="code-prompt">$</span> <span class="code-cmd">git clone https://github.com/Pradyu12/KALKI-WAF.git</span>
+<span class="code-prompt">$</span> <span class="code-cmd">cd KALKI-WAF</span>
+<span class="code-comment"># Build and run all services</span>
+<span class="code-prompt">$</span> <span class="code-cmd">docker compose up --build</span>
+<span class="code-comment"># Dashboard at http://localhost:8000</span></code>
+      </div>
+      <p style="color:var(--text-dim);font-size:13px">Starts the Rust proxy, Go API, C monitor, and dashboard. Great for development and CI environments.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Docs -->
+<section id="docs">
+  <div style="text-align:center">
+    <div class="section-label">Documentation</div>
+    <h2 class="section-title">Get Started Quickly</h2>
+    <p class="section-subtitle" style="margin:0 auto">Comprehensive docs to configure rules, set postures, and monitor threats.</p>
+    <div class="divider"></div>
+  </div>
+  <div class="features">
+    <div class="feature-card" onclick="window.open('https://github.com/Pradyu12/KALKI-WAF#readme','_blank')" style="cursor:pointer">
+      <div class="feature-icon green"><span>&#128214;</span></div>
+      <h3>README</h3>
+      <p>Quick start, architecture overview, API endpoints, and project structure.</p>
+    </div>
+    <div class="feature-card" onclick="window.open('https://github.com/Pradyu12/KALKI-WAF/tree/main/config','_blank')" style="cursor:pointer">
+      <div class="feature-icon cyan"><span>&#9881;</span></div>
+      <h3>Configuration</h3>
+      <p>YAML-based config for proxy ports, upstream URLs, rate limits, and GeoIP databases.</p>
+    </div>
+    <div class="feature-card" onclick="window.open('https://github.com/Pradyu12/KALKI-WAF/tree/main/rust/kalki-rules','_blank')" style="cursor:pointer">
+      <div class="feature-icon purple"><span>&#128220;</span></div>
+      <h3>Security Rules</h3>
+      <p>Default OWASP rulesets for SQLi, XSS, RFI, and CMDi. Write and test custom regex rules.</p>
+    </div>
+    <div class="feature-card" onclick="window.open('https://github.com/Pradyu12/KALKI-WAF/issues','_blank')" style="cursor:pointer">
+      <div class="feature-icon red"><span>&#128295;</span></div>
+      <h3>Support</h3>
+      <p>GitHub Issues for bug reports, feature requests, and troubleshooting.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-links">
+    <a href="https://github.com/Pradyu12/KALKI-WAF" target="_blank">GitHub</a>
+    <a href="https://github.com/Pradyu12/KALKI-WAF/issues" target="_blank">Issues</a>
+    <a href="https://github.com/Pradyu12/KALKI-WAF/releases" target="_blank">Releases</a>
+    <a href="https://github.com/Pradyu12/KALKI-WAF#readme" target="_blank">Docs</a>
+    <a href="https://github.com/Pradyu12/KALKI-WAF/blob/main/LICENSE" target="_blank">License</a>
+  </div>
+  <p>TRAKSHYA WAF — Built with Rust, Go, and C. <span id="github-stars">&#11088;</span></p>
+  <p style="margin-top:8px;opacity:0.5">Trakshya (&#x0924;&#x094D;&#x0930;&#x0915;&#x094D;&#x0937;&#x094D;&#x092F;) — The divine eagle, guardian of the heavens.</p>
+</footer>
+
+<script src="scripts.js"></script>
+</body>
+</html>
