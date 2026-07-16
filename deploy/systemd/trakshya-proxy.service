@@ -1,0 +1,17 @@
+[Unit]
+Description=TRAKSHYA WAF Proxy
+Documentation=https://github.com/Pradyu12/KALKI-WAF
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/opt/trakshya-waf
+EnvironmentFile=/opt/trakshya-waf/.env
+ExecStart=/opt/trakshya-waf/rust/target/release/trakshya-proxy
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
