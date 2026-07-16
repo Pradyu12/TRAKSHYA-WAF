@@ -1,0 +1,71 @@
+apiVersion: v1
+description: Default values for TRAKSHYA WAF
+name: trakshya-waf
+
+global:
+  imageRegistry: docker.io
+  namespace: trakshya-waf
+
+image:
+  registry: docker.io
+  pullPolicy: IfNotPresent
+  dashboard:
+    repository: pradyu12/trakshya-waf-dashboard
+    tag: latest
+  proxy:
+    repository: pradyu12/trakshya-waf-proxy
+    tag: latest
+  api:
+    repository: pradyu12/trakshya-waf-api
+    tag: latest
+
+dashboard:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+proxy:
+  replicaCount: 2
+  service:
+    type: LoadBalancer
+    httpPort: 80
+    httpsPort: 443
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+api:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 8000
+    metricsPort: 9090
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+data:
+  storageClass: ""
+  size: 10Gi
+
+secrets:
+  apiKey: changeme-prod
+  jwtSecret: changeme-jwt-secret
+  slackWebhook: ""
+  discordWebhook: ""

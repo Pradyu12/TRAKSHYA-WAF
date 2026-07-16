@@ -58,3 +58,27 @@ Production Deployment Guide
     curl -f http://localhost:8000/health
     curl -f http://localhost:8080/health
     curl -f http://localhost:8001/health
+
+11. Kubernetes Deployment
+    Prereqs: Kubernetes 1.24+, Helm 3.12+ (optional), container registry.
+
+    Option A - Helm:
+      helm install trakshya-waf ./helm/trakshya-waf \
+        --namespace trakshya-waf --create-namespace \
+        --set image.dashboard.repository=ghcr.io/Pradyu12/trakshya-waf-dashboard \
+        --set image.proxy.repository=ghcr.io/Pradyu12/trakshya-waf-proxy \
+        --set image.api.repository=ghcr.io/Pradyu12/trakshya-waf-api \
+        --set secrets.apiKey=$(openssl rand -hex 32)
+
+    Option B - kubectl:
+      kubectl apply -f k8s/
+
+    Update strategy:
+      For rule/config changes, rebuild images, push with a new tag, and roll:
+        docker compose -f docker-compose.stack.yml build
+        docker push ghcr.io/Pradyu12/trakshya-waf-proxy:newtag
+        kubectl set image deployment/trakshya-proxy proxy=ghcr.io/Pradyu12/trakshya-waf-proxy:newtag -n trakshya-waf
+        kubectl rollout status deployment/trakshya-proxy -n trakshya-waf
+
+      For quick restarts without image changes:
+        kubectl rollout restart deployment/trakshya-proxy -n trakshya-waf

@@ -155,6 +155,81 @@ docker compose -f docker-compose.stack.yml up -d --build
 docker compose -f docker-compose.stack.yml down
 ```
 
+## Kubernetes Deployment
+
+TRAKSHYA-WAF can be deployed on Kubernetes using the included Helm chart or raw manifests.
+
+### Prerequisites
+
+- Kubernetes 1.24+
+- Helm 3.12+ (for Helm deployment)
+- A container registry (Docker Hub, GHCR, etc.)
+
+### Using Helm
+
+```bash
+# Add your registry images to values.yaml or pass inline
+helm install trakshya-waf ./helm/trakshya-waf \
+  --namespace trakshya-waf --create-namespace \
+  --set image.dashboard.repository=ghcr.io/Pradyu12/trakshya-waf-dashboard \
+  --set image.proxy.repository=ghcr.io/Pradyu12/trakshya-waf-proxy \
+  --set image.api.repository=ghcr.io/Pradyu12/trakshya-waf-api \
+  --set secrets.apiKey=$(openssl rand -hex 32)
+```
+
+### Using kubectl
+
+```bash
+kubectl apply -f k8s/
+```
+
+### Updating WAF rules/config without redeploying pods
+
+The recommended Kubernetes update path is rolling image updates. When you change firewall rules or config:
+
+1. Update `config/trakshya.yaml` or the WAF rules source
+2. Rebuild and push images with a new tag:
+   - `docker compose -f docker-compose.stack.yml build`
+   - `docker push ghcr.io/Pradyu12/trakshya-waf-proxy:newtag`
+3. Roll the deployment:
+   - `kubectl set image deployment/trakshya-proxy proxy=ghcr.io/Pradyu12/trakshya-waf-proxy:newtag -n trakshya-waf`
+   - `kubectl rollout status deployment/trakshya-proxy -n trakshya-waf`
+4. For config-only changes, use a rolling restart:
+   - `kubectl rollout restart deployment/trakshya-proxy -n trakshya-waf`
+
+### Exposing the dashboard
+
+```bash
+# Option 1: LoadBalancer (cloud)
+kubectl expose deployment trakshya-dashboard --port=8000 --target-port=8000 --type=LoadBalancer -n trakshya-waf
+
+# Option 2: NodePort
+kubectl expose deployment trakshya-dashboard --port=8000 --target-port=8000 --type=NodePort -n trakshya-waf
+
+# Option 3: Ingress
+kubectl apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trakshya-dashboard
+  namespace: trakshya-waf
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: waf.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: trakshya-dashboard
+                port:
+                  number: 8000
+EOF
+```
+
 ## Make Targets
 
 ```bash

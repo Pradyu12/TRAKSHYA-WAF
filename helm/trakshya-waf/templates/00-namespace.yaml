@@ -1,0 +1,12 @@
+{{- $name := include "trakshya-waf.fullname" . }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "trakshya-waf.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

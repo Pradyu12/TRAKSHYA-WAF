@@ -1,0 +1,23 @@
+{{- $name := include "trakshya-waf.fullname" . }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-proxy
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "trakshya-waf.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: proxy
+spec:
+  type: {{ .Values.proxy.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.proxy.service.httpPort }}
+      targetPort: http
+    - name: https
+      port: {{ .Values.proxy.service.httpsPort }}
+      targetPort: https
+  selector:
+    app.kubernetes.io/name: {{ include "trakshya-waf.name" . }}
+    app.kubernetes.io/component: proxy

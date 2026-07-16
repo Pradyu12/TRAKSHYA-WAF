@@ -1,0 +1,14 @@
+apiVersion: v1
+name: trakshya-waf
+description: TRAKSHYA WAF - Helm chart
+version: 2.3.0
+appVersion: 2.3.0
+keywords:
+  - waf
+  - firewall
+  - security
+  - siem
+  - dashboard
+maintainers:
+  - name: Pradyu
+    email: pradyu@example.com
