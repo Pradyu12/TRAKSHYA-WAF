@@ -1,27 +1,17 @@
 {
   "name": "trakshya-waf",
-  "version": "2.0.0",
-  "description": "Trakshya WAF — Desktop Security Dashboard. Install once, run locally. No cloud, no data leaks.",
-  "main": "index.js",
+  "version": "2.1.0",
+  "description": "TRAKSHYA WAF — CLI installer and controller",
   "bin": {
-    "trakshya-waf": "bin/trakshya-waf.js",
-    "trakshya-waf-cli": "bin/trakshya-cli.js"
+    "trakshya-waf": "./bin/trakshya-waf.js",
+    "trakshya-cli": "./bin/trakshya-cli.js",
+    "trakshya-install": "./bin/trakshya-install.js"
   },
   "scripts": {
-    "postinstall": "node install.js",
     "start": "node bin/trakshya-waf.js"
   },
-  "keywords": ["waf", "firewall", "security", "siem", "xdr", "dashboard", "synthwave"],
+  "keywords": ["waf", "firewall", "security", "siem", "xdr", "dashboard", "cli"],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Pradyu12/TRAKSHYA-WAF.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Pradyu12/TRAKSHYA-WAF/issues"
-  },
-  "homepage": "https://pradyu12.github.io/TRAKSHYA-WAF",
-  "os": ["linux"],
-  "cpu": ["x64"],
-  "preferUnplugged": true
+  "preferUnplugged": true,
+  "dependencies": {}
 }
