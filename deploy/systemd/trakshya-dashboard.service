@@ -9,8 +9,7 @@ User=%i
 WorkingDirectory=/opt/trakshya-waf
 Environment=NODE_ENV=production
 EnvironmentFile=/opt/trakshya-waf/.env
-ExecStartPre=/opt/trakshya-waf/scripts/generate-dev-certs.sh
-ExecStart=/usr/bin/node server.js
+ExecStart=node server.js
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=65536

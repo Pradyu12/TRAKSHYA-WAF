@@ -152,8 +152,8 @@ function buildBinaries(repoRoot) {
   }
 
   run(`mkdir -p ${INSTALL_DIR}/build`);
-  if (fs.existsSync(path.join(repoRoot, 'rust/target/release/trakshya-proxy'))) {
-    run(`install -m 0755 ${repoRoot}/rust/target/release/trakshya-proxy ${INSTALL_DIR}/build/trakshya-proxy`);
+  if (fs.existsSync(path.join(repoRoot, 'rust/target/release/krsna-proxy'))) {
+    run(`install -m 0755 ${repoRoot}/rust/target/release/krsna-proxy ${INSTALL_DIR}/build/trakshya-proxy`);
   }
 }
 
@@ -307,7 +307,7 @@ set -euo pipefail
 REPO_ROOT="${repoRoot}"
 DASHBOARD_PORT=${DASHBOARD_PORT}
 PROXY_PORT=${PROXY_PORT}
-RUST_BIN="\$REPO_ROOT/rust/target/release/trakshya-proxy"
+RUST_BIN="\\$REPO_ROOT/rust/target/release/krsna-proxy"
 
 echo "Starting TRAKSHYA WAF..."
 cd "\$REPO_ROOT"

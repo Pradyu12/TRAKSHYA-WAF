@@ -46,7 +46,7 @@ set -euo pipefail
 REPO_ROOT="$REPO_ROOT"
 DASHBOARD_PORT=$DASHBOARD_PORT
 PROXY_PORT=$PROXY_PORT
-RUST_BIN="\$REPO_ROOT/rust/target/release/trakshya-proxy"
+RUST_BIN="\$REPO_ROOT/rust/target/release/krsna-proxy"
 
 echo "Starting TRAKSHYA WAF..."
 cd "\$REPO_ROOT"
@@ -82,5 +82,5 @@ echo ""
 echo "  Installed: $INSTALL_DIR/$BIN_NAME"
 echo "  Run:      $BIN_NAME"
 echo "  Dashboard: http://localhost:$DASHBOARD_PORT"
-[ -x "$REPO_ROOT/rust/target/release/trakshya-proxy" ] && echo "  Proxy:     http://localhost:$PROXY_PORT"
+[ -x "$REPO_ROOT/rust/target/release/krsna-proxy" ] && echo "  Proxy:     http://localhost:$PROXY_PORT"
 echo ""
