@@ -1,14 +1,23 @@
 {
   "name": "trakshya-waf",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "TRAKSHYA WAF — CLI installer and controller",
   "bin": {
     "trakshya-waf": "./bin/trakshya-waf.js",
     "trakshya-cli": "./bin/trakshya-cli.js",
     "trakshya-install": "./bin/trakshya-install.js"
   },
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
   "scripts": {
-    "start": "node bin/trakshya-waf.js"
+    "start": "node bin/trakshya-waf.js",
+    "install:linux": "node bin/trakshya-install.js install",
+    "install:win": "powershell -ExecutionPolicy Bypass -File bin/trakshya-install.ps1 install",
+    "install:win:service": "powershell -ExecutionPolicy Bypass -File bin/trakshya-install.ps1 install --mode service",
+    "postinstall:win": "npm run install:win"
   },
   "keywords": ["waf", "firewall", "security", "siem", "xdr", "dashboard", "cli"],
   "license": "MIT",
