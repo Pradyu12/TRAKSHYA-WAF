@@ -24,12 +24,15 @@ Runs entirely on your machine via an Electron desktop app. No cloud dependency.
 ## Quick Install
 
 ```bash
-# Option 1: npm (recommended)
-npm install -g trakshya-waf
+# Option 1: local npm CLI
+cd npm-package && npm link
+trakshya-install install --mode=local
 trakshya-waf
 
-# Option 2: curl one-liner
-curl -fsSL https://pradyu12.github.io/TRAKSHYA-WAF/install.sh | bash
+# Option 2: clone and setup
+git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git
+cd TRAKSHYA-WAF
+bash install.sh
 trakshya-waf
 
 # Option 3: Docker
@@ -108,6 +111,11 @@ trakshya-waf stop
 trakshya-waf test
 trakshya-waf certs
 trakshya-waf scan
+
+# Windows installer
+powershell -ExecutionPolicy Bypass -File npm-package/bin/trakshya-install.ps1 install --mode=local
+powershell -ExecutionPolicy Bypass -File npm-package/bin/trakshya-install.ps1 install --mode=service
+powershell -ExecutionPolicy Bypass -File npm-package/bin/trakshya-install.ps1 status
 ```
 
 ## Local HTTPS Dev Certs
