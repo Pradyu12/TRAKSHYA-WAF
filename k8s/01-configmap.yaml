@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trakshya-config
+  namespace: trakshya-waf
+  labels:
+    app.kubernetes.io/name: trakshya-waf
+    app.kubernetes.io/component: config
+data:
+  trakshya.yaml: |
+    # TRAKSHYA-WAF Configuration
+    # Shared configuration for Rust proxy and Go API
+    global:
+      log_level: info
+      data_dir: /var/lib/trakshya
+
+    proxy:
+      port: 8080
+      upstream_url: ${UPSTREAM_URL}
+      posture: standard
+      management_api_url: http://trakshya-api.trakshya-waf.svc.cluster.local:8000
+
+    rate_limiter:
+      enabled: true
+      requests_per_minute: 120
+      burst_size: 20
+
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 5
+      recovery_timeout_secs: 30
+      half_open_max_requests: 3
+
+    api:
+      port: 8000
+      db_path: /var/lib/trakshya/trakshya.db
+      api_key: ${API_KEY}
+
+    c_system_monitor:
+      port: 9001
+      enabled: "false"
+
+    geoip:
+      enabled: ${GEOIP_ENABLED}
+      db_path: /var/lib/trakshya/GeoLite2-City.mmdb
+      blocked_countries: ${BLOCKED_COUNTRIES}
+
+    jwt:
+      enabled: ${JWT_ENABLED}
+      secret: ${JWT_SECRET}
+      required_role: "admin"
+
+    trusted_ips:
+      - 127.0.0.1
+      - ::1
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+
+    webhooks:
+      slack_webhook_url: ${SLACK_WEBHOOK_URL}
+      discord_webhook_url: ${DISCORD_WEBHOOK_URL}
+
+    telemetry:
+      prometheus_enabled: "true"
+      otlp_endpoint: http://datadog-agent.datadog.svc.cluster.local:4317
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trakshya-frontend
+  namespace: trakshya-waf
+  labels:
+    app.kubernetes.io/name: trakshya-waf
+    app.kubernetes.io/component: frontend
+data:
+  dashboard.html: |
+    <!-- Dashboard HTML will be injected from frontend/dashboard.html -->
+    PLACEHOLDER_DASHBOARD_HTML

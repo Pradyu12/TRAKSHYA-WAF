@@ -5,7 +5,7 @@ rust/target/
 # Go
 go/vendor/
 go/*.exe
-go/kalki-api
+go/trakshya-api
 
 # C build
 c/build/
@@ -17,7 +17,7 @@ c/cmake-build-*/
 # Build output
 build/
 
-# KALKI data
+# TRAKSHYA data
 *.db
 *.db-shm
 *.db-wal
@@ -52,3 +52,6 @@ globe.glb
 
 # Node
 node_modules/
+
+# Python
+.venv/

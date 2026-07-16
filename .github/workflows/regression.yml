@@ -1,0 +1,44 @@
+name: Regression
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      waf:
+        image: node:22
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -f http://127.0.0.1:8000/health || exit 1"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+        volumes:
+          - ${{ github.workspace }}/server.js:/repo/server.js:ro
+          - ${{ github.workspace }}/frontend:/repo/frontend:ro
+          - ${{ github.workspace }}/landing:/repo/landing:ro
+        working_dir: /repo
+        run: |
+          node server.js
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run WAF regression suite
+        run: python scripts/regression.py
+        env:
+          TRAKSHYA_REGRESSION_BASE: 'http://127.0.0.1:8000'
+          TRAKSHYA_PROXY_BASE: 'http://127.0.0.1:8000'

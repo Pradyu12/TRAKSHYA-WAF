@@ -20,32 +20,32 @@ type Metrics struct {
 func NewMetrics() *Metrics {
 	m := &Metrics{
 		RequestsTotal: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "kalki_requests_total",
+			Name: "trakshya_requests_total",
 			Help: "Total number of requests processed",
 		}),
 		BlockedTotal: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "kalki_blocked_total",
+			Name: "trakshya_blocked_total",
 			Help: "Total number of blocked requests",
 		}),
 		IncidentsTotal: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "kalki_incidents_total",
+			Name: "trakshya_incidents_total",
 			Help: "Total number of incidents",
 		}),
 		ActiveConnections: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "kalki_active_connections",
+			Name: "trakshya_active_connections",
 			Help: "Current number of active connections",
 		}),
 		RequestDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name:    "kalki_request_duration_seconds",
+			Name:    "trakshya_request_duration_seconds",
 			Help:    "Request duration in seconds",
 			Buckets: prometheus.DefBuckets,
 		}),
 		AttackTypeCount: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "kalki_attack_type_total",
+			Name: "trakshya_attack_type_total",
 			Help: "Total requests by attack type",
 		}, []string{"attack_type"}),
 		UpstreamHealth: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "kalki_upstream_health",
+			Name: "trakshya_upstream_health",
 			Help: "Upstream health status (1=healthy, 0=unhealthy)",
 		}, []string{"upstream"}),
 	}

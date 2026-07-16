@@ -1,8 +1,0 @@
-[package]
-name = "kalki-rate-limiter"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-serde.workspace = true
-dashmap = "6"

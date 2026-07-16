@@ -1,11 +1,11 @@
 {
   "monitors": [
     {
-      "name": "KALKI WAF - High Block Rate",
+      "name": "TRAKSHYA WAF - High Block Rate",
       "type": "metric alert",
-      "query": "avg(last_5m):anomalies(sum:kalki_waf.waf_blocked_total{service:kalki-waf}.as_rate(), 'basic', 2, direction='above') >= 1",
-      "message": "{{#is_alert}}KALKI WAF is blocking an anomalously high number of requests ({{value}} blocked/s). Investigate potential attack or false positive rules.{{/is_alert}}\n@slack-security",
-      "tags": ["app:kalki-waf", "team:security", "severity:critical"],
+      "query": "avg(last_5m):anomalies(sum:trakshya_waf.waf_blocked_total{service:trakshya-waf}.as_rate(), 'basic', 2, direction='above') >= 1",
+      "message": "{{#is_alert}}TRAKSHYA WAF is blocking an anomalously high number of requests ({{value}} blocked/s). Investigate potential attack or false positive rules.{{/is_alert}}\n@slack-security",
+      "tags": ["app:trakshya-waf", "team:security", "severity:critical"],
       "options": {
         "thresholds": { "critical": 1 },
         "notify_audit": false,
@@ -14,11 +14,11 @@
       }
     },
     {
-      "name": "KALKI WAF - Upstream Timeouts",
+      "name": "TRAKSHYA WAF - Upstream Timeouts",
       "type": "metric alert",
-      "query": "sum:kalki_waf.waf_upstream_timeouts_total{service:kalki-waf}.as_rate() > 5",
+      "query": "sum:trakshya_waf.waf_upstream_timeouts_total{service:trakshya-waf}.as_rate() > 5",
       "message": "{{#is_alert}}Upstream server timeouts detected ({{value}}/s). Upstream may be degraded or unreachable.{{/is_alert}}\n@slayer-sre",
-      "tags": ["app:kalki-waf", "team:platform", "severity:high"],
+      "tags": ["app:trakshya-waf", "team:platform", "severity:high"],
       "options": {
         "thresholds": { "critical": 5 },
         "notify_audit": false,
@@ -26,11 +26,11 @@
       }
     },
     {
-      "name": "KALKI WAF - Agent Down",
+      "name": "TRAKSHYA WAF - Agent Down",
       "type": "service check",
       "query": "\"datadog.agent.up\".over('*').last(2).by('host').publish_health('any', 2, 0, 0)",
-      "message": "{{#is_alert}}Datadog Agent is unreachable on host {{host.name}}. Metrics, logs, and traces from KALKI WAF may be missing.{{/is_alert}}\n@slayer-sre",
-      "tags": ["app:kalki-waf", "team:platform", "severity:critical"],
+      "message": "{{#is_alert}}Datadog Agent is unreachable on host {{host.name}}. Metrics, logs, and traces from TRAKSHYA WAF may be missing.{{/is_alert}}\n@slayer-sre",
+      "tags": ["app:trakshya-waf", "team:platform", "severity:critical"],
       "options": {
         "thresholds": { "critical": 2 },
         "notify_audit": false,
@@ -38,11 +38,11 @@
       }
     },
     {
-      "name": "KALKI WAF - Request Latency P99",
+      "name": "TRAKSHYA WAF - Request Latency P99",
       "type": "metric alert",
-      "query": "p99:kalki_waf.waf_request_duration_seconds{service:kalki-waf} > 5",
+      "query": "p99:trakshya_waf.waf_request_duration_seconds{service:trakshya-waf} > 5",
       "message": "{{#is_alert}}WAF request latency P99 exceeds 5s ({{value}}s). Possible upstream bottleneck or resource exhaustion.{{/is_alert}}\n@slayer-sre",
-      "tags": ["app:kalki-waf", "team:platform", "severity:high"],
+      "tags": ["app:trakshya-waf", "team:platform", "severity:high"],
       "options": {
         "thresholds": { "critical": 5 },
         "notify_audit": false,
@@ -50,11 +50,11 @@
       }
     },
     {
-      "name": "KALKI WAF - No Data Received",
+      "name": "TRAKSHYA WAF - No Data Received",
       "type": "query alert",
-      "query": "sum:kalki_waf.waf_requests_total{service:kalki-waf}.as_rate() < 0.01",
+      "query": "sum:trakshya_waf.waf_requests_total{service:trakshya-waf}.as_rate() < 0.01",
       "message": "{{#is_alert}}No requests observed in the last 5 minutes. WAF may be down or misconfigured.{{/is_alert}}\n@slayer-sre",
-      "tags": ["app:kalki-waf", "team:platform", "severity:critical"],
+      "tags": ["app:trakshya-waf", "team:platform", "severity:critical"],
       "options": {
         "thresholds": { "critical": 0.01 },
         "notify_audit": false,

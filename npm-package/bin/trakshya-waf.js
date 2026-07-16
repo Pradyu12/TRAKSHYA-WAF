@@ -8,6 +8,17 @@ const BIN_NAME = 'trakshya-waf';
 const INSTALL_DIR = path.join(os.homedir(), '.local', 'bin');
 const APPIMAGE_PATH = path.join(INSTALL_DIR, `${BIN_NAME}.AppImage`);
 const SYMLINK_PATH = path.join(INSTALL_DIR, BIN_NAME);
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const ASCII_PATH = path.join(REPO_ROOT, 'scripts', 'trakshya-ascii.sh');
+
+function printAscii() {
+  if (!fs.existsSync(ASCII_PATH)) return '';
+  try {
+    return execSync(`bash "${ASCII_PATH}"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return '';
+  }
+}
 
 function findBinary() {
   // Check symlink target
@@ -41,18 +52,21 @@ if (!bin) {
     \u001b[36m$\u001b[0m \u001b[1mcurl -fsSL https://trakshya.waf/install.sh | bash\u001b[0m
 
   Or get the AppImage from:
-    https://github.com/Pradyu12/KALKI-WAF/releases
+    https://github.com/Pradyu12/TRAKSHYA-WAF/releases
 `);
   process.exit(1);
 }
 
-console.log(`
-  \u001b[1m\u001b[35mTRAKSHYA WAF\u001b[0m
-  \u001b[2mDivine Eagle Guardian for Your Web Applications\u001b[0m
+const ascii = printAscii();
+const brand = [
+  `\u001b[1m\u001b[35mTRAKSHYA WAF\u001b[0m`,
+  `\u001b[2mDivine Eagle Guardian for Your Web Applications\u001b[0m`
+];
+const prelude = [ascii, ...brand].filter(Boolean).join('\n');
 
-  \u001b[36m\u25b6\u001b[0m Launching desktop dashboard...
-  \u001b[2m  (Close this terminal to shut down all services)\u001b[0m
-`);
+console.log(`\n${prelude}\n`);
+console.log(`  \u001b[36m\u25b6\u001b[0m Launching desktop dashboard...`);
+console.log(`  \u001b[2m  (Close this terminal to shut down all services)\u001b[0m\n`);
 
 try {
   execSync(`"${bin}"`, { stdio: 'inherit', cwd: os.homedir() });

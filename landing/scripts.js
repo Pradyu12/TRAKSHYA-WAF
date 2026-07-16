@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // GitHub stats
 async function loadGitHubStats() {
   try {
-    const res = await fetch('https://api.github.com/repos/Pradyu12/KALKI-WAF');
+    const res = await fetch('https://api.github.com/repos/Pradyu12/TRAKSHYA-WAF');
     const data = await res.json();
     const el = document.getElementById('github-stars');
     if (el && data.stargazers_count !== undefined) el.textContent = data.stargazers_count;

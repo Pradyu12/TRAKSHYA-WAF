@@ -1,10 +1,10 @@
-#include "kalki.h"
+#include "trakshya.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
-#define BASELINE_FILE "/var/lib/kalki/fim_baseline.dat"
+#define BASELINE_FILE "/var/lib/trakshya/fim_baseline.dat"
 #define MAX_FILES 256
 
 static FileBaseline baseline[MAX_FILES];
@@ -26,7 +26,7 @@ int fim_init(void) {
             if (hash) {
                 *hash = '\0';
                 hash++;
-                strncpy(baseline[baseline_count].path, path, KALKI_MAX_PATH - 1);
+                strncpy(baseline[baseline_count].path, path, TRAKSHYA_MAX_PATH - 1);
                 strncpy(baseline[baseline_count].hash, hash, 64);
                 struct stat st;
                 if (stat(path, &st) == 0) {
@@ -50,7 +50,7 @@ int fim_baseline_create(const char *paths[], int count) {
         char hash[65] = {0};
         if (sha256_file(paths[i], hash)) {
             fprintf(f, "%s|%s\n", paths[i], hash);
-            strncpy(baseline[baseline_count].path, paths[i], KALKI_MAX_PATH - 1);
+            strncpy(baseline[baseline_count].path, paths[i], TRAKSHYA_MAX_PATH - 1);
             strncpy(baseline[baseline_count].hash, hash, 64);
             struct stat st;
             if (stat(paths[i], &st) == 0) {
@@ -77,7 +77,7 @@ int fim_scan(FimReport *report) {
     for (int i = 0; i < baseline_count; i++) {
         char current_hash[65] = {0};
         if (!sha256_file(baseline[i].path, current_hash)) {
-            strncpy(report->changes[report->count].path, baseline[i].path, KALKI_MAX_PATH - 1);
+            strncpy(report->changes[report->count].path, baseline[i].path, TRAKSHYA_MAX_PATH - 1);
             strncpy(report->changes[report->count].expected_hash, baseline[i].hash, 64);
             strncpy(report->changes[report->count].actual_hash, "", 64);
             report->changes[report->count].status = "deleted";
@@ -86,7 +86,7 @@ int fim_scan(FimReport *report) {
         }
 
         if (strcmp(current_hash, baseline[i].hash) != 0) {
-            strncpy(report->changes[report->count].path, baseline[i].path, KALKI_MAX_PATH - 1);
+            strncpy(report->changes[report->count].path, baseline[i].path, TRAKSHYA_MAX_PATH - 1);
             strncpy(report->changes[report->count].expected_hash, baseline[i].hash, 64);
             strncpy(report->changes[report->count].actual_hash, current_hash, 64);
             report->changes[report->count].status = "modified";

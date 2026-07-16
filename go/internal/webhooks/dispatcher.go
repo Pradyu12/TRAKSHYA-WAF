@@ -3,7 +3,6 @@ package webhooks
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -80,7 +79,7 @@ func (d *Dispatcher) sendSlack(title, message, severity, source string) {
 	}
 
 	msg := SlackMessage{
-		Username:  "KALKI-WAF",
+		Username:  "TRAKSHYA-WAF",
 		IconEmoji: ":shield:",
 		Attachments: []SlackAttachment{{
 			Color: color,
@@ -114,7 +113,7 @@ func (d *Dispatcher) sendDiscord(title, message, severity, source string) {
 	}
 
 	msg := DiscordMessage{
-		Username: "KALKI-WAF",
+		Username: "TRAKSHYA-WAF",
 		Embeds: []DiscordEmbed{{
 			Title:       title,
 			Description: message,

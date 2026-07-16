@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/kalki-waf/kalki-api/internal/db"
-	"github.com/kalki-waf/kalki-api/internal/telemetry"
+	"github.com/trakshya/trakshya-api/internal/db"
+	"github.com/trakshya/trakshya-api/internal/telemetry"
 )
 
 
@@ -103,6 +103,14 @@ func NewRouter(cfg *Config, database *db.SQLite, metrics *telemetry.Metrics) htt
 		r.Post("/vulns/scan", srv.startVulnScan)
 		r.Get("/vulns/scan/{id}", srv.getVulnScan)
 
+		// VAPT scanning
+		r.Get("/vapt/stats", srv.getVaptStats)
+		r.Get("/vapt", srv.listVaptFindings)
+		r.Get("/vapt/scans", srv.listVaptScans)
+		r.Post("/vapt/scan", srv.startVaptScan)
+		r.Get("/vapt/scan/{id}", srv.getVaptScan)
+		r.Get("/vapt/scan/{id}/findings", srv.getVaptScanFindings)
+
 		// Mitigation posture (frontend-compatible alias)
 		r.Get("/mitigation-posture", srv.getPosture)
 		r.Post("/mitigation-posture", srv.setMitigationPosture)
@@ -119,7 +127,7 @@ func NewRouter(cfg *Config, database *db.SQLite, metrics *telemetry.Metrics) htt
 		r.Get("/static/*", func(w http.ResponseWriter, r *http.Request) {
 			http.StripPrefix("/static/", fileServer).ServeHTTP(w, r)
 		})
-		r.Get("/kalki_waf_logo.png", fileServer.ServeHTTP)
+		r.Get("/trakshya_waf_logo.png", fileServer.ServeHTTP)
 		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, srv.cfg.FrontendDir+"/dashboard.html")
 		})
@@ -141,7 +149,7 @@ func (s *Server) errorJSON(w http.ResponseWriter, status int, msg string) {
 func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
 	s.json(w, http.StatusOK, map[string]string{
 		"status":  "ok",
-		"service": "kalki-management-api",
+		"service": "trakshya-management-api",
 		"uptime":  time.Since(s.startAt).String(),
 	})
 }

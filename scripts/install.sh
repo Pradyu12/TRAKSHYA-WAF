@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="Pradyu12/KALKI-WAF"
+REPO="Pradyu12/TRAKSHYA-WAF"
 BIN_NAME="trakshya-waf"
 INSTALL_DIR="${HOME}/.local/bin"
 APPIMAGE_PATH="${INSTALL_DIR}/${BIN_NAME}.AppImage"

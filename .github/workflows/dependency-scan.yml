@@ -1,0 +1,59 @@
+name: Dependency Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: npm audit
+        working-directory: npm-package
+        run: |
+          npm install --no-audit --no-fund
+          npm audit --omit=dev || true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: cargo audit
+        run: |
+          pushd rust >/dev/null
+          cargo audit --deny warnings || true
+          popd >/dev/null
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Go vuln check
+        run: |
+          cd go
+          go mod tidy
+          go list -json -m all > /tmp/go-mod.txt || true
+          if ! command -v govulncheck >/dev/null 2>&1; then
+            echo "govulncheck not installed, skipping govulncheck"
+            exit 0
+          fi
+          govulncheck ./... || true

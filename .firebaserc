@@ -1,6 +1,6 @@
 {
   "projects": {
-    "default": "kalki-waf"
+    "default": "trakshya-waf"
   },
   "targets": {},
   "etags": {}

@@ -8,16 +8,16 @@ cd "$SCRIPT_DIR"
 echo "=== Trakshya WAF Launcher ==="
 
 # Set frontend directory for Go API
-export KALKI_FRONTEND_DIR="$SCRIPT_DIR/renderer"
+export TRAKSHYA_FRONTEND_DIR="$SCRIPT_DIR/renderer"
 
 # Start backends
-for bin in kalki-api kalki-proxy kalki-systemd; do
+for bin in trakshya-api trakshya-proxy trakshya-systemd; do
   if [ -f "bin/$bin" ]; then
     echo "Starting $bin..."
-    if [ "$bin" = "kalki-systemd" ]; then
+    if [ "$bin" = "trakshya-systemd" ]; then
       bin/$bin &
     else
-      bin/$bin --config "$SCRIPT_DIR/../config/kalki.yaml" &
+      bin/$bin --config "$SCRIPT_DIR/../config/trakshya.yaml" &
     fi
     sleep 1
   else

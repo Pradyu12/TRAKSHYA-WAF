@@ -6,6 +6,6 @@ RUN mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(n
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates libmicrohttpd12 libcurl4 openssl iptables && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/build/kalki-systemd /usr/local/bin/
+COPY --from=builder /app/build/trakshya-systemd /usr/local/bin/
 EXPOSE 9001
-CMD ["kalki-systemd"]
+CMD ["trakshya-systemd"]

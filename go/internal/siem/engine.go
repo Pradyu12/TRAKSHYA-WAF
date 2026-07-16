@@ -5,8 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kalki-waf/kalki-api/internal/api"
-	"github.com/kalki-waf/kalki-api/pkg/models"
+	"github.com/trakshya/trakshya-api/internal/api"
+	"github.com/trakshya/trakshya-api/pkg/models"
+	_ "github.com/trakshya/trakshya-api/internal/siem/rules"
 )
 
 type CorrelationEngine struct {

@@ -1,6 +1,6 @@
 {
-  "title": "KALKI WAF - Security Overview",
-  "description": "Real-time monitoring dashboard for KALKI Web Application Firewall",
+  "title": "TRAKSHYA WAF - Security Overview",
+  "description": "Real-time monitoring dashboard for TRAKSHYA Web Application Firewall",
   "widgets": [
     {
       "definition": {
@@ -8,14 +8,14 @@
         "title": "Requests & Blocks per Second",
         "requests": [
           {
-            "q": "sum:kalki_waf.waf_requests_total{service:kalki-waf}.as_rate()",
+            "q": "sum:trakshya_waf.waf_requests_total{service:trakshya-waf}.as_rate()",
             "display_type": "line",
             "style": {
               "palette": "green"
             }
           },
           {
-            "q": "sum:kalki_waf.waf_blocked_total{service:kalki-waf}.as_rate()",
+            "q": "sum:trakshya_waf.waf_blocked_total{service:trakshya-waf}.as_rate()",
             "display_type": "line",
             "style": {
               "palette": "red"
@@ -39,21 +39,21 @@
         "title": "Request Latency (P50 / P95 / P99)",
         "requests": [
           {
-            "q": "p50:kalki_waf.waf_request_duration_seconds{service:kalki-waf}",
+            "q": "p50:trakshya_waf.waf_request_duration_seconds{service:trakshya-waf}",
             "display_type": "line",
             "style": {
               "palette": "blue"
             }
           },
           {
-            "q": "p95:kalki_waf.waf_request_duration_seconds{service:kalki-waf}",
+            "q": "p95:trakshya_waf.waf_request_duration_seconds{service:trakshya-waf}",
             "display_type": "line",
             "style": {
               "palette": "yellow"
             }
           },
           {
-            "q": "p99:kalki_waf.waf_request_duration_seconds{service:kalki-waf}",
+            "q": "p99:trakshya_waf.waf_request_duration_seconds{service:trakshya-waf}",
             "display_type": "line",
             "style": {
               "palette": "orange"
@@ -74,7 +74,7 @@
         "title": "Upstream Timeouts",
         "requests": [
           {
-            "q": "sum:kalki_waf.waf_upstream_timeouts_total{service:kalki-waf}.as_rate()",
+            "q": "sum:trakshya_waf.waf_upstream_timeouts_total{service:trakshya-waf}.as_rate()",
             "display_type": "bars",
             "style": {
               "palette": "purple"
@@ -95,7 +95,7 @@
         "title": "Total Blocks Today",
         "requests": [
           {
-            "q": "sum:kalki_waf.waf_blocked_total{service:kalki-waf}",
+            "q": "sum:trakshya_waf.waf_blocked_total{service:trakshya-waf}",
             "aggregator": "sum"
           }
         ],
@@ -114,7 +114,7 @@
         "title": "Active Connections",
         "requests": [
           {
-            "q": "avg:kalki_waf.waf_active_connections{service:kalki-waf}",
+            "q": "avg:trakshya_waf.waf_active_connections{service:trakshya-waf}",
             "aggregator": "avg"
           }
         ],
@@ -133,7 +133,7 @@
         "title": "Blocks by Threat Category",
         "requests": [
           {
-            "q": "top(sum:kalki_waf.waf_blocked_total{service:kalki-waf} by {category}, 10, 'max', 'desc')",
+            "q": "top(sum:trakshya_waf.waf_blocked_total{service:trakshya-waf} by {category}, 10, 'max', 'desc')",
             "style": {
               "palette": "warm"
             }
@@ -151,7 +151,7 @@
       "definition": {
         "type": "log_stream",
         "title": "Recent Security Events",
-        "query": "service:kalki-waf AND (\"SQLi\" OR \"XSS\" OR \"CMDi\" OR \"BLOCKED\")",
+        "query": "service:trakshya-waf AND (\"SQLi\" OR \"XSS\" OR \"CMDi\" OR \"BLOCKED\")",
         "columns": [
           "timestamp",
           "host",
@@ -176,7 +176,7 @@
     "slayer-sre@example.com"
   ],
   "tags": [
-    "app:kalki-waf",
+    "app:trakshya-waf",
     "team:security"
   ]
 }

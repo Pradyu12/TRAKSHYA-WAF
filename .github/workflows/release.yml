@@ -1,0 +1,110 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-backends:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system deps
+        run: sudo apt-get install -y libmicrohttpd-dev libcurl4-openssl-dev cmake
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Build Rust proxy
+        run: cargo build --release --manifest-path rust/trakshya-proxy/Cargo.toml
+      - name: Build Go API
+        run: CGO_ENABLED=1 go build -o trakshya-api ./cmd/trakshya-api/
+        working-directory: go
+      - name: Build C monitor
+        run: |
+          cmake -B build -S c
+          make -C build -j$(nproc)
+      - name: Copy binaries
+        run: |
+          mkdir -p app/bin
+          cp rust/target/release/trakshya-proxy app/bin/
+          cp go/trakshya-api app/bin/
+          cp c/build/trakshya-systemd app/bin/
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backends
+          path: app/bin/
+
+  build-electron:
+    needs: build-backends
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: backends
+          path: app/bin/
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm install -D electron electron-builder
+        working-directory: app
+      - name: Build AppImage
+        run: npx electron-builder --linux AppImage
+        working-directory: app
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: app/dist/*.AppImage
+
+  publish-npm:
+    needs: build-electron
+    runs-on: ubuntu-latest
+    if: github.repository == 'Pradyu12/TRAKSHYA-WAF'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Publish to npm
+        run: npm publish --access public
+        working-directory: npm-package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-release:
+    needs: build-electron
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: appimage
+          path: dist/
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.AppImage > checksums.txt
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Trakshya WAF ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          files: |
+            dist/*.AppImage
+            dist/checksums.txt
+          generate_release_notes: true

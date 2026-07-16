@@ -3,7 +3,7 @@ package siem
 import (
 	"time"
 
-	"github.com/kalki-waf/kalki-api/pkg/models"
+	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
 type RapidScanRule struct{}

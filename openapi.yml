@@ -1,0 +1,637 @@
+openapi: 3.0.3
+info:
+  title: TRAKSHYA WAF Management API
+  version: 1.0.0
+  description: Management API for TRAKSHYA-WAF dashboard, SIEM, VAPT, and configuration.
+
+servers:
+  - url: http://localhost:8000
+    description: Local management API
+
+security:
+  - LocalhostAuth: []
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    LocalhostAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Required when calling from non-localhost.
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  uptime:
+                    type: string
+
+  /api/dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Dashboard aggregate stats
+      responses:
+        '200':
+          description: Aggregated dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+
+  /api/incidents:
+    get:
+      tags: [Incidents]
+      summary: List incidents
+      responses:
+        '200':
+          description: Recent incidents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Incident'
+        '401':
+          description: Unauthorized
+
+  /api/incidents:
+    post:
+      tags: [Incidents]
+      summary: Create incident
+      responses:
+        '201':
+          description: Created incident
+        '401':
+          description: Unauthorized
+
+  /api/incidents/{id}/acknowledge:
+    put:
+      tags: [Incidents]
+      summary: Acknowledge incident
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Updated incident
+        '401':
+          description: Unauthorized
+
+  /api/config:
+    get:
+      tags: [Config]
+      summary: Read WAF config
+      responses:
+        '200':
+          description: Current config
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+        '401':
+          description: Unauthorized
+    put:
+      tags: [Config]
+      summary: Update WAF config
+      responses:
+        '200':
+          description: Updated config
+        '401':
+          description: Unauthorized
+
+  /api/posture:
+    get:
+      tags: [Config]
+      summary: Read mitigation posture
+      responses:
+        '200':
+          description: Current posture
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posture:
+                    type: string
+        '401':
+          description: Unauthorized
+    put:
+      tags: [Config]
+      summary: Update mitigation posture
+      responses:
+        '200':
+          description: Updated posture
+        '401':
+          description: Unauthorized
+
+  /api/agents:
+    get:
+      tags: [Agents]
+      summary: List agents
+      responses:
+        '200':
+          description: Registered agents
+          content:
+            application/json:
+              schema:
+                type: array
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Agents]
+      summary: Register agent
+      responses:
+        '201':
+          description: Registered agent
+        '401':
+          description: Unauthorized
+
+  /api/rules:
+    get:
+      tags: [Rules]
+      summary: List WAF rules
+      responses:
+        '200':
+          description: WAF rules
+          content:
+            application/json:
+              schema:
+                type: array
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Rules]
+      summary: Create rule
+      responses:
+        '201':
+          description: Created rule
+        '401':
+          description: Unauthorized
+    put:
+      tags: [Rules]
+      summary: Toggle rule
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Toggled rule
+        '401':
+          description: Unauthorized
+    delete:
+      tags: [Rules]
+      summary: Delete rule
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '204':
+          description: Deleted rule
+        '401':
+          description: Unauthorized
+
+  /api/blacklist:
+    get:
+      tags: [Blacklist]
+      summary: List blacklist entries
+      responses:
+        '200':
+          description: Blacklisted IPs
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Blacklist]
+      summary: Add blacklist entry
+      responses:
+        '201':
+          description: Added entry
+        '401':
+          description: Unauthorized
+    delete:
+      tags: [Blacklist]
+      summary: Remove blacklist entry
+      parameters:
+        - in: path
+          name: ip
+          schema:
+            type: string
+          required: true
+      responses:
+        '204':
+          description: Removed entry
+        '401':
+          description: Unauthorized
+
+  /api/siem/stats:
+    get:
+      tags: [SIEM]
+      summary: SIEM stats
+      responses:
+        '200':
+          description: SIEM statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SIEMStats'
+        '401':
+          description: Unauthorized
+
+  /api/siem/alerts:
+    get:
+      tags: [SIEM]
+      summary: List SIEM alerts
+      responses:
+        '200':
+          description: Recent alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SIEMAlert'
+        '401':
+          description: Unauthorized
+    post:
+      tags: [SIEM]
+      summary: Acknowledge SIEM alert
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Acknowledged alert
+        '401':
+          description: Unauthorized
+
+  /api/geo:
+    get:
+      tags: [Telemetry]
+      summary: Geo telemetry
+      responses:
+        '200':
+          description: Geo data for map visualization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoData'
+
+  /api/vulns/stats:
+    get:
+      tags: [VulnManagement]
+      summary: Vulnerability stats
+      responses:
+        '200':
+          description: Vulnerability statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VulnStats'
+        '401':
+          description: Unauthorized
+
+  /api/vulns:
+    get:
+      tags: [VulnManagement]
+      summary: List vulnerability findings
+      responses:
+        '200':
+          description: Vulnerability findings
+          content:
+            application/json:
+              schema:
+                type: array
+        '401':
+          description: Unauthorized
+
+  /api/vulns/scan:
+    post:
+      tags: [VulnManagement]
+      summary: Start vulnerability scan
+      responses:
+        '202':
+          description: Scan started
+        '401':
+          description: Unauthorized
+
+  /api/vulns/scan/{id}:
+    get:
+      tags: [VulnManagement]
+      summary: Get vulnerability scan result
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Scan result
+        '401':
+          description: Unauthorized
+
+  /api/vapt/stats:
+    get:
+      tags: [VAPT]
+      summary: VAPT stats
+      responses:
+        '200':
+          description: VAPT statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaptStats'
+        '401':
+          description: Unauthorized
+
+  /api/vapt:
+    get:
+      tags: [VAPT]
+      summary: List VAPT findings
+      responses:
+        '200':
+          description: VAPT findings
+          content:
+            application/json:
+              schema:
+                type: array
+        '401':
+          description: Unauthorized
+
+  /api/vapt/scans:
+    get:
+      tags: [VAPT]
+      summary: List VAPT scans
+      responses:
+        '200':
+          description: VAPT scans
+          content:
+            application/json:
+              schema:
+                type: array
+        '401':
+          description: Unauthorized
+
+  /api/vapt/scan:
+    post:
+      tags: [VAPT]
+      summary: Start VAPT scan
+      responses:
+        '202':
+          description: Scan started
+        '401':
+          description: Unauthorized
+
+  /api/vapt/scan/{id}:
+    get:
+      tags: [VAPT]
+      summary: Get VAPT scan result
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Scan result
+        '401':
+          description: Unauthorized
+
+  /api/vapt/scan/{id}/findings:
+    get:
+      tags: [VAPT]
+      summary: Get VAPT findings for a scan
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Findings
+        '401':
+          description: Unauthorized
+
+  /api/mitigation-posture:
+    get:
+      tags: [Config]
+      summary: Mitigation posture alias
+      responses:
+        '200':
+          description: Current posture
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Config]
+      summary: Update mitigation posture alias
+      responses:
+        '200':
+          description: Updated posture
+        '401':
+          description: Unauthorized
+
+components:
+  schemas:
+    DashboardStats:
+      type: object
+      required: [total_requests, blocked_requests, active_ips, incidents_today, posture]
+      properties:
+        total_requests:
+          type: integer
+        blocked_requests:
+          type: integer
+        active_ips:
+          type: integer
+        incidents_today:
+          type: integer
+        posture:
+          type: string
+        uptime_seconds:
+          type: integer
+        top_attacks:
+          type: array
+          items:
+            type: object
+            properties:
+              attack_type:
+                type: string
+              count:
+                type: integer
+        recent_incidents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Incident'
+        agents_online:
+          type: integer
+        rule_count:
+          type: integer
+    Incident:
+      type: object
+      required: [id, type, attack_type, client_ip, timestamp, severity]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        rule_id:
+          type: string
+        attack_type:
+          type: string
+        client_ip:
+          type: string
+        path:
+          type: string
+        method:
+          type: string
+        severity:
+          type: string
+        message:
+          type: string
+        source:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        acknowledged:
+          type: boolean
+    Config:
+      type: object
+      properties:
+        proxy_port:
+          type: integer
+        upstream_url:
+          type: string
+        posture:
+          type: string
+    SIEMStats:
+      type: object
+      required: [total, by_severity, by_type]
+      properties:
+        total:
+          type: integer
+        by_severity:
+          type: object
+        by_type:
+          type: object
+        unacknowledged:
+          type: integer
+    SIEMAlert:
+      type: object
+      required: [rule_name, severity, description, source_ip]
+      properties:
+        id:
+          type: integer
+        rule_name:
+          type: string
+        severity:
+          type: string
+        description:
+          type: string
+        source_ip:
+          type: string
+        path:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        acked:
+          type: boolean
+    GeoData:
+      type: object
+      required: [total_ips, total_countries, locations]
+      properties:
+        total_ips:
+          type: integer
+        total_countries:
+          type: integer
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              ip:
+                type: string
+              country_code:
+                type: string
+              country_name:
+                type: string
+              latitude:
+                type: number
+              longitude:
+                type: number
+              count:
+                type: integer
+              last_seen:
+                type: string
+                format: date-time
+    VulnStats:
+      type: object
+      required: [total_cves, total_packages, by_severity]
+      properties:
+        total_cves:
+          type: integer
+        total_packages:
+          type: integer
+        avg_cvss:
+          type: number
+        by_severity:
+          type: object
+        last_scan_time:
+          type: string
+          format: date-time
+        last_scan_status:
+          type: string
+    VaptStats:
+      type: object
+      required: [total_findings, total_probes]
+      properties:
+        total_findings:
+          type: integer
+        total_probes:
+          type: integer
+        avg_cvss:
+          type: number
+        by_severity:
+          type: object
+        last_scan_time:
+          type: string
+          format: date-time
+        last_scan_status:
+          type: string

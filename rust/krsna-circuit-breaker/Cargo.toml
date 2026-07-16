@@ -1,0 +1,17 @@
+[package]
+name = "krsna-circuit-breaker"
+version.workspace = true
+edition.workspace = true
+description = "Circuit breaker pattern implementation for upstream health monitoring with half-open recovery"
+repository = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+documentation = "https://github.com/Pradyu12/TRAKSHYA-WAF#readme"
+homepage = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+categories = ["network-programming", "asynchronous"]
+keywords = ["circuit-breaker", "resilience", "fault-tolerance", "health-check"]
+license = "MIT"
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true

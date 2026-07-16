@@ -496,6 +496,57 @@ option{background:var(--bg-dark);color:var(--text)}
 .shortcut-key{background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px;font-family:'Orbitron',monospace;color:var(--neon-pink);font-weight:600}
 .shortcut-desc{font-size:13px;color:var(--text-secondary)}
 
+/* ============ ACCESSIBILITY ============ */
+.skip-link{position:absolute;top:-100px;left:0;background:var(--neon-cyan);color:#000;padding:8px 12px;z-index:2000;border-radius:0 0 8px 0;text-decoration:none;font-weight:600}
+.skip-link:focus{top:0}
+:focus-visible{outline:2px solid var(--neon-cyan);outline-offset:2px;border-radius:4px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+
+/* ============ TOAST NOTIFICATIONS ============ */
+.toast-container{position:fixed;top:16px;right:16px;z-index:3000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--bg-elevated);border:1px solid var(--border);border-left:3px solid var(--neon-cyan);border-radius:10px;padding:10px 14px;min-width:260px;max-width:360px;box-shadow:var(--shadow);color:var(--text);font-size:13px;line-height:1.4;pointer-events:auto;animation:slideIn .25s ease}
+.toast.success{border-left-color:var(--neon-green)}
+.toast.error{border-left-color:var(--neon-red)}
+.toast.warning{border-left-color:var(--neon-yellow)}
+.toast-title{font-weight:700;margin-bottom:2px}
+.toast-body{color:var(--text-secondary)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0;transform:translateY(-6px)}}
+
+/* ============ LIVE UPDATE TICKER ============ */
+.last-updated-tick{animation:tickPulse .6s ease}
+@keyframes tickPulse{0%{color:var(--text)}40%{color:var(--neon-cyan)}100%{color:var(--text)}}
+
+/* ============ SIMULATED ATTACK FEEDBACK ============ */
+#sim-result{margin-top:10px;padding:10px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);font-size:12px;line-height:1.5;min-height:36px}
+#sim-result .attack-log{margin-top:6px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:11px;color:var(--text-secondary)}
+#sim-result .attack-log div{padding:2px 0;border-bottom:1px solid rgba(176,38,255,0.08)}
+.attack-flash{animation:attackFlash .35s ease}
+@keyframes attackFlash{0%{box-shadow:0 0 0px rgba(255,41,117,0)}50%{box-shadow:0 0 24px rgba(255,41,117,0.35)}100%{box-shadow:0 0 0px rgba(255,41,117,0)}}
+
+/* ============ SHORTCUTS MODAL UX ============ */
+#shortcuts-modal .modal{transition:opacity .15s ease,transform .15s ease}
+#shortcuts-modal .modal:not(.open){opacity:0;transform:translateY(8px)}
+
+/* ============ MOBILE OPTIMIZATION ============ */
+@media(max-width:768px){
+  .header-actions{gap:8px}
+  .icon-btn{padding:8px}
+  .posture-btn-sm{padding:8px}
+  .auto-refresh-btn{padding:8px}
+  .globe-container{height:280px}
+  .globe-card{min-height:280px}
+  .donut-container{height:180px}
+  .drawer{width:100%}
+}
+@media(max-width:480px){
+  .metric-grid{grid-template-columns:1fr}
+  .attack-sim-grid{grid-template-columns:repeat(2,1fr)!important}
+  .settings-posture-grid{grid-template-columns:1fr!important}
+  .toast-container{right:8px;left:8px}
+  .toast{min-width:0;max-width:100%}
+}
+
 /* ============ ALERT DETAILS DRAWER ============ */
 .drawer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(5,0,16,0.6);z-index:900;display:none}
 .drawer-overlay.open{display:block}
@@ -585,6 +636,8 @@ option{background:var(--bg-dark);color:var(--text)}
 </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to content</a>
+<div id="toast-container" class="toast-container"></div>
 <canvas id="particle-canvas"></canvas>
 <div class="grid-bg"></div>
 
@@ -657,6 +710,9 @@ option{background:var(--bg-dark);color:var(--text)}
       <span class="material-symbols-rounded">security</span>SIEM
       <span class="badge" id="siem-badge">0</span>
     </div>
+    <div class="nav-item" data-section="vapt">
+      <span class="material-symbols-rounded">bug_report</span>VAPT
+    </div>
     <div class="nav-item" data-section="rules">
       <span class="material-symbols-rounded">rule</span>Rules
     </div>
@@ -677,7 +733,7 @@ option{background:var(--bg-dark);color:var(--text)}
 </aside>
 
 <!-- Main -->
-<main class="main">
+<main class="main" id="main-content">
   <header class="header">
     <div>
       <div class="header-title" id="page-title">SECURITY OVERVIEW</div>
@@ -885,6 +941,41 @@ option{background:var(--bg-dark);color:var(--text)}
       </div>
     </div>
 
+    <!-- ===== VAPT ===== -->
+    <div class="section" id="section-vapt">
+      <div class="metric-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="metric-card">
+          <div class="metric-icon"><span class="material-symbols-rounded">find_in_page</span></div>
+          <div class="metric-value" id="vapt-probes">0</div>
+          <div class="metric-label">Total Probes</div>
+        </div>
+        <div class="metric-icon" style="background:var(--neon-red-dim)"><span class="material-symbols-rounded" style="color:var(--neon-red)">priority_high</span></div>
+        <div class="metric-value" id="vapt-findings">0</div>
+        <div class="metric-label">Findings</div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title"><span class="material-symbols-rounded">rocket_launch</span>New VAPT Scan</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <input class="input" id="vapt-target" placeholder="https://example.com" style="flex:1">
+          <button class="btn btn-primary" onclick="startVaptScan()"><span class="material-symbols-rounded">play_arrow</span>Run Scan</button>
+        </div>
+        <div id="vapt-status" style="margin-top:10px;font-size:12px;color:var(--text-dim)"></div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title"><span class="material-symbols-rounded">list</span>VAPT Findings</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="loadVapt()">Refresh</button>
+          </div>
+        </div>
+        <div class="table-container" id="vapt-table">
+          <div class="empty"><span class="material-symbols-rounded">inbox</span><div class="empty-text">No findings</div><div class="empty-subtext">Run a scan to enumerate probes</div></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== RULES ===== -->
     <div class="section" id="section-rules">
       <div class="card" style="margin-bottom:20px">
@@ -939,6 +1030,18 @@ option{background:var(--bg-dark);color:var(--text)}
             <span class="theme-variant-swatch" style="background:linear-gradient(135deg,#0a0008,#180020)"></span>
             Neon Storm
           </button>
+          <button class="theme-variant-btn" data-theme="cyber-blue" onclick="setThemeVariant('cyber-blue')">
+            <span class="theme-variant-swatch" style="background:linear-gradient(135deg,#000510,#001830)"></span>
+            Cyber Blue
+          </button>
+          <button class="theme-variant-btn" data-theme="matrix-green" onclick="setThemeVariant('matrix-green')">
+            <span class="theme-variant-swatch" style="background:linear-gradient(135deg,#000a00,#002200)"></span>
+            Matrix Green
+          </button>
+          <button class="theme-variant-btn" data-theme="sunset" onclick="setThemeVariant('sunset')">
+            <span class="theme-variant-swatch" style="background:linear-gradient(135deg,#100500,#200a00)"></span>
+            Sunset
+          </button>
         </div>
       </div>
 
@@ -957,7 +1060,7 @@ option{background:var(--bg-dark);color:var(--text)}
         </div></div>
         <div class="col"><div class="card">
           <div class="card-header"><div class="card-title"><span class="material-symbols-rounded">palette</span>Theme</div></div>
-          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Synthwave theme active</div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px" id="theme-variant-label">Deep Void theme active</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <span style="width:32px;height:32px;border-radius:50%;background:var(--neon-pink);display:inline-block;border:2px solid rgba(255,255,255,0.2)"></span>
             <span style="width:32px;height:32px;border-radius:50%;background:var(--neon-cyan);display:inline-block;border:2px solid rgba(255,255,255,0.2)"></span>
@@ -1037,7 +1140,7 @@ option{background:var(--bg-dark);color:var(--text)}
 <div class="footer-bar" id="footer-bar">
   <span><span class="status-dot demo" id="footer-status-dot"></span><span id="footer-status-text">Demo Mode</span></span>
   <span>Last updated: <span id="footer-last-update">--</span></span>
-  <span>Theme: Synthwave</span>
+  <span>Theme: <span id="footer-theme">Deep Void</span></span>
   <span>Press <strong>?</strong> for shortcuts</span>
 </div>
 
@@ -1122,6 +1225,7 @@ function navigateTo(section) {
     overview: ['SECURITY OVERVIEW', 'Real-time threat monitoring and analysis'],
     threats: ['THREAT ANALYSIS', 'Attack patterns and severity breakdown'],
     siem: ['SECURITY INFORMATION & EVENT MANAGEMENT', 'Alert correlation and incident tracking'],
+    vapt: ['VULNERABILITY ASSESSMENT & PENETRATION TESTING', 'Active probes against configured targets'],
     rules: ['SECURITY RULES', 'Create and manage WAF rules'],
     settings: ['SETTINGS', 'System configuration and posture control'],
   };
@@ -1132,6 +1236,7 @@ function navigateTo(section) {
   if (section === 'overview') { loadOverview(); loadGeoData(); }
   if (section === 'threats') loadThreats();
   if (section === 'siem') loadSiem();
+  if (section === 'vapt') loadVapt();
   if (section === 'rules') loadRules();
   if (section === 'settings') loadSettings();
 }
@@ -1371,6 +1476,44 @@ async function loadSiem() {
   }
 }
 
+// ============ VAPT ============
+async function loadVapt() {
+  const stats = await api('/api/vapt/stats');
+  if (stats) {
+    document.getElementById('vapt-probes').textContent = stats.total_probes || 0;
+    document.getElementById('vapt-findings').textContent = stats.total_findings || 0;
+  }
+  const findings = await api('/api/vapt');
+  renderVaptFindings(findings || []);
+}
+
+async function startVaptScan() {
+  const target = document.getElementById('vapt-target').value.trim();
+  const statusEl = document.getElementById('vapt-status');
+  if (!target) { statusEl.textContent = 'Enter a target URL'; return; }
+  statusEl.textContent = 'Scan started...';
+  const res = await api('/api/vapt/scan', 'POST', { target });
+  if (res.error) { statusEl.textContent = res.error; return; }
+  statusEl.textContent = 'Scan running: ' + res.scan_id;
+  setTimeout(() => { loadVapt(); }, 1500);
+}
+
+function renderVaptFindings(findings) {
+  const table = document.getElementById('vapt-table');
+  if (!findings || findings.length === 0) {
+    table.innerHTML = '<div class="empty"><span class="material-symbols-rounded">inbox</span><div class="empty-text">No findings</div><div class="empty-subtext">Run a scan to enumerate probes</div></div>';
+    return;
+  }
+  table.innerHTML = '<table><thead><tr><th>Severity</th><th>Category</th><th>Title</th><th>Evidence</th><th>Remediation</th></tr></thead><tbody>' +
+    findings.map(f =>
+      '<tr><td>' + getBadge(f.severity) + '</td>' +
+      '<td style="font-family:monospace;font-size:12px;color:var(--neon-cyan)">' + f.category + '</td>' +
+      '<td>' + (f.title || '') + '</td>' +
+      '<td style="font-family:monospace;font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (f.evidence || '').replace(/"/g, '&quot;') + '">' + (f.evidence || '') + '</td>' +
+      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (f.remediation || '').replace(/"/g, '&quot;') + '">' + (f.remediation || '') + '</td></tr>'
+    ).join('') + '</tbody></table>';
+}
+
 // ============ RULES ============
 async function loadRules() {
   const data = await api('/api/rules');
@@ -1446,8 +1589,6 @@ function blacklistIp(ip) {
 }
 
 function removeBlacklist(ip) {}
-
-function exportReport() { alert('Export feature coming soon'); }
 
 // ============ ATTACK SIMULATOR ============
 async function simulateAttack(type, payload) {
@@ -1613,7 +1754,7 @@ let showWireframe = true;
 let showMarkersFlag = true;
 let earthGroup, markersGroup, glowMesh;
 
-const GLOBE_RADIUS = 1;
+const GLOBE_RADIUS = 1.0;
 
 function initGlobe() {
   const container = document.getElementById('globe-container');
@@ -1637,10 +1778,15 @@ function initGlobe() {
   globeControls.enableDamping = true;
   globeControls.dampingFactor = 0.05;
   globeControls.rotateSpeed = 0.5;
-  globeControls.enableZoom = true;
-  globeControls.minDistance = 1.8;
-  globeControls.maxDistance = 5;
+  globeControls.enableZoom = false;
+  globeControls.minDistance = GLOBE_RADIUS * 2.1;
+  globeControls.maxDistance = GLOBE_RADIUS * 2.1;
   globeControls.enablePan = false;
+
+  // Fixed camera position for stable view
+  globeCamera.position.set(0, 0.2, GLOBE_RADIUS * 2.1);
+  globeControls.target.set(0, 0, 0);
+  globeControls.update();
 
   earthGroup = new THREE.Group();
   globeScene.add(earthGroup);
@@ -2073,22 +2219,77 @@ function importRules(event) {
 
 // ============ 1.4 THEME VARIANT ============
 function setThemeVariant(variant) {
-  document.querySelectorAll('.theme-variant-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.querySelector('.theme-variant-btn[data-theme="' + variant + '"]').classList.add('active');
-  const root = document.documentElement;
-  if (variant === 'neon-storm') {
-    root.style.setProperty('--void', '#0a0008');
-    root.style.setProperty('--bg-dark', '#180020');
-    root.style.setProperty('--bg-card', 'rgba(24,0,32,0.5)');
-    root.style.setProperty('--bg-elevated', 'rgba(40,0,55,0.6)');
-  } else {
-    root.style.setProperty('--void', '#050010');
-    root.style.setProperty('--bg-dark', '#0f0020');
-    root.style.setProperty('--bg-card', 'rgba(15,0,32,0.5)');
-    root.style.setProperty('--bg-elevated', 'rgba(25,0,45,0.6)');
+  try {
+    document.querySelectorAll('.theme-variant-btn').forEach(function(b) { b.classList.remove('active'); });
+    const btn = document.querySelector('.theme-variant-btn[data-theme="' + variant + '"]');
+    if (btn) btn.classList.add('active');
+    const root = document.documentElement;
+    const themes = {
+      'deep-void': {
+        '--void':'#050010','--bg-deep':'#0a0015','--bg-dark':'#0f0020','--bg-card':'rgba(15,0,32,0.5)','--bg-elevated':'rgba(25,0,45,0.6)','--bg-input':'#1a0040',
+        '--neon-pink':'#ff2975','--neon-pink-dim':'rgba(255,41,117,0.15)','--neon-pink-glow':'rgba(255,41,117,0.6)',
+        '--neon-cyan':'#00f0ff','--neon-cyan-dim':'rgba(0,240,255,0.12)','--neon-cyan-glow':'rgba(0,240,255,0.5)',
+        '--neon-purple':'#b026ff','--neon-purple-dim':'rgba(176,38,255,0.15)','--neon-purple-glow':'rgba(176,38,255,0.5)',
+        '--text':'#ffffff','--text-secondary':'#b8b8d0','--text-dim':'#6a6a8e',
+        '--border':'rgba(176,38,255,0.25)','--border-hover':'rgba(255,41,117,0.5)','--shadow':'0 8px 32px rgba(176,38,255,0.15)','--shadow-pink':'0 0 30px rgba(255,41,117,0.2)'
+      },
+      'neon-storm': {
+        '--void':'#0a0008','--bg-deep':'#0f000e','--bg-dark':'#180020','--bg-card':'rgba(24,0,32,0.5)','--bg-elevated':'rgba(40,0,55,0.6)','--bg-input':'#1a0035',
+        '--neon-pink':'#ff2d7a','--neon-pink-dim':'rgba(255,45,122,0.15)','--neon-pink-glow':'rgba(255,45,122,0.6)',
+        '--neon-cyan':'#00e5ff','--neon-cyan-dim':'rgba(0,229,255,0.12)','--neon-cyan-glow':'rgba(0,229,255,0.5)',
+        '--neon-purple':'#c040ff','--neon-purple-dim':'rgba(192,64,255,0.15)','--neon-purple-glow':'rgba(192,64,255,0.5)',
+        '--text':'#ffffff','--text-secondary':'#c0b8d0','--text-dim':'#706a8e',
+        '--border':'rgba(192,64,255,0.25)','--border-hover':'rgba(255,45,122,0.5)','--shadow':'0 8px 32px rgba(192,64,255,0.15)','--shadow-pink':'0 0 30px rgba(255,45,122,0.2)'
+      },
+      'cyber-blue': {
+        '--void':'#000510','--bg-deep':'#000a1a','--bg-dark':'#001020','--bg-card':'rgba(0,15,35,0.5)','--bg-elevated':'rgba(0,25,55,0.6)','--bg-input':'#002040',
+        '--neon-pink':'#00f0ff','--neon-pink-dim':'rgba(0,240,255,0.15)','--neon-pink-glow':'rgba(0,240,255,0.55)',
+        '--neon-cyan':'#4da6ff','--neon-cyan-dim':'rgba(77,166,255,0.12)','--neon-cyan-glow':'rgba(77,166,255,0.5)',
+        '--neon-purple':'#0066ff','--neon-purple-dim':'rgba(0,102,255,0.15)','--neon-purple-glow':'rgba(0,102,255,0.5)',
+        '--neon-red':'#ff3355','--neon-orange':'#ff8833',
+        '--text':'#ffffff','--text-secondary':'#b8c8d8','--text-dim':'#6a7a8e',
+        '--border':'rgba(0,102,255,0.25)','--border-hover':'rgba(0,240,255,0.5)','--shadow':'0 8px 32px rgba(0,102,255,0.15)','--shadow-pink':'0 0 30px rgba(0,240,255,0.2)'
+      },
+      'matrix-green': {
+        '--void':'#000a00','--bg-deep':'#001200','--bg-dark':'#002200','--bg-card':'rgba(0,35,15,0.5)','--bg-elevated':'rgba(0,50,25,0.6)','--bg-input':'#003010',
+        '--neon-pink':'#00ff41','--neon-pink-dim':'rgba(0,255,65,0.12)','--neon-pink-glow':'rgba(0,255,65,0.5)',
+        '--neon-cyan':'#33ff77','--neon-cyan-dim':'rgba(51,255,119,0.1)','--neon-cyan-glow':'rgba(51,255,119,0.45)',
+        '--neon-purple':'#00cc33','--neon-purple-dim':'rgba(0,204,51,0.12)','--neon-purple-glow':'rgba(0,204,51,0.5)',
+        '--neon-red':'#ff2222','--neon-orange':'#ff8833','--neon-yellow':'#aaff00',
+        '--text':'#e0ffe0','--text-secondary':'#90c090','--text-dim':'#4a7a4a',
+        '--border':'rgba(0,204,51,0.25)','--border-hover':'rgba(0,255,65,0.45)','--shadow':'0 8px 32px rgba(0,204,51,0.12)','--shadow-pink':'0 0 30px rgba(0,255,65,0.18)'
+      },
+      'sunset': {
+        '--void':'#100500','--bg-deep':'#1a0800','--bg-dark':'#200a00','--bg-card':'rgba(45,10,0,0.5)','--bg-elevated':'rgba(60,15,0,0.6)','--bg-input':'#300d00',
+        '--neon-pink':'#ff5500','--neon-pink-dim':'rgba(255,85,0,0.15)','--neon-pink-glow':'rgba(255,85,0,0.55)',
+        '--neon-cyan':'#ff8833','--neon-cyan-dim':'rgba(255,136,51,0.12)','--neon-cyan-glow':'rgba(255,136,51,0.5)',
+        '--neon-purple':'#ff2200','--neon-purple-dim':'rgba(255,34,0,0.15)','--neon-purple-glow':'rgba(255,34,0,0.5)',
+        '--neon-red':'#ff0044','--neon-orange':'#ffaa00','--neon-yellow':'#ffcc00',
+        '--text':'#ffffff','--text-secondary':'#d8c8b8','--text-dim':'#8e7a6a',
+        '--border':'rgba(255,34,0,0.25)','--border-hover':'rgba(255,85,0,0.5)','--shadow':'0 8px 32px rgba(255,34,0,0.15)','--shadow-pink':'0 0 30px rgba(255,85,0,0.2)'
+      }
+    };
+    const t = themes[variant] || themes['deep-void'];
+    Object.entries(t).forEach(([k,v]) => root.style.setProperty(k,v));
+    const labels = {'deep-void':'Deep Void','neon-storm':'Neon Storm','cyber-blue':'Cyber Blue','matrix-green':'Matrix Green','sunset':'Sunset'};
+    const name = labels[variant] || variant;
+    const footerTheme = document.getElementById('footer-theme');
+    if (footerTheme) footerTheme.textContent = name;
+    const variantLabel = document.getElementById('theme-variant-label');
+    if (variantLabel) variantLabel.textContent = name + ' theme active';
+    localStorage.setItem('trakshya-theme', variant);
+  } catch (err) {
+    console.error('Theme change failed:', err);
   }
-  localStorage.setItem('trakshya-theme', variant);
 }
+
+// Fallback: global click handler for theme buttons
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.theme-variant-btn');
+  if (!btn) return;
+  const variant = btn.getAttribute('data-theme');
+  if (variant) setThemeVariant(variant);
+});
 
 (function() {
   const saved = localStorage.getItem('trakshya-theme');
@@ -2131,6 +2332,12 @@ function openFullscreenGlobe() {
     globeRenderer.setSize(w, h);
     globeCamera.aspect = w / h;
     globeCamera.updateProjectionMatrix();
+    // Keep zoom disabled in fullscreen
+    if (globeControls) {
+      globeControls.enableZoom = false;
+      globeControls.minDistance = GLOBE_RADIUS * 2.1;
+      globeControls.maxDistance = GLOBE_RADIUS * 2.1;
+    }
   }, 50);
   document.addEventListener('keydown', fsEscHandler);
 }
@@ -2341,6 +2548,119 @@ window.addEventListener('load', function() {
       });
     };
   }
+});
+
+// ============ TOAST NOTIFICATIONS ============
+function showToast(title, message, type) {
+  type = type || 'info';
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.innerHTML = '<div class=\"toast-title\">' + title + '</div><div class=\"toast-body\">' + message + '</div>';
+  container.appendChild(toast);
+  setTimeout(function() {
+    toast.style.animation = 'fadeOut .35s ease forwards';
+    setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 400);
+  }, 3500);
+}
+
+// ============ LIVE UPDATE TICKER ============
+setInterval(function() {
+  const el = document.getElementById('footer-last-update');
+  if (el && el.textContent !== '--') {
+    el.textContent = new Date().toLocaleTimeString();
+    el.classList.remove('last-updated-tick');
+    void el.offsetWidth;
+    el.classList.add('last-updated-tick');
+  }
+}, 1000);
+
+// ============ SIMULATED ATTACK FEEDBACK ============
+const origSimulateAttack = window.simulateAttack;
+if (origSimulateAttack) {
+  window.simulateAttack = function(type, payload) {
+    const resultEl = document.getElementById('sim-result');
+    let log = null;
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      log = document.createElement('div');
+      log.className = 'attack-log';
+      log.innerHTML = '';
+      resultEl.innerHTML = '<span style=\\\"color:var(--neon-yellow)\\\">&#9679; Sending ' + type.replace(/_/g, ' ') + ' attack...</span>';
+      resultEl.appendChild(log);
+    }
+    const card = document.getElementById('globe-card');
+    if (card) { card.classList.add('attack-flash'); setTimeout(function() { card.classList.remove('attack-flash'); }, 400); }
+    return origSimulateAttack(type, payload).then(function() {
+      if (resultEl && log) {
+        const entry = document.createElement('div');
+        entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + type + ' -> ' + (payload || 'simulated');
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+      }
+      showToast('Attack Simulator', type.replace(/_/g, ' ') + ' sent', 'warning');
+    }).catch(function() {
+      if (resultEl && log) {
+        const entry = document.createElement('div');
+        entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + type + ' failed';
+        entry.style.color = 'var(--neon-red)';
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+      }
+      showToast('Attack Simulator', type.replace(/_/g, ' ') + ' failed', 'error');
+    });
+  };
+}
+
+// ============ EXPORT REPORT ============
+function exportReport() {
+  const statsPayload = {
+    exportedAt: new Date().toISOString(),
+    overview: document.getElementById('total-requests') ? { totalRequests: document.getElementById('total-requests').textContent, blocked: document.getElementById('blocked-threats').textContent } : null,
+    liveFeed: (function() {
+      var rows = document.querySelectorAll('#events-feed tr');
+      var out = [];
+      rows.forEach(function(tr) { var td = tr.querySelectorAll('td'); if (td.length >= 5) out.push([td[0].textContent.trim(), td[1].textContent.trim(), td[2].textContent.trim(), td[3].textContent.trim(), td[4].textContent.trim()]); });
+      return out;
+    })()
+  };
+  const blob = new Blob([JSON.stringify(statsPayload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'trakshya-report-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Export', 'Report downloaded', 'success');
+}
+
+// ============ SHORTCUTS MODAL UX ============
+document.getElementById('shortcuts-modal').addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') hideShortcutsModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('shortcuts-modal').classList.contains('open')) return;
+  if (e.key === 'Escape') { e.preventDefault(); hideShortcutsModal(); }
+});
+
+// ============ ACCESSIBILITY ============
+document.querySelectorAll('.icon-btn').forEach(function(btn) {
+  if (!btn.getAttribute('aria-label')) {
+    var title = btn.getAttribute('title') || 'Action';
+    btn.setAttribute('aria-label', title);
+    btn.setAttribute('role', 'button');
+    btn.setAttribute('tabindex', '0');
+    btn.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); } });
+  }
+});
+document.querySelectorAll('.posture-btn-sm').forEach(function(btn) {
+  if (!btn.getAttribute('aria-label')) btn.setAttribute('aria-label', btn.getAttribute('title') || 'Posture option');
+});
+document.querySelectorAll('.theme-variant-btn').forEach(function(btn) {
+  if (!btn.getAttribute('aria-label')) btn.setAttribute('aria-label', btn.textContent.trim() + ' theme');
 });
 </script>
 </body>

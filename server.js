@@ -1,11 +1,15 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
 const PORT = 8000;
+const HTTPS_PORT = 8443;
 const FRONTEND_DIR = path.join(__dirname, 'frontend');
 const STATIC_DIR = path.join(FRONTEND_DIR, 'static');
+const LANDING_DIR = path.join(__dirname, 'landing');
+const DEV_CERTS_DIR = path.join(__dirname, 'dev-certs');
 
 const MIME = {
   '.html': 'text/html',
@@ -92,7 +96,7 @@ for (let i = 0; i < 200; i++) {
     method: ['POST', 'GET', 'GET', 'GET', 'POST', 'GET'][Math.floor(Math.random() * 6)],
     severity: sev,
     message: `${type} detected from ${ip}`,
-    source: 'kalki-proxy',
+    source: 'trakshya-proxy',
     timestamp: ts.toISOString(),
     acknowledged: Math.random() > 0.7,
   });
@@ -288,7 +292,23 @@ function generateCVE(pkg, ver) {
   return `CVE-${new Date().getFullYear()}-${Math.abs(hash) % 9999}`;
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(handleRequest);
+const httpsServer = (() => {
+  try {
+    const keyPath = path.join(DEV_CERTS_DIR, 'localhost.key');
+    const certPath = path.join(DEV_CERTS_DIR, 'localhost.crt');
+    if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) return null;
+    const httpsOptions = {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath),
+    };
+    return https.createServer(httpsOptions, handleRequest);
+  } catch {
+    return null;
+  }
+})();
+
+function handleRequest(req, res) {
   const parsed = url.parse(req.url, true);
   const pathname = parsed.pathname;
 
@@ -382,7 +402,7 @@ const server = http.createServer((req, res) => {
   }
   if (pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', service: 'kalki-management-api' }));
+    res.end(JSON.stringify({ status: 'ok', service: 'trakshya-management-api' }));
     return;
   }
 
@@ -420,10 +440,98 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (pathname === '/api/vapt/stats' && req.method === 'GET') {
+    const stats = {
+      total_findings: 0,
+      total_probes: 0,
+      avg_cvss: 0,
+      last_scan_time: null,
+      last_scan_status: 'none',
+      by_severity: {},
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(stats));
+    return;
+  }
+  if (pathname === '/api/vapt' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify([]));
+    return;
+  }
+  if (pathname === '/api/vapt/scans' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify([]));
+    return;
+  }
+  if (pathname === '/api/vapt/scan' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      let target = '';
+      try { const parsed = JSON.parse(body); target = parsed.target || ''; } catch (e) {}
+      const scanId = require('crypto').randomUUID();
+      const findings = [
+        {
+          id: require('crypto').randomUUID(),
+          scan_id: scanId,
+          category: 'headers',
+          severity: 'medium',
+          title: 'Missing X-Content-Type-Options',
+          description: 'Browsers may MIME-sniff responses.',
+          evidence: 'X-Content-Type-Options not present in response',
+          remediation: 'Add X-Content-Type-Options: nosniff.',
+        },
+        {
+          id: require('crypto').randomUUID(),
+          scan_id: scanId,
+          category: 'sensitive_files',
+          severity: 'critical',
+          title: 'Sensitive path exposed: /.env',
+          description: 'A sensitive file or directory is publicly accessible.',
+          evidence: 'GET ' + target + '/.env returned 200 OK',
+          remediation: 'Restrict access, remove sensitive files from web root, or block via WAF rules.',
+        },
+      ];
+      const result = {
+        id: scanId,
+        status: 'completed',
+        target: target || 'unknown',
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        total_probes: findings.length,
+        findings,
+      };
+      res.writeHead(202, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ scan_id: result.id, status: result.status, target: result.target }));
+    });
+    return;
+  }
+  const vaptScanMatch = pathname.match(/^\/api\/vapt\/scan\/([^\/]+)(\/findings)?$/);
+  if (vaptScanMatch && req.method === 'GET') {
+    const scanId = vaptScanMatch[1];
+    const findingsMatch = vaptScanMatch[2];
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    if (findingsMatch) {
+      res.end(JSON.stringify([]));
+    } else {
+      res.end(JSON.stringify({ id: scanId, status: 'completed', target: '', total_probes: 0, findings: [] }));
+    }
+    return;
+  }
+
   // Serve static files
   let filePath;
   if (pathname === '/' || pathname === '/dashboard.html') {
     filePath = path.join(FRONTEND_DIR, 'dashboard.html');
+  } else if (pathname === '/install.sh') {
+    filePath = path.join(__dirname, 'install.sh');
+  } else if (pathname === '/landing' || pathname.startsWith('/landing/')) {
+    const landingPath = path.join(LANDING_DIR, pathname.slice('/landing/'.length));
+    if (pathname === '/landing' || landingPath.endsWith('/') || !path.extname(landingPath)) {
+      filePath = path.join(LANDING_DIR, 'index.html');
+    } else {
+      filePath = landingPath;
+    }
   } else if (pathname.startsWith('/static/')) {
     filePath = path.join(STATIC_DIR, pathname.slice('/static/'.length));
   } else {
@@ -439,11 +547,20 @@ const server = http.createServer((req, res) => {
       res.end('Not Found');
       return;
     }
-    res.writeHead(200, { 'Content-Type': contentType });
+    const isHtml = filePath.endsWith('.html');
+    res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': isHtml ? 'no-store, no-cache, must-revalidate' : 'public, max-age=86400' });
     res.end(data);
   });
-});
+}
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`KALKI WAF mock server running at http://localhost:${PORT}`);
+  console.log(`TRAKSHYA WAF mock server running at http://localhost:${PORT}`);
 });
+
+if (httpsServer) {
+  httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+    console.log(`TRAKSHYA WAF mock HTTPS server running at https://localhost:${HTTPS_PORT}`);
+  });
+} else {
+  console.log(`Dev HTTPS server disabled: missing ${DEV_CERTS_DIR}/localhost.{crt,key}`);
+}

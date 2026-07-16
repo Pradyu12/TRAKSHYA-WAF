@@ -1,11 +1,11 @@
-# Datadog OpenMetrics Integration: KALKI WAF Prometheus Metrics
+# Datadog OpenMetrics Integration: TRAKSHYA WAF Prometheus Metrics
 #
 # The Datadog Agent scrapes the WAF's /metrics Prometheus endpoint
-# and maps metrics into the "kalki_waf" namespace in Datadog.
+# and maps metrics into the "trakshya_waf" namespace in Datadog.
 #
 instances:
   - openmetrics_endpoint: http://waf:8000/metrics
-    namespace: kalki_waf
+    namespace: trakshya_waf
     metrics:
       - waf_requests_total
       - waf_blocked_total
@@ -13,6 +13,6 @@ instances:
       - waf_active_connections
       - waf_upstream_timeouts_total
     tags:
-      - app:kalki-waf
+      - app:trakshya-waf
       - team:security
     min_collection_interval: 15

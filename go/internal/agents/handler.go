@@ -127,7 +127,7 @@ func (fm *FleetManager) StartPruner() {
 	go func() {
 		for range ticker.C {
 			fm.mu.Lock()
-			for id, agent := range fm.agents {
+			for _, agent := range fm.agents {
 				if time.Since(agent.LastSeen) > 5*time.Minute {
 					agent.Status = "offline"
 				}

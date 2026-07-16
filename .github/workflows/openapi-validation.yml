@@ -1,0 +1,22 @@
+name: OpenAPI Validation
+
+on:
+  push:
+    paths:
+      - 'openapi.yml'
+  pull_request:
+    paths:
+      - 'openapi.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-openapi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate OpenAPI schema
+        uses: mihaipdev/openapi-validator-action@v1
+        with:
+          file: openapi.yml

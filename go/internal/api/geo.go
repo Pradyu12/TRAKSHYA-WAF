@@ -6,7 +6,7 @@ import (
 	"math"
 	"net/http"
 
-	"github.com/kalki-waf/kalki-api/pkg/models"
+	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
 var countryNames = map[string]string{

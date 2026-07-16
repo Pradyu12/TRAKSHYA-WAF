@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/kalki-waf/kalki-api/pkg/models"
+	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
 type SQLite struct {

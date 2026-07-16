@@ -1,4 +1,4 @@
-#include "kalki.h"
+#include "trakshya.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +16,7 @@ static enum MHD_Result api_handler(void *cls, struct MHD_Connection *connection,
                                    const char *url, const char *method,
                                    const char *version, const char *upload_data,
                                    size_t *upload_data_size, void **con_cls) {
-    const char *response_str = "{\"status\": \"ok\", \"service\": \"kalki-systemd\"}";
+    const char *response_str = "{\"status\": \"ok\", \"service\": \"trakshya-systemd\"}";
     struct MHD_Response *response = MHD_create_response_from_buffer(
         strlen(response_str), (void *)response_str, MHD_RESPMEM_PERSISTENT);
     MHD_add_response_header(response, "Content-Type", "application/json");
@@ -28,7 +28,7 @@ static enum MHD_Result api_handler(void *cls, struct MHD_Connection *connection,
 int start_api_server(void) {
     struct MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD,
-        KALKI_API_PORT, NULL, NULL,
+        TRAKSHYA_API_PORT, NULL, NULL,
         &api_handler, NULL,
         MHD_OPTION_END);
     return daemon ? 0 : -1;
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
 
-    fprintf(stderr, "KALKI System Monitor starting on port %d...\n", KALKI_API_PORT);
+    fprintf(stderr, "TRAKSHYA System Monitor starting on port %d...\n", TRAKSHYA_API_PORT);
 
     hids_init();
     fim_init();
@@ -88,6 +88,6 @@ int main(int argc, char *argv[]) {
         sleep(60);
     }
 
-    fprintf(stderr, "KALKI System Monitor shutting down...\n");
+    fprintf(stderr, "TRAKSHYA System Monitor shutting down...\n");
     return 0;
 }

@@ -4,7 +4,7 @@ const path = require('path');
 const os = require('os');
 const { createGunzip } = require('zlib');
 
-const REPO = 'Pradyu12/KALKI-WAF';
+const REPO = 'Pradyu12/TRAKSHYA-WAF';
 const BIN_NAME = 'trakshya-waf';
 const INSTALL_DIR = path.join(os.homedir(), '.local', 'bin');
 const APPIMAGE_PATH = path.join(INSTALL_DIR, `${BIN_NAME}.AppImage`);

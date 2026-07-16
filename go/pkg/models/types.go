@@ -155,3 +155,33 @@ type VulnStats struct {
 	LastScanTime   *time.Time     `json:"last_scan_time,omitempty"`
 	LastScanStatus string         `json:"last_scan_status"`
 }
+
+type VaptScan struct {
+	ID          string        `json:"id"`
+	Status      string        `json:"status"`
+	Target      string        `json:"target"`
+	StartedAt   time.Time     `json:"started_at"`
+	CompletedAt *time.Time    `json:"completed_at,omitempty"`
+	TotalProbes int           `json:"total_probes"`
+	Findings    []VaptFinding `json:"findings,omitempty"`
+}
+
+type VaptFinding struct {
+	ID          string `json:"id"`
+	ScanID      string `json:"scan_id"`
+	Category    string `json:"category"`
+	Severity    string `json:"severity"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Evidence    string `json:"evidence"`
+	Remediation string `json:"remediation"`
+}
+
+type VaptStats struct {
+	TotalFindings  int            `json:"total_findings"`
+	TotalProbes    int            `json:"total_probes"`
+	AvgCVSS        float64        `json:"avg_cvss"`
+	LastScanTime   *time.Time     `json:"last_scan_time,omitempty"`
+	LastScanStatus string         `json:"last_scan_status"`
+	BySeverity     map[string]int `json:"by_severity"`
+}

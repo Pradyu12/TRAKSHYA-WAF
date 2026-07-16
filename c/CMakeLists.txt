@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(kalki-systemd LANGUAGES C VERSION 1.0.0)
+project(trakshya-systemd LANGUAGES C VERSION 1.0.0)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -39,9 +39,9 @@ set(SOURCES
     src/utils.c
 )
 
-add_executable(kalki-systemd ${SOURCES})
+add_executable(trakshya-systemd ${SOURCES})
 
-target_link_libraries(kalki-systemd
+target_link_libraries(trakshya-systemd
     ${LIBMICROHTTPD_LIBRARIES}
     ${LIBCURL_LIBRARIES}
     ${OPENSSL_LIBRARIES}
@@ -49,7 +49,7 @@ target_link_libraries(kalki-systemd
     pthread
 )
 
-install(TARGETS kalki-systemd DESTINATION /usr/local/bin)
+install(TARGETS trakshya-systemd DESTINATION /usr/local/bin)
 
 enable_testing()
 add_subdirectory(tests)

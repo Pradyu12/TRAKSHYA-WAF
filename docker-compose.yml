@@ -1,46 +1,46 @@
 version: "3.8"
 
 services:
-  kalki-proxy:
+  trakshya-proxy:
     build:
       context: ./rust
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
-      - KALKI_CONFIG=/etc/kalki/config.yaml
-      - KALKI_PROXY_PORT=8080
-      - KALKI_UPSTREAM_URL=http://upstream:3000
-      - KALKI_MGMT_API_URL=http://kalki-api:8000
+      - TRAKSHYA_CONFIG=/etc/trakshya/config.yaml
+      - TRAKSHYA_PROXY_PORT=8080
+      - TRAKSHYA_UPSTREAM_URL=http://localhost:3000
+      - TRAKSHYA_MGMT_API_URL=http://trakshya-api:8000
       - RUST_LOG=info
     volumes:
-      - ./config/kalki.yaml:/etc/kalki/config.yaml:ro
-      - kalki-data:/var/lib/kalki
+      - ./config/trakshya.yaml:/etc/trakshya/config.yaml:ro
+      - trakshya-data:/var/lib/trakshya
     depends_on:
-      - kalki-api
+      - trakshya-api
     networks:
-      - kalki-net
+      - trakshya-net
     restart: unless-stopped
 
-  kalki-api:
+  trakshya-api:
     build:
       context: ./go
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - KALKI_MGMT_PORT=8000
-      - KALKI_DB_PATH=/var/lib/kalki/kalki.db
-      - KALKI_FRONTEND_DIR=/opt/kalki/frontend
-      - KALKI_API_KEY=${KALKI_API_KEY:-}
+      - TRAKSHYA_MGMT_PORT=8000
+      - TRAKSHYA_DB_PATH=/var/lib/trakshya/trakshya.db
+      - TRAKSHYA_FRONTEND_DIR=/opt/trakshya/frontend
+      - TRAKSHYA_API_KEY=${TRAKSHYA_API_KEY:-}
     volumes:
-      - kalki-data:/var/lib/kalki
-      - ./frontend:/opt/kalki/frontend:ro
+      - trakshya-data:/var/lib/trakshya
+      - ./frontend:/opt/trakshya/frontend:ro
     networks:
-      - kalki-net
+      - trakshya-net
     restart: unless-stopped
 
-  kalki-systemd:
+  trakshya-systemd:
     build:
       context: ./c
       dockerfile: Dockerfile
@@ -49,23 +49,13 @@ services:
     volumes:
       - /var/log:/var/log:ro
       - /etc:/etc:ro
-      - kalki-data:/var/lib/kalki
+      - trakshya-data:/var/lib/trakshya
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
     privileged: true
     networks:
-      - kalki-net
-    restart: unless-stopped
-
-  upstream:
-    build:
-      context: ./backend/upstream
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    networks:
-      - kalki-net
+      - trakshya-net
     restart: unless-stopped
 
   datadog-agent:
@@ -79,12 +69,12 @@ services:
       - /proc/:/host/proc/:ro
       - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
     networks:
-      - kalki-net
+      - trakshya-net
     restart: unless-stopped
 
 networks:
-  kalki-net:
+  trakshya-net:
     driver: bridge
 
 volumes:
-  kalki-data:
+  trakshya-data:

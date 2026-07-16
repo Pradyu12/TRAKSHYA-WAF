@@ -1,0 +1,69 @@
+name: Continuous Validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    services:
+      waf:
+        image: node:22
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -f http://127.0.0.1:8000/health || exit 1"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+        volumes:
+          - ${{ github.workspace }}/server.js:/repo/server.js:ro
+          - ${{ github.workspace }}/frontend:/repo/frontend:ro
+          - ${{ github.workspace }}/landing:/repo/landing:ro
+        working_dir: /repo
+        run: |
+          node server.js
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate pyproject/metadata consistency
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root = Path('.')
+          files = [
+              *root.glob('npm-package/*.json'),
+              *root.glob('rust/*/Cargo.toml'),
+              *root.glob('.github/workflows/*.yml'),
+              'README.md',
+          ]
+          forbidden = ['kalki', 'KALKI', 'krsna-proxy', 'krsna-api']
+          bad = []
+          for path in files:
+              text = path.read_text(encoding='utf-8', errors='ignore')
+              for token in forbidden:
+                  if token in text:
+                      bad.append((path, token))
+          if bad:
+              print('VALIDATION FAILED')
+              for path, token in bad[:20]:
+                  print(f'- {path}: {token}')
+              raise SystemExit(1)
+          print('VALIDATION OK')
+          PY
+
+      - name: Run WAF regression suite
+        run: python scripts/regression.py
+        env:
+          TRAKSHYA_REGRESSION_BASE: 'http://127.0.0.1:8000'
+          TRAKSHYA_PROXY_BASE: 'http://127.0.0.1:8000'

@@ -1,0 +1,43 @@
+[package]
+name = "krsna-proxy"
+version.workspace = true
+edition.workspace = true
+description = "High-performance WAF reverse proxy with attack detection, rate limiting, and circuit breaking"
+repository = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+documentation = "https://github.com/Pradyu12/TRAKSHYA-WAF#readme"
+homepage = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+categories = ["network-programming", "security", "web-programming"]
+keywords = ["waf", "firewall", "proxy", "reverse-proxy", "rate-limiting", "circuit-breaker"]
+license = "MIT"
+
+[dependencies]
+axum = { version = "0.7", features = ["json"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+bytes = "1"
+krsna-rules = { path = "../krsna-rules" }
+krsna-rate-limiter = { path = "../krsna-rate-limiter" }
+krsna-circuit-breaker = { path = "../krsna-circuit-breaker" }
+krsna-geoip = { path = "../krsna-geoip" }
+krsna-jwt = { path = "../krsna-jwt" }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+reqwest.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde_yaml.workspace = true
+chrono.workspace = true
+clap = { version = "4", features = ["derive"] }
+
+# Database
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls", "chrono", "uuid", "migrate", "json"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-util = "0.3"
+regex = "1"

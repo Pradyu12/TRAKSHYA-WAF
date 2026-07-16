@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/kalki-waf/kalki-api/pkg/models"
+	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
 func (s *SQLite) RunVulnMigrations() error {

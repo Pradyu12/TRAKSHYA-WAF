@@ -1,17 +1,20 @@
 [workspace]
 members = [
-    "kalki-proxy",
-    "kalki-rules",
-    "kalki-rate-limiter",
-    "kalki-circuit-breaker",
-    "kalki-geoip",
-    "kalki-jwt",
+    "krsna-proxy",
+    "krsna-rules",
+    "krsna-rate-limiter",
+    "krsna-circuit-breaker",
+    "krsna-geoip",
+    "krsna-jwt",
 ]
 
 [workspace.package]
 edition = "2021"
 version = "1.0.0"
 license = "MIT"
+repository = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+documentation = "https://github.com/Pradyu12/TRAKSHYA-WAF#readme"
+homepage = "https://github.com/Pradyu12/TRAKSHYA-WAF"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

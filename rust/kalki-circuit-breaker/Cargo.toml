@@ -1,8 +1,0 @@
-[package]
-name = "kalki-circuit-breaker"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-tokio.workspace = true
-serde.workspace = true

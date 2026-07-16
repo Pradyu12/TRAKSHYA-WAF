@@ -5,9 +5,9 @@ const http = require('http');
 const fs = require('fs');
 
 const BACKENDS = {
-  api: { bin: 'kalki-api', port: 8000, args: ['--config', '../config/kalki.yaml'] },
-  proxy: { bin: 'kalki-proxy', port: 8080, args: ['--config', '../config/kalki.yaml'] },
-  cmon: { bin: 'kalki-systemd', port: 9001, args: [] },
+  api: { bin: 'trakshya-api', port: 8000, args: ['--config', '../config/trakshya.yaml'] },
+  proxy: { bin: 'trakshya-proxy', port: 8080, args: ['--config', '../config/trakshya.yaml'] },
+  cmon: { bin: 'trakshya-systemd', port: 9001, args: [] },
 };
 
 let mainWindow = null;
@@ -33,7 +33,7 @@ function startBackend(name) {
   console.log(`Starting ${name} (${binPath})...`);
   const proc = execFile(binPath, backend.args, {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, KALKI_FRONTEND_DIR: path.join(__dirname, 'renderer') },
+    env: { ...process.env, TRAKSHYA_FRONTEND_DIR: path.join(__dirname, 'renderer') },
   }, (err, stdout, stderr) => {
     if (err && backendRetries[name] < MAX_RETRIES) {
       console.error(`${name} exited (${err.code}), restarting...`);

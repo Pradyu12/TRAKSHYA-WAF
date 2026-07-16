@@ -1,0 +1,35 @@
+name: Compose Healthgate
+
+on:
+  push:
+    paths:
+      - 'docker-compose.stack.yml'
+      - 'docker-compose.yml'
+  pull_request:
+    paths:
+      - 'docker-compose.stack.yml'
+      - 'docker-compose.yml'
+  workflow_dispatch:
+
+jobs:
+  compose-healthgate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v2
+
+      - name: Lint/validate compose files
+        run: |
+          docker compose -f docker-compose.yml config >/dev/null
+          if [ -f docker-compose.stack.yml ]; then
+            docker compose -f docker-compose.stack.yml config >/dev/null
+          fi
+
+      - name: Verify healthchecks exist
+        run: |
+          if [ -f docker-compose.stack.yml ]; then
+            grep -E "healthcheck:" docker-compose.stack.yml >/dev/null || { echo 'missing healthchecks'; exit 1; }
+          fi

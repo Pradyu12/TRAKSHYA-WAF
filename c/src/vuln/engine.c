@@ -1,9 +1,9 @@
-#include "kalki.h"
+#include "trakshya.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define CVE_DB_PATH "/var/lib/kalki/cve.db"
+#define CVE_DB_PATH "/var/lib/trakshya/cve.db"
 
 typedef struct {
     char package[64];
