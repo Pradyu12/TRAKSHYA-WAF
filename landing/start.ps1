@@ -1,5 +1,5 @@
 # TRAKSHYA WAF — Windows launcher
-# Usage: powershell -ExecutionPolicy Bypass -File start.ps1
+# Usage: irm https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.ps1 | iex
 $ErrorActionPreference = 'Stop'
 
 Write-Host "`n  TRAKSHYA WAF — Starting...`n" -ForegroundColor Magenta
@@ -15,15 +15,29 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 $nodeVer = node -v 2>$null
 Write-Host "  v Node.js $nodeVer" -ForegroundColor Green
 
-# Determine repo location
-if ((Test-Path ".git") -and (Test-Path "server.js")) {
+$base = "https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main"
+
+# Check if we're already in the repo
+if ((Test-Path "server.js") -and (Test-Path "frontend")) {
   $repoDir = (Get-Location).Path
   Write-Host "  * Using local repo: $repoDir" -ForegroundColor Cyan
 } else {
   $repoDir = Join-Path $env:TEMP "trakshya-waf-$([guid]::NewGuid().ToString('N').Substring(0,8))"
-  Write-Host "  * Cloning to $repoDir..." -ForegroundColor Cyan
-  if (Test-Path $repoDir) { Remove-Item $repoDir -Recurse -Force }
-  git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git $repoDir 2>$null
+  Write-Host "  * Downloading TRAKSHYA WAF to $repoDir..." -ForegroundColor Cyan
+
+  $frontendDir = Join-Path $repoDir "frontend"
+  $staticDir = Join-Path $frontendDir "static"
+  New-Item -ItemType Directory -Path $staticDir -Force | Out-Null
+
+  Write-Host "  * Downloading server.js..." -ForegroundColor Cyan
+  Invoke-WebRequest "$base/server.js" -OutFile (Join-Path $repoDir "server.js") -UseBasicParsing
+
+  Write-Host "  * Downloading dashboard..." -ForegroundColor Cyan
+  Invoke-WebRequest "$base/frontend/dashboard.html" -OutFile (Join-Path $frontendDir "dashboard.html") -UseBasicParsing
+
+  Write-Host "  * Downloading globe assets..." -ForegroundColor Cyan
+  try { Invoke-WebRequest "$base/frontend/static/earth.glb" -OutFile (Join-Path $staticDir "earth.glb") -UseBasicParsing } catch {}
+  try { Invoke-WebRequest "$base/frontend/static/earth.jpg" -OutFile (Join-Path $staticDir "earth.jpg") -UseBasicParsing } catch {}
 }
 
 Set-Location $repoDir

@@ -22,20 +22,38 @@ fi
 NODE_VER=$(node -v 2>/dev/null)
 echo -e "  ${GREEN}v${RESET} Node.js ${NODE_VER}"
 
-# Determine repo location
-if [ -d ".git" ] && [ -f "server.js" ]; then
+# Check curl
+if ! command -v curl &>/dev/null; then
+  echo -e "  ${RED}x${RESET} curl is required."
+  exit 1
+fi
+
+# Check if we're already in the repo
+if [ -f "server.js" ] && [ -d "frontend" ]; then
   REPO_DIR="$(pwd)"
   echo -e "  ${CYAN}*${RESET} Using local repo: ${REPO_DIR}"
 else
   REPO_DIR="/tmp/trakshya-waf-$$"
-  echo -e "  ${CYAN}*${RESET} Cloning to ${REPO_DIR}..."
+  echo -e "  ${CYAN}*${RESET} Downloading TRAKSHYA WAF to ${REPO_DIR}..."
   rm -rf "${REPO_DIR}"
-  git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git "${REPO_DIR}" 2>/dev/null
+  mkdir -p "${REPO_DIR}/frontend/static"
+
+  BASE="https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main"
+
+  echo -e "  ${CYAN}*${RESET} Downloading server.js..."
+  curl -fsSL "${BASE}/server.js" -o "${REPO_DIR}/server.js"
+
+  echo -e "  ${CYAN}*${RESET} Downloading dashboard..."
+  curl -fsSL "${BASE}/frontend/dashboard.html" -o "${REPO_DIR}/frontend/dashboard.html"
+
+  echo -e "  ${CYAN}*${RESET} Downloading globe assets..."
+  curl -fsSL "${BASE}/frontend/static/earth.glb" -o "${REPO_DIR}/frontend/static/earth.glb" 2>/dev/null || true
+  curl -fsSL "${BASE}/frontend/static/earth.jpg" -o "${REPO_DIR}/frontend/static/earth.jpg" 2>/dev/null || true
 fi
 
 cd "${REPO_DIR}"
 
-# Cleanup on exit (only remove if we cloned to a temp dir)
+# Cleanup on exit (only remove if we downloaded to a temp dir)
 cleanup() {
   echo -e "\n  ${PINK}TRAKSHYA WAF${RESET} stopped."
   if [[ "${REPO_DIR}" == /tmp/* ]] && [ -d "${REPO_DIR}" ]; then

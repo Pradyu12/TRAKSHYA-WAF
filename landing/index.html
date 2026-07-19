@@ -401,14 +401,8 @@ Active  → iptables/nftables/UFW</code></pre>
     <div class="os-panel active" id="os-linux">
       <div class="code-block" style="max-width:720px;margin:0 auto 16px">
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># One-liner — clones, installs, and starts the dashboard</span>
+        <code><span class="code-comment"># One-liner — downloads and starts the dashboard</span>
 <span class="code-prompt">$</span> <span class="code-cmd">bash &lt;(curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.sh)</span></code>
-      </div>
-      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># Or clone manually and start</span>
-<span class="code-prompt">$</span> <span class="code-cmd">git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git</span>
-<span class="code-prompt">$</span> <span class="code-cmd">cd TRAKSHYA-WAF && bash landing/start.sh</span></code>
       </div>
     </div>
 
@@ -416,14 +410,8 @@ Active  → iptables/nftables/UFW</code></pre>
     <div class="os-panel" id="os-mac">
       <div class="code-block" style="max-width:720px;margin:0 auto 16px">
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># One-liner — clones, installs, and starts the dashboard</span>
+        <code><span class="code-comment"># One-liner — downloads and starts the dashboard</span>
 <span class="code-prompt">$</span> <span class="code-cmd">bash &lt;(curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.sh)</span></code>
-      </div>
-      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># Or clone manually and start</span>
-<span class="code-prompt">$</span> <span class="code-cmd">git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git</span>
-<span class="code-prompt">$</span> <span class="code-cmd">cd TRAKSHYA-WAF && bash landing/start.sh</span></code>
       </div>
     </div>
 
@@ -431,14 +419,8 @@ Active  → iptables/nftables/UFW</code></pre>
     <div class="os-panel" id="os-windows">
       <div class="code-block" style="max-width:720px;margin:0 auto 16px">
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># PowerShell — clones, installs, and starts the dashboard</span>
+        <code><span class="code-comment"># PowerShell — downloads and starts the dashboard</span>
 <span class="code-prompt">&gt;</span> <span class="code-cmd">irm https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.ps1 | iex</span></code>
-      </div>
-      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># Or clone manually and run</span>
-<span class="code-prompt">&gt;</span> <span class="code-cmd">git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git</span>
-<span class="code-prompt">&gt;</span> <span class="code-cmd">cd TRAKSHYA-WAF; powershell -ExecutionPolicy Bypass -File landing/start.ps1</span></code>
       </div>
     </div>
 
@@ -447,7 +429,7 @@ Active  → iptables/nftables/UFW</code></pre>
       <span class="live-dot"></span>
       <span class="live-text">Dashboard opens at <strong>http://localhost:8000</strong> with live traffic, SIEM alerts, and real-time SSE stream</span>
     </div>
-    <p style="color:var(--text-dim);font-size:12px;text-align:center;margin-top:12px">Requires <a href="https://nodejs.org/" target="_blank" style="color:var(--neon-cyan);text-decoration:none">Node.js 18+</a>. Builds Rust proxy if cargo is installed, otherwise uses the built-in mock server with simulated traffic.</p>
+    <p style="color:var(--text-dim);font-size:12px;text-align:center;margin-top:12px">Requires <a href="https://nodejs.org/" target="_blank" style="color:var(--neon-cyan);text-decoration:none">Node.js 18+</a> and <a href="https://curl.se/" target="_blank" style="color:var(--neon-cyan);text-decoration:none">curl</a>. Downloads only the essential files — no git, no build tools, no cloud accounts.</p>
   </div>
 
   <!-- Advanced install methods -->
