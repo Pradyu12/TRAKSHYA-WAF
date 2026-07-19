@@ -180,7 +180,6 @@ function scoreFor(sev) {
   return { critical: 9.5, high: 7.5, medium: 5.0, low: 2.5, info: 0.0 }[sev] || 0;
 }
 
-const { execSync } = require('child_process');
 const scanCache = { result: null, ts: 0 };
 
 function isLinux() {
@@ -195,154 +194,42 @@ function isWindows() {
   return process.platform === 'win32';
 }
 
-function getInstalledVersion(pkg) {
-  if (!isLinux()) return 'unknown';
-  try {
-    return execSync(`dpkg-query -W -f="\${Version}" ${pkg} 2>/dev/null`, { encoding: 'utf8' }).trim() || 'unknown';
-  } catch (e) {
-    return 'unknown';
-  }
-}
-
 function generateCVE(pkg, ver) {
   let hash = 0;
   for (const c of (pkg + ver)) hash = ((hash << 5) - hash + c.charCodeAt(0)) | 0;
   return `CVE-${new Date().getFullYear()}-${Math.abs(hash) % 9999}`;
 }
 
+function mockFindings(scanId, platform) {
+  const pkgs = platform === 'darwin'
+    ? ['openssl@3', 'curl', 'git', 'node', 'python@3.12']
+    : platform === 'win32'
+    ? ['Visual Studio Code', 'Google Chrome', 'Mozilla Firefox', '7-Zip', 'Notepad++']
+    : ['libc6', 'libssl3', 'openssl', 'curl', 'wget', 'sudo', 'bash', 'systemd'];
+
+  return pkgs.map(pkg => ({
+    id: require('crypto').randomUUID(),
+    scan_id: scanId,
+    package: pkg,
+    installed_version: '0.0.0',
+    available_version: '0.0.1',
+    severity: ['critical', 'high', 'medium'][Math.floor(Math.random() * 3)],
+    cve: generateCVE(pkg, '0.0.1'),
+    description: `Update available for ${pkg}`,
+    category: 'outdated',
+  }));
+}
+
 function runLinuxScan(scanId) {
-  const findings = [];
-  let totalPkgs = 0;
-
-  try {
-    const aptOut = execSync('apt list --upgradable 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
-    const securityRe = /\bsecurity\b/i;
-    const criticalPkgs = ['libc6', 'libssl3', 'openssl', 'openssh', 'linux-image', 'systemd', 'sudo', 'bash', 'dpkg', 'apt', 'curl', 'wget'];
-
-    aptOut.split('\n').forEach(line => {
-      line = line.trim();
-      if (!line || !line.includes('/')) return;
-      const parts = line.split(' ');
-      const pkgFull = parts[0] || '';
-      const pkgName = pkgFull.split('/')[0];
-      if (!pkgName) return;
-
-      const installed = getInstalledVersion(pkgName);
-      let available = '';
-      if (parts.length >= 2) available = parts[1];
-
-      let severity = 'medium';
-      let description = `Package ${pkgName} has an update available (${installed} -> ${available})`;
-
-      if (securityRe.test(line)) {
-        severity = 'high';
-        description = `Security update available for ${pkgName} (${installed} -> ${available})`;
-      }
-      if (criticalPkgs.some(c => pkgName.toLowerCase().includes(c))) {
-        severity = 'critical';
-        description = `Critical security update for ${pkgName} (${installed} -> ${available})`;
-      }
-
-      findings.push({
-        id: require('crypto').randomUUID(),
-        scan_id: scanId,
-        package: pkgName,
-        installed_version: installed,
-        available_version: available,
-        severity,
-        cve: generateCVE(pkgName, available),
-        description,
-        category: 'outdated',
-      });
-    });
-  } catch (e) {}
-
-  try {
-    const dpkgOut = execSync('dpkg-query -W -f="${Package}\\t${Version}\\t${Status}\\n" 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
-    dpkgOut.split('\n').forEach(line => {
-      if (line.trim()) totalPkgs++;
-    });
-  } catch (e) {}
-
-  try {
-    const auditOut = execSync('dpkg --audit 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
-    auditOut.split('\n').forEach(line => {
-      line = line.trim();
-      if (!line) return;
-      findings.push({
-        id: require('crypto').randomUUID(),
-        scan_id: scanId,
-        package: line.split(' ')[0] || 'unknown',
-        installed_version: '',
-        available_version: '',
-        severity: 'high',
-        cve: '',
-        description: `Package files modified from upstream: ${line}`,
-        category: 'modified',
-      });
-    });
-  } catch (e) {}
-
-  return { findings, totalPkgs };
+  return { findings: mockFindings(scanId, 'linux'), totalPkgs: 42 };
 }
 
 function runMacScan(scanId) {
-  const findings = [];
-  let totalPkgs = 0;
-
-  try {
-    const brewOut = execSync('brew outdated 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
-    brewOut.split('\n').forEach(line => {
-      line = line.trim();
-      if (!line) return;
-      const pkgName = line.split(' ')[0];
-      if (!pkgName) return;
-      totalPkgs++;
-      findings.push({
-        id: require('crypto').randomUUID(),
-        scan_id: scanId,
-        package: pkgName,
-        installed_version: '',
-        available_version: '',
-        severity: 'medium',
-        cve: generateCVE(pkgName, ''),
-        description: `Outdated Homebrew package: ${pkgName}`,
-        category: 'outdated',
-      });
-    });
-  } catch (e) {}
-
-  return { findings, totalPkgs };
+  return { findings: mockFindings(scanId, 'darwin'), totalPkgs: 38 };
 }
 
 function runWindowsScan(scanId) {
-  const findings = [];
-  let totalPkgs = 0;
-
-  try {
-    const wingetOut = execSync('winget list --upgrade-available 2>/dev/null', { timeout: 15000, encoding: 'utf8' });
-    wingetOut.split('\n').forEach(line => {
-      line = line.trim();
-      if (!line || line.startsWith('Name') || line.startsWith('-')) return;
-      const parts = line.split(/\s{2,}/);
-      const pkgName = parts[0];
-      if (!pkgName) return;
-      totalPkgs++;
-      findings.push({
-        id: require('crypto').randomUUID(),
-        scan_id: scanId,
-        package: pkgName,
-        installed_version: parts[2] || '',
-        available_version: parts[3] || '',
-        severity: 'medium',
-        cve: generateCVE(pkgName, ''),
-        description: `Updatable Windows package: ${pkgName}`,
-        category: 'outdated',
-      });
-    });
-  } catch (e) {}
-
-  return { findings, totalPkgs };
+  return { findings: mockFindings(scanId, 'win32'), totalPkgs: 51 };
 }
 
 function runLocalScan() {
@@ -408,8 +295,17 @@ function handleRequest(req, res) {
   const parsed = url.parse(req.url, true);
   const pathname = parsed.pathname;
 
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS headers — scoped to local origins only
+  const origin = req.headers.origin || '';
+  const allowed = [
+    `http://localhost:${PORT}`,
+    `http://localhost:${HTTPS_PORT}`,
+    `http://127.0.0.1:${PORT}`,
+    `http://127.0.0.1:${HTTPS_PORT}`,
+  ];
+  if (allowed.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-Key, Authorization');
 
@@ -564,7 +460,7 @@ function handleRequest(req, res) {
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
       let target = '';
-      try { const parsed = JSON.parse(body); target = parsed.target || ''; } catch (e) {}
+      try { const parsed = JSON.parse(body); target = String(parsed.target || '').replace(/[<>"'&]/g, ''); } catch (e) {}
       const scanId = require('crypto').randomUUID();
       const findings = [
         {
@@ -644,17 +540,23 @@ function handleRequest(req, res) {
       return;
     }
     const isHtml = filePath.endsWith('.html');
-    res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': isHtml ? 'no-store, no-cache, must-revalidate' : 'public, max-age=86400' });
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Cache-Control': isHtml ? 'no-store, no-cache, must-revalidate' : 'public, max-age=86400',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+    });
     res.end(data);
   });
 }
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`TRAKSHYA WAF mock server running at http://localhost:${PORT}`);
 });
 
 if (httpsServer) {
-  httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+  httpsServer.listen(HTTPS_PORT, '127.0.0.1', () => {
     console.log(`TRAKSHYA WAF mock HTTPS server running at https://localhost:${HTTPS_PORT}`);
   });
 } else {

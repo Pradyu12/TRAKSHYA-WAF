@@ -36,8 +36,8 @@ if ((Test-Path "server.js") -and (Test-Path "frontend")) {
   Invoke-WebRequest "$base/frontend/dashboard.html" -OutFile (Join-Path $frontendDir "dashboard.html") -UseBasicParsing
 
   Write-Host "  * Downloading globe assets..." -ForegroundColor Cyan
-  try { Invoke-WebRequest "$base/frontend/static/earth.glb" -OutFile (Join-Path $staticDir "earth.glb") -UseBasicParsing } catch {}
-  try { Invoke-WebRequest "$base/frontend/static/earth.jpg" -OutFile (Join-Path $staticDir "earth.jpg") -UseBasicParsing } catch {}
+  try { Invoke-WebRequest "$base/frontend/static/earth.glb" -OutFile (Join-Path $staticDir "earth.glb") -UseBasicParsing } catch { Write-Host "  ! globe.glb skipped (optional)" -ForegroundColor DarkYellow }
+  try { Invoke-WebRequest "$base/frontend/static/earth.jpg" -OutFile (Join-Path $staticDir "earth.jpg") -UseBasicParsing } catch { Write-Host "  ! globe.jpg skipped (optional)" -ForegroundColor DarkYellow }
 }
 
 Set-Location $repoDir
