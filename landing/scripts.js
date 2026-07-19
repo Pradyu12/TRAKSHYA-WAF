@@ -118,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadGitHubStats() {
   try {
     const res = await fetch('https://api.github.com/repos/Pradyu12/TRAKSHYA-WAF');
+    if (!res.ok) return;
     const data = await res.json();
     const el = document.getElementById('github-stars');
     if (el && data.stargazers_count !== undefined) el.textContent = data.stargazers_count;

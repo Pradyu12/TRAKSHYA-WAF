@@ -2,7 +2,6 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const url = require('url');
 
 const PORT = 8000;
 const HTTPS_PORT = 8443;
@@ -292,7 +291,7 @@ const httpsServer = (() => {
 })();
 
 function handleRequest(req, res) {
-  const parsed = url.parse(req.url, true);
+  const parsed = new URL(req.url, 'http://localhost');
   const pathname = parsed.pathname;
 
   // CORS headers — scoped to local origins only
