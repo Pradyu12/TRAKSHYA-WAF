@@ -17,7 +17,7 @@ if command -v openssl >/dev/null 2>&1; then
     -out "${DEV_CERTS_DIR}/localhost.csr" \
     -subj "/CN=localhost" || true
 
-  cat > "${DEV_CERTS_DIR}/localhost.ext" <<'EOF'
+  cat >"${DEV_CERTS_DIR}/localhost.ext" <<'EOF'
 basicConstraints = CA:FALSE
 keyUsage = digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth

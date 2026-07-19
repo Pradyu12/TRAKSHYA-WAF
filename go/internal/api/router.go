@@ -17,27 +17,29 @@ import (
 
 
 type Config struct {
-	ProxyPort      int    `yaml:"proxy_port"`
-	UpstreamURL    string `yaml:"upstream_url"`
-	ManagementPort int    `yaml:"management_port"`
-	DBPath         string `yaml:"db_path"`
-	Posture        string `yaml:"posture"`
-	LogLevel       string `yaml:"log_level"`
-	FrontendDir    string `yaml:"frontend_dir"`
-	APIKey         string `yaml:"api_key"`
+	ProxyPort        int      `yaml:"proxy_port"`
+	UpstreamURL      string   `yaml:"upstream_url"`
+	ManagementPort   int      `yaml:"management_port"`
+	DatabaseURL      string   `yaml:"database_url"`
+	Posture          string   `yaml:"posture"`
+	LogLevel         string   `yaml:"log_level"`
+	FrontendDir      string   `yaml:"frontend_dir"`
+	APIKey           string   `yaml:"api_key"`
 }
 
 type Server struct {
 	cfg     *Config
-	db      *db.SQLite
+	db      *db.Postgres
+	duck    *db.DuckDB
 	metrics *telemetry.Metrics
 	startAt time.Time
 }
 
-func NewRouter(cfg *Config, database *db.SQLite, metrics *telemetry.Metrics) http.Handler {
+func NewRouter(cfg *Config, database *db.Postgres, duckdb *db.DuckDB, metrics *telemetry.Metrics) http.Handler {
 	srv := &Server{
 		cfg:     cfg,
 		db:      database,
+		duck:    duckdb,
 		metrics: metrics,
 		startAt: time.Now(),
 	}
@@ -93,6 +95,10 @@ func NewRouter(cfg *Config, database *db.SQLite, metrics *telemetry.Metrics) htt
 		r.Get("/siem/stats", srv.getSIEMStats)
 		r.Get("/siem/alerts", srv.listSIEMAlerts)
 		r.Post("/siem/alerts/{id}/ack", srv.ackSIEMAlert)
+
+		// DuckDB analytics (high-volume event data)
+		r.Get("/analytics/events", srv.getEventStats)
+		r.Post("/analytics/ingest", srv.ingestEvent)
 
 		// Geo-location data for map visualization
 		r.Get("/geo", srv.getGeoData)
@@ -154,6 +160,16 @@ func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func isPrivateHost(host string) bool {
+	if isPrivateHost(host) {
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified()
+	}
+	return false
+}
+
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
@@ -166,7 +182,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			host = h
 		}
 
-		if host == "127.0.0.1" || host == "::1" || host == "localhost" {
+		if isPrivateHost(host) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -190,4 +206,29 @@ func (s *Server) getDashboardStats(w http.ResponseWriter, r *http.Request) {
 
 	stats.UptimeSeconds = int64(time.Since(s.startAt).Seconds())
 	s.json(w, http.StatusOK, stats)
+}
+
+// ── DuckDB Analytics Endpoints ──────────────────────────────────────────────
+
+func (s *Server) getEventStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := s.duck.GetEventStats()
+	if err != nil {
+		log.Printf("Failed to get event stats: %v", err)
+		s.errorJSON(w, http.StatusInternalServerError, "failed to get event stats")
+		return
+	}
+	s.json(w, http.StatusOK, stats)
+}
+
+func (s *Server) ingestEvent(w http.ResponseWriter, r *http.Request) {
+	var evt db.RawEvent
+	if err := json.NewDecoder(r.Body).Decode(&evt); err != nil {
+		s.errorJSON(w, http.StatusBadRequest, "invalid event payload")
+		return
+	}
+	if evt.Timestamp.IsZero() {
+		evt.Timestamp = time.Now()
+	}
+	s.duck.Ingest(evt)
+	s.json(w, http.StatusAccepted, map[string]string{"status": "queued"})
 }

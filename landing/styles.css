@@ -83,6 +83,22 @@ section{padding:80px 40px;position:relative;z-index:1}
 .install-oneliner .code-block{margin-bottom:0}
 .install-oneliner code{font-size:14px}
 
+/* OS tabs */
+.os-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg-elevated);padding:4px;border-radius:10px;border:1px solid var(--border);max-width:fit-content;margin-left:auto;margin-right:auto}
+.os-tab{display:flex;align-items:center;gap:6px;padding:10px 24px;border-radius:8px;border:none;background:transparent;color:var(--text-dim);font-size:13px;font-weight:500;cursor:pointer;transition:0.2s;font-family:inherit}
+.os-tab.active{background:var(--bg-card);color:var(--neon-cyan);border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,240,255,0.08)}
+.os-tab:hover:not(.active){color:var(--text-secondary)}
+.os-icon{font-size:16px}
+.os-panel{display:none;max-width:720px;margin:0 auto}
+.os-panel.active{display:block}
+
+/* Live traffic indicator */
+.live-indicator{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:20px;padding:12px 20px;background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.15);border-radius:8px;max-width:600px;margin-left:auto;margin-right:auto}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--neon-green);animation:pulse-live 2s ease-in-out infinite;flex-shrink:0;box-shadow:0 0 8px rgba(0,255,136,0.5)}
+.live-text{font-size:13px;color:var(--text-secondary);text-align:center}
+.live-text strong{color:var(--neon-cyan)}
+@keyframes pulse-live{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.85)}}
+
 /* Demo section */
 .demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;max-width:1100px;margin:0 auto}
 .demo-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:0.3s}
@@ -123,6 +139,9 @@ section{padding:80px 40px;position:relative;z-index:1}
   .diagram-row{flex-direction:column}
   .diagram-arrow{transform:rotate(90deg)}
   .install-tabs{flex-wrap:wrap;max-width:100%}
+  .os-tabs{flex-wrap:wrap;max-width:100%}
+  .os-tab{padding:8px 16px;font-size:12px}
+  .live-indicator{flex-direction:column;gap:6px}
   .demo-grid{grid-template-columns:1fr}
   .comparison-table{min-width:100%}
   .comparison-table th,.comparison-table td{padding:10px 12px;font-size:12px}

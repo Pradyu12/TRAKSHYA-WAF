@@ -2,7 +2,7 @@
 .github
 node_modules
 rust/target
-go/trakshya-api
+# go/trakshya-api
 c/build
 .cargo
 .agents

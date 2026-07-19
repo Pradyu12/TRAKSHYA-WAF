@@ -28,7 +28,7 @@ done
 # Wait for API to be ready
 echo "Waiting for backends..."
 for i in $(seq 1 30); do
-  if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+  if curl -s http://localhost:8000/health >/dev/null 2>&1; then
     echo "API ready"
     break
   fi
@@ -36,9 +36,9 @@ for i in $(seq 1 30); do
 done
 
 # Launch Electron
-if command -v npx &> /dev/null; then
+if command -v npx &>/dev/null; then
   npx electron .
-elif command -v electron &> /dev/null; then
+elif command -v electron &>/dev/null; then
   electron .
 else
   echo "Electron not found. Opening dashboard in browser..."

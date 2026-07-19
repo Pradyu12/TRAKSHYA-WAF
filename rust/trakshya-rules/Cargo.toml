@@ -1,0 +1,17 @@
+[package]
+name = "trakshya-rules"
+version.workspace = true
+edition.workspace = true
+description = "Regex-based attack detection engine for SQLi, XSS, CMDi, Path Traversal, LFI, RFI, XXE, SSTI"
+repository = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+documentation = "https://github.com/Pradyu12/TRAKSHYA-WAF#readme"
+homepage = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+categories = ["security", "text-processing"]
+keywords = ["waf", "firewall", "attack-detection", "sql-injection", "xss", "regex"]
+license = "MIT"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+regex = "1"
+once_cell = "1.19"

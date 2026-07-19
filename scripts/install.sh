@@ -69,7 +69,7 @@ if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
   if [ -f "${HOME}/.zshrc" ]; then
     SHELL_CONFIG="${HOME}/.zshrc"
   fi
-  echo "export PATH=\"\${PATH}:${INSTALL_DIR}\"" >> "${SHELL_CONFIG}"
+  echo "export PATH=\"\${PATH}:${INSTALL_DIR}\"" >>"${SHELL_CONFIG}"
   echo -e "  ${CYAN}\u25cf${RESET} Added ${INSTALL_DIR} to PATH in ${SHELL_CONFIG}"
 fi
 
@@ -82,7 +82,7 @@ echo -e "  Or reopen your terminal and just type: ${BOLD}${BIN_NAME}${RESET}\n"
 # Offer to start now
 read -r -p "  Start Trakshya WAF now? [Y/n] " yn
 yn=${yn:-Y}
-if [[ "$yn" =~ ^[Yy]$ ]]; then
+if [[ $yn =~ ^[Yy]$ ]]; then
   echo -e "\n  ${CYAN}\u25b6${RESET} Launching..."
   "${APPIMAGE_PATH}"
 fi

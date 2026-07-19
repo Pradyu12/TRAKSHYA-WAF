@@ -1442,7 +1442,7 @@ function renderHealthPanel(data) {
     { name: 'Go API', status: 'online', detail: 'Port 8000' },
     { name: 'Rust Proxy', status: 'online', detail: 'Port 8080' },
     { name: 'C Monitor', status: 'online', detail: 'Port 9001' },
-    { name: 'SQLite', status: 'online', detail: data.rule_count + ' rules' },
+    { name: 'PostgreSQL', status: 'online', detail: data.rule_count + ' rules' },
   ];
   panel.innerHTML = services.map(s =>
     '<div class="health-card"><div class="health-dot ' + s.status + '"></div><div><div class="health-name">' + s.name + '</div><div class="health-detail">' + s.detail + '</div></div></div>'

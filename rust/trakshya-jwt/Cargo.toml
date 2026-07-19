@@ -1,0 +1,19 @@
+[package]
+name = "trakshya-jwt"
+version.workspace = true
+edition.workspace = true
+description = "JWT token validation with JWKS support and role-based access control"
+repository = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+documentation = "https://github.com/Pradyu12/TRAKSHYA-WAF#readme"
+homepage = "https://github.com/Pradyu12/TRAKSHYA-WAF"
+categories = ["security", "authentication"]
+keywords = ["jwt", "jwks", "oauth2", "oidc", "authentication", "authorization"]
+license = "MIT"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+jsonwebtoken = "9"
+reqwest.workspace = true
+tokio.workspace = true
+thiserror.workspace = true

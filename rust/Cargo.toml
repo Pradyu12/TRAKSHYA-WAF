@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "krsna-proxy",
-    "krsna-rules",
-    "krsna-rate-limiter",
-    "krsna-circuit-breaker",
-    "krsna-geoip",
-    "krsna-jwt",
+    "trakshya-proxy",
+    "trakshya-rules",
+    "trakshya-rate-limiter",
+    "trakshya-circuit-breaker",
+    "trakshya-geoip",
+    "trakshya-jwt",
 ]
 
 [workspace.package]

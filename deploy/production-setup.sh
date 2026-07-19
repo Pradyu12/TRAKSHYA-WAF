@@ -27,7 +27,7 @@ if [ "$BUILD_MODE" = "local" ] || [ "$BUILD_MODE" = "mixed" ]; then
     pushd "$REPO_ROOT/rust" >/dev/null
     cargo build --release
     popd >/dev/null
-    install -m 0755 "$REPO_ROOT/rust/target/release/krsna-proxy" "$INSTALL_DIR/build/trakshya-proxy"
+    install -m 0755 "$REPO_ROOT/rust/target/release/trakshya-proxy" "$INSTALL_DIR/build/trakshya-proxy"
   fi
 
   if command -v go >/dev/null 2>&1; then
@@ -37,7 +37,7 @@ if [ "$BUILD_MODE" = "local" ] || [ "$BUILD_MODE" = "mixed" ]; then
   fi
 fi
 
-cat > "$INSTALL_DIR/.env" <<'ENVEOF'
+cat >"$INSTALL_DIR/.env" <<'ENVEOF'
 TRAKSHYA_MGMT_PORT=8000
 TRAKSHYA_PROXY_PORT=8080
 TRAKSHYA_FRONTEND_DIR=/opt/trakshya-waf/frontend

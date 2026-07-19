@@ -7,14 +7,14 @@ import (
 	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
-func (s *SQLite) RunVulnMigrations() error {
+func (s *Postgres) RunVulnMigrations() error {
 	migrations := []string{
 		`CREATE TABLE IF NOT EXISTS vuln_scans (
 			id TEXT PRIMARY KEY,
 			status TEXT DEFAULT 'running',
 			target TEXT NOT NULL,
-			started_at DATETIME,
-			completed_at DATETIME,
+			started_at TIMESTAMP,
+			completed_at TIMESTAMP,
 			total_pkgs INTEGER DEFAULT 0,
 			total_cves INTEGER DEFAULT 0
 		)`,
@@ -42,15 +42,15 @@ func (s *SQLite) RunVulnMigrations() error {
 	return nil
 }
 
-func (s *SQLite) CreateVulnScan(scan *models.VulnScan) error {
+func (s *Postgres) CreateVulnScan(scan *models.VulnScan) error {
 	query := `INSERT INTO vuln_scans (id, status, target, started_at, completed_at, total_pkgs, total_cves)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	_, err := s.db.Exec(query, scan.ID, scan.Status, scan.Target, scan.StartedAt, scan.CompletedAt, scan.TotalPkgs, scan.TotalCVEs)
 	return err
 }
 
-func (s *SQLite) UpdateVulnScan(scan *models.VulnScan) error {
-	query := `UPDATE vuln_scans SET status=?, completed_at=?, total_pkgs=?, total_cves=? WHERE id=?`
+func (s *Postgres) UpdateVulnScan(scan *models.VulnScan) error {
+	query := `UPDATE vuln_scans SET status=$1, completed_at=$2, total_pkgs=$3, total_cves=$4 WHERE id=$5`
 	result, err := s.db.Exec(query, scan.Status, scan.CompletedAt, scan.TotalPkgs, scan.TotalCVEs, scan.ID)
 	if err != nil {
 		return err
@@ -62,9 +62,9 @@ func (s *SQLite) UpdateVulnScan(scan *models.VulnScan) error {
 	return nil
 }
 
-func (s *SQLite) GetVulnScan(id string) (*models.VulnScan, error) {
+func (s *Postgres) GetVulnScan(id string) (*models.VulnScan, error) {
 	var scan models.VulnScan
-	query := `SELECT id, status, target, started_at, completed_at, total_pkgs, total_cves FROM vuln_scans WHERE id=?`
+	query := `SELECT id, status, target, started_at, completed_at, total_pkgs, total_cves FROM vuln_scans WHERE id=$1`
 	err := s.db.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalPkgs, &scan.TotalCVEs)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -76,11 +76,11 @@ func (s *SQLite) GetVulnScan(id string) (*models.VulnScan, error) {
 	return &scan, nil
 }
 
-func (s *SQLite) ListVulnScans(limit int) ([]models.VulnScan, error) {
+func (s *Postgres) ListVulnScans(limit int) ([]models.VulnScan, error) {
 	if limit <= 0 {
 		limit = 20
 	}
-	query := `SELECT id, status, target, started_at, completed_at, total_pkgs, total_cves FROM vuln_scans ORDER BY started_at DESC LIMIT ?`
+	query := `SELECT id, status, target, started_at, completed_at, total_pkgs, total_cves FROM vuln_scans ORDER BY started_at DESC LIMIT $1`
 	rows, err := s.db.Query(query, limit)
 	if err != nil {
 		return nil, err
@@ -101,16 +101,16 @@ func (s *SQLite) ListVulnScans(limit int) ([]models.VulnScan, error) {
 	return scans, nil
 }
 
-func (s *SQLite) CreateVulnFinding(f *models.VulnFinding) error {
+func (s *Postgres) CreateVulnFinding(f *models.VulnFinding) error {
 	query := `INSERT INTO vuln_findings (id, scan_id, package, installed_version, available_version, severity, cve, description, category)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 	_, err := s.db.Exec(query, f.ID, f.ScanID, f.Package, f.Installed, f.Available, f.Severity, f.CVE, f.Description, f.Category)
 	return err
 }
 
-func (s *SQLite) ListVulnFindings(scanID string) ([]models.VulnFinding, error) {
+func (s *Postgres) ListVulnFindings(scanID string) ([]models.VulnFinding, error) {
 	query := `SELECT id, scan_id, package, installed_version, available_version, severity, cve, description, category
-		FROM vuln_findings WHERE scan_id=? ORDER BY
+		FROM vuln_findings WHERE scan_id=$1 ORDER BY
 		CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`
 	rows, err := s.db.Query(query, scanID)
 	if err != nil {
@@ -132,7 +132,7 @@ func (s *SQLite) ListVulnFindings(scanID string) ([]models.VulnFinding, error) {
 	return findings, nil
 }
 
-func (s *SQLite) ListAllVulnFindings() ([]models.VulnFinding, error) {
+func (s *Postgres) ListAllVulnFindings() ([]models.VulnFinding, error) {
 	query := `SELECT f.id, f.scan_id, f.package, f.installed_version, f.available_version, f.severity, f.cve, f.description, f.category
 		FROM vuln_findings f
 		INNER JOIN vuln_scans s ON f.scan_id = s.id
@@ -159,7 +159,7 @@ func (s *SQLite) ListAllVulnFindings() ([]models.VulnFinding, error) {
 	return findings, nil
 }
 
-func (s *SQLite) GetVulnStats() (*models.VulnStats, error) {
+func (s *Postgres) GetVulnStats() (*models.VulnStats, error) {
 	stats := &models.VulnStats{
 		BySeverity: make(map[string]int),
 	}

@@ -80,7 +80,7 @@ type Config struct {
 	Posture          Posture  `yaml:"posture" json:"posture"`
 	BlockedCountries []string `yaml:"blocked_countries" json:"blocked_countries"`
 	TrustedIPs       []string `yaml:"trusted_ips" json:"trusted_ips"`
-	DBPath           string   `yaml:"db_path" json:"db_path"`
+	DatabaseURL      string   `yaml:"database_url" json:"database_url"`
 	LogLevel         string   `yaml:"log_level" json:"log_level"`
 }
 

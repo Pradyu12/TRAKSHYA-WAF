@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 import urllib.request
 import urllib.error
 
@@ -93,7 +94,7 @@ def waf_proxy_checks() -> bool:
 
     malicious_queries = [
         ("sql_injection", "/search?q=UNION+SELECT+1,2,3"),
-        ("xss", "/page?payload=<script>alert(1)</script>"),
+        ("xss", "/page?payload=%3Cscript%3Ealert(1)%3C/script%3E"),
         ("path_traversal", "/files?name=../../etc/passwd"),
         ("command_injection", "/debug?cmd=;ls+-la"),
     ]

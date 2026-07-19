@@ -7,14 +7,14 @@ import (
 	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
-func (s *SQLite) RunVaptMigrations() error {
+func (s *Postgres) RunVaptMigrations() error {
 	migrations := []string{
 		`CREATE TABLE IF NOT EXISTS vapt_scans (
 			id TEXT PRIMARY KEY,
 			status TEXT DEFAULT 'running',
 			target TEXT NOT NULL,
-			started_at DATETIME,
-			completed_at DATETIME,
+			started_at TIMESTAMP,
+			completed_at TIMESTAMP,
 			total_probes INTEGER DEFAULT 0
 		)`,
 		`CREATE TABLE IF NOT EXISTS vapt_findings (
@@ -40,15 +40,15 @@ func (s *SQLite) RunVaptMigrations() error {
 	return nil
 }
 
-func (s *SQLite) CreateVaptScan(scan *models.VaptScan) error {
+func (s *Postgres) CreateVaptScan(scan *models.VaptScan) error {
 	query := `INSERT INTO vapt_scans (id, status, target, started_at, completed_at, total_probes)
-		VALUES (?, ?, ?, ?, ?, ?)`
+		VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := s.db.Exec(query, scan.ID, scan.Status, scan.Target, scan.StartedAt, scan.CompletedAt, scan.TotalProbes)
 	return err
 }
 
-func (s *SQLite) UpdateVaptScan(scan *models.VaptScan) error {
-	query := `UPDATE vapt_scans SET status=?, completed_at=?, total_probes=? WHERE id=?`
+func (s *Postgres) UpdateVaptScan(scan *models.VaptScan) error {
+	query := `UPDATE vapt_scans SET status=$1, completed_at=$2, total_probes=$3 WHERE id=$4`
 	result, err := s.db.Exec(query, scan.Status, scan.CompletedAt, scan.TotalProbes, scan.ID)
 	if err != nil {
 		return err
@@ -60,9 +60,9 @@ func (s *SQLite) UpdateVaptScan(scan *models.VaptScan) error {
 	return nil
 }
 
-func (s *SQLite) GetVaptScan(id string) (*models.VaptScan, error) {
+func (s *Postgres) GetVaptScan(id string) (*models.VaptScan, error) {
 	var scan models.VaptScan
-	query := `SELECT id, status, target, started_at, completed_at, total_probes FROM vapt_scans WHERE id=?`
+	query := `SELECT id, status, target, started_at, completed_at, total_probes FROM vapt_scans WHERE id=$1`
 	err := s.db.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalProbes)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -74,11 +74,11 @@ func (s *SQLite) GetVaptScan(id string) (*models.VaptScan, error) {
 	return &scan, nil
 }
 
-func (s *SQLite) ListVaptScans(limit int) ([]models.VaptScan, error) {
+func (s *Postgres) ListVaptScans(limit int) ([]models.VaptScan, error) {
 	if limit <= 0 {
 		limit = 20
 	}
-	query := `SELECT id, status, target, started_at, completed_at, total_probes FROM vapt_scans ORDER BY started_at DESC LIMIT ?`
+	query := `SELECT id, status, target, started_at, completed_at, total_probes FROM vapt_scans ORDER BY started_at DESC LIMIT $1`
 	rows, err := s.db.Query(query, limit)
 	if err != nil {
 		return nil, err
@@ -99,16 +99,16 @@ func (s *SQLite) ListVaptScans(limit int) ([]models.VaptScan, error) {
 	return scans, nil
 }
 
-func (s *SQLite) CreateVaptFinding(f *models.VaptFinding) error {
+func (s *Postgres) CreateVaptFinding(f *models.VaptFinding) error {
 	query := `INSERT INTO vapt_findings (id, scan_id, category, severity, title, description, evidence, remediation)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	_, err := s.db.Exec(query, f.ID, f.ScanID, f.Category, f.Severity, f.Title, f.Description, f.Evidence, f.Remediation)
 	return err
 }
 
-func (s *SQLite) ListVaptFindings(scanID string) ([]models.VaptFinding, error) {
+func (s *Postgres) ListVaptFindings(scanID string) ([]models.VaptFinding, error) {
 	query := `SELECT id, scan_id, category, severity, title, description, evidence, remediation
-		FROM vapt_findings WHERE scan_id=? ORDER BY
+		FROM vapt_findings WHERE scan_id=$1 ORDER BY
 		CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`
 	rows, err := s.db.Query(query, scanID)
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *SQLite) ListVaptFindings(scanID string) ([]models.VaptFinding, error) {
 	return findings, nil
 }
 
-func (s *SQLite) ListAllVaptFindings() ([]models.VaptFinding, error) {
+func (s *Postgres) ListAllVaptFindings() ([]models.VaptFinding, error) {
 	query := `SELECT f.id, f.scan_id, f.category, f.severity, f.title, f.description, f.evidence, f.remediation
 		FROM vapt_findings f
 		INNER JOIN vapt_scans s ON f.scan_id = s.id
@@ -157,7 +157,7 @@ func (s *SQLite) ListAllVaptFindings() ([]models.VaptFinding, error) {
 	return findings, nil
 }
 
-func (s *SQLite) GetVaptStats() (*models.VaptStats, error) {
+func (s *Postgres) GetVaptStats() (*models.VaptStats, error) {
 	stats := &models.VaptStats{BySeverity: make(map[string]int)}
 
 	lastScanQuery := `SELECT id, status, started_at, total_probes FROM vapt_scans ORDER BY started_at DESC LIMIT 1`

@@ -10,7 +10,7 @@ Dates are in ISO format.
 - CI smoke test and validation workflows: `.github/workflows/validate.yml`, `.github/workflows/regression.yml`
 - CI dependency scanning: `.github/workflows/dependency-scan.yml`
 - OpenAPI schema for management API: `openapi.yml`
-- Docker multi-stage build and compose stack: `rust/krsna-proxy/Dockerfile`, `go/Dockerfile`, `dashboard/Dockerfile`, `docker-compose.stack.yml`
+- Docker multi-stage build and compose stack: `rust/trakshya-proxy/Dockerfile`, `go/Dockerfile`, `dashboard/Dockerfile`, `docker-compose.stack.yml`
 - Management CLI subcommands: `npm-package/bin/trakshya-cli.js`
 - Figlet-style ASCII logo: `scripts/trakshya-ascii.sh`
 - Local dev CA and HTTPS runtime listener on `8443`

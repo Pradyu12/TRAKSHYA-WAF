@@ -1,5 +1,7 @@
 # TRAKSHYA-WAF Configuration
-# Shared configuration for all components (Rust proxy, Go API, C system monitor)
+# Shared configuration for all components (Rust proxy, Go API)
+
+database_url: postgres://trakshya:***@localhost:5432/trakshya?sslmode=disable
 
 global:
   log_level: info
@@ -24,7 +26,6 @@ circuit_breaker:
 
 api:
   port: 8000
-  db_path: /var/lib/trakshya/trakshya.db
   api_key: ""  # empty means localhost-only (secure by default)
 
 c_system_monitor:

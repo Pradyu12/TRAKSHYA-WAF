@@ -17,7 +17,7 @@ if [ ! -f "$EXEC_PATH" ]; then
   echo "Creating desktop file anyway with placeholder path."
 fi
 
-cat > "$DESKTOP_FILE" << EOF
+cat >"$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Trakshya WAF

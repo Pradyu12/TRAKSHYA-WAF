@@ -1,6 +1,24 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trakshya
+      POSTGRES_PASSWORD: trakshya
+      POSTGRES_DB: trakshya
+    volumes:
+      - trakshya-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - trakshya-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trakshya"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   trakshya-dashboard:
     build:
       context: .
@@ -10,12 +28,19 @@ services:
       - "8443:8443"
     environment:
       - NODE_ENV=production
+      - TRAKSHYA_API_URL=http://trakshya-api:8000
+      - TRAKSHYA_DATABASE_URL=postgres://trakshya:trakshya@postgres:5432/trakshya?sslmode=disable
     volumes:
       - ./dev-certs:/app/dev-certs:ro
       - trakshya-logs:/var/log/trakshya
     networks:
       - trakshya-net
     restart: unless-stopped
+    depends_on:
+      trakshya-api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -25,7 +50,7 @@ services:
   trakshya-proxy:
     build:
       context: ./rust
-      dockerfile: krsna-proxy/Dockerfile
+      dockerfile: trakshya-proxy/Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -33,14 +58,14 @@ services:
       - TRAKSHYA_PROXY_PORT=8080
       - TRAKSHYA_UPSTREAM_URL=http://trakshya-dashboard:8000
       - TRAKSHYA_MGMT_API_URL=http://trakshya-api:8000
+      - TRAKSHYA_DATABASE_URL=postgres://trakshya:trakshya@postgres:5432/trakshya?sslmode=disable
       - RUST_LOG=info
     volumes:
       - ./config/trakshya.yaml:/etc/trakshya/config.yaml:ro
-      - trakshya-data:/var/lib/trakshya
     depends_on:
       trakshya-api:
         condition: service_healthy
-      trakshya-dashboard:
+      postgres:
         condition: service_healthy
     networks:
       - trakshya-net
@@ -59,12 +84,14 @@ services:
       - "8001:8000"
     environment:
       - TRAKSHYA_MGMT_PORT=8000
-      - TRAKSHYA_DB_PATH=/var/lib/trakshya/trakshya.db
+      - TRAKSHYA_DATABASE_URL=postgres://trakshya:trakshya@postgres:5432/trakshya?sslmode=disable
       - TRAKSHYA_FRONTEND_DIR=/opt/trakshya/frontend
       - TRAKSHYA_API_KEY=${TRAKSHYA_API_KEY:-}
     volumes:
-      - trakshya-data:/var/lib/trakshya
       - ./frontend:/opt/trakshya/frontend:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - trakshya-net
     restart: unless-stopped
@@ -73,38 +100,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-
-  trakshya-systemd:
-    build:
-      context: ./c
-      dockerfile: Dockerfile
-    ports:
-      - "9001:9001"
-    volumes:
-      - /var/log:/var/log:ro
-      - /etc:/etc:ro
-      - trakshya-data:/var/lib/trakshya
-    cap_add:
-      - NET_ADMIN
-      - SYS_ADMIN
-    privileged: true
-    networks:
-      - trakshya-net
-    restart: unless-stopped
-
-  datadog-agent:
-    image: gcr.io/datadoghq/agent:latest
-    environment:
-      - DD_API_KEY=${DD_API_KEY:-}
-      - DD_SITE=datadoghq.com
-      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /proc/:/host/proc/:ro
-      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
-    networks:
-      - trakshya-net
-    restart: unless-stopped
 
 networks:
   trakshya-net:

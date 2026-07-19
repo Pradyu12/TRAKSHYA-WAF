@@ -42,6 +42,32 @@ function switchTab(group, tab) {
   if (panel) panel.classList.add('active');
 }
 
+// OS tabs
+function switchOS(tab) {
+  const container = tab.closest('.install-oneliner');
+  container.querySelectorAll('.os-tab').forEach(t => t.classList.remove('active'));
+  container.querySelectorAll('.os-panel').forEach(p => p.classList.remove('active'));
+  tab.classList.add('active');
+  const panel = document.getElementById('os-' + tab.dataset.os);
+  if (panel) panel.classList.add('active');
+}
+
+function detectOS() {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes('win')) return 'windows';
+  if (ua.includes('mac') || ua.includes('iphone') || ua.includes('ipad')) return 'mac';
+  return 'linux';
+}
+
+function selectOSTab(os) {
+  const tabs = document.querySelectorAll('.os-tab');
+  tabs.forEach(t => {
+    if (t.dataset.os === os) {
+      switchOS(t);
+    }
+  });
+}
+
 // Copy to clipboard
 function copyCode(btn) {
   const code = btn.parentElement.querySelector('code') || btn.parentElement;
@@ -85,6 +111,7 @@ function observeCards() {
 document.addEventListener('DOMContentLoaded', () => {
   initParticles();
   observeCards();
+  selectOSTab(detectOS());
 });
 
 // GitHub stats

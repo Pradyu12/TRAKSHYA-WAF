@@ -329,7 +329,7 @@
 ├── /api/agents       Fleet registration
 ├── /ws / /events     Real-time WebSocket/SSE
 └── /metrics          Prometheus exposition</code></pre>
-      <p>SQLite for incidents/agents/config. 7 SIEM rules with sliding windows (5m-1h). Webhook dispatcher for Slack/Discord. OpenTelemetry OTLP exporter.</p>
+      <p>PostgreSQL for incidents/agents/config. 7 SIEM rules with sliding windows (5m-1h). Webhook dispatcher for Slack/Discord. OpenTelemetry OTLP exporter.</p>
     </div>
     <div class="deep-dive-card">
       <h4>C Daemon (System Monitoring)</h4>
@@ -367,7 +367,7 @@ Active  → iptables/nftables/UFW</code></pre>
       <span class="badge-tech">&#127760; Rust 1.96</span>
       <span class="badge-tech">&#127760; Go 1.26</span>
       <span class="badge-tech">&#127760; C11 (GCC 15)</span>
-      <span class="badge-tech">&#127760; SQLite</span>
+      <span class="badge-tech">&#127760; PostgreSQL</span>
       <span class="badge-tech">&#127760; Three.js Globe</span>
       <span class="badge-tech">&#127760; Chart.js</span>
     </div>
@@ -383,34 +383,90 @@ Active  → iptables/nftables/UFW</code></pre>
     <div class="divider"></div>
   </div>
 
-  <!-- One-liner install -->
+  <!-- OS-specific one-liner -->
   <div class="install-oneliner">
-    <div class="code-block" style="max-width:700px;margin:0 auto 32px">
-      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-      <code><span class="code-comment"># One-liner local install (Linux/macOS)</span>
-<span class="code-prompt">$</span> <span class="code-cmd">cd ~ && git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git && cd TRAKSHYA-WAF && bash install.sh</span></code>
+    <div class="os-tabs">
+      <button class="os-tab active" data-os="linux" onclick="switchOS(this)">
+        <span class="os-icon">&#127987;</span> Linux
+      </button>
+      <button class="os-tab" data-os="mac" onclick="switchOS(this)">
+        <span class="os-icon">&#63743;</span> macOS
+      </button>
+      <button class="os-tab" data-os="windows" onclick="switchOS(this)">
+        <span class="os-icon">&#127987;</span> Windows
+      </button>
     </div>
-    <p style="color:var(--text-dim);font-size:13px;text-align:center">Clones the repo and sets up locally. Builds Rust proxy if available, otherwise uses the mock server. Dashboard at <strong>http://localhost:8000</strong>.</p>
+
+    <!-- Linux -->
+    <div class="os-panel active" id="os-linux">
+      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># One-liner — clones, installs, and starts the dashboard</span>
+<span class="code-prompt">$</span> <span class="code-cmd">bash &lt;(curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.sh)</span></code>
+      </div>
+      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># Or clone manually and start</span>
+<span class="code-prompt">$</span> <span class="code-cmd">git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git</span>
+<span class="code-prompt">$</span> <span class="code-cmd">cd TRAKSHYA-WAF && bash landing/start.sh</span></code>
+      </div>
+    </div>
+
+    <!-- macOS -->
+    <div class="os-panel" id="os-mac">
+      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># One-liner — clones, installs, and starts the dashboard</span>
+<span class="code-prompt">$</span> <span class="code-cmd">bash &lt;(curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.sh)</span></code>
+      </div>
+      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># Or clone manually and start</span>
+<span class="code-prompt">$</span> <span class="code-cmd">git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git</span>
+<span class="code-prompt">$</span> <span class="code-cmd">cd TRAKSHYA-WAF && bash landing/start.sh</span></code>
+      </div>
+    </div>
+
+    <!-- Windows -->
+    <div class="os-panel" id="os-windows">
+      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># PowerShell — clones, installs, and starts the dashboard</span>
+<span class="code-prompt">&gt;</span> <span class="code-cmd">irm https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.ps1 | iex</span></code>
+      </div>
+      <div class="code-block" style="max-width:720px;margin:0 auto 16px">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># Or clone manually and run</span>
+<span class="code-prompt">&gt;</span> <span class="code-cmd">git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git</span>
+<span class="code-prompt">&gt;</span> <span class="code-cmd">cd TRAKSHYA-WAF; powershell -ExecutionPolicy Bypass -File landing/start.ps1</span></code>
+      </div>
+    </div>
+
+    <!-- Live traffic indicator -->
+    <div class="live-indicator">
+      <span class="live-dot"></span>
+      <span class="live-text">Dashboard opens at <strong>http://localhost:8000</strong> with live traffic, SIEM alerts, and real-time SSE stream</span>
+    </div>
+    <p style="color:var(--text-dim);font-size:12px;text-align:center;margin-top:12px">Requires <a href="https://nodejs.org/" target="_blank" style="color:var(--neon-cyan);text-decoration:none">Node.js 18+</a>. Builds Rust proxy if cargo is installed, otherwise uses the built-in mock server with simulated traffic.</p>
   </div>
 
-  <div style="max-width:800px;margin:0 auto" data-tabs>
+  <!-- Advanced install methods -->
+  <div style="max-width:800px;margin:40px auto 0" data-tabs>
     <div class="install-tabs">
       <button class="install-tab active" data-panel="panel-local" onclick="switchTab(this,this)">Local</button>
       <button class="install-tab" data-panel="panel-npm" onclick="switchTab(this,this)">npm</button>
-      <button class="install-tab" data-panel="panel-curl" onclick="switchTab(this,this)">curl</button>
-      <button class="install-tab" data-panel="panel-manual" onclick="switchTab(this,this)">Manual</button>
       <button class="install-tab" data-panel="panel-docker" onclick="switchTab(this,this)">Docker</button>
+      <button class="install-tab" data-panel="panel-production" onclick="switchTab(this,this)">Production</button>
     </div>
 
     <div class="install-panel active" id="panel-local">
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># Clone and setup locally</span>
-<span class="code-prompt">$</span> <span class="code-cmd">cd ~ && git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git && cd TRAKSHYA-WAF && bash install.sh</span>
-<span class="code-comment"># Launch</span>
-<span class="code-prompt">$</span> <span class="code-cmd">trakshya-waf</span></code>
+        <code><span class="code-comment"># Clone and start locally</span>
+<span class="code-prompt">$</span> <span class="code-cmd">git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git</span>
+<span class="code-prompt">$</span> <span class="code-cmd">cd TRAKSHYA-WAF && node server.js</span></code>
       </div>
-      <p style="color:var(--text-dim);font-size:13px">Runs locally from source. Builds Rust proxy with cargo if available, otherwise falls back to the Node.js mock server. <strong>No cloud, no external downloads.</strong></p>
+      <p style="color:var(--text-dim);font-size:13px">Runs locally from source. Builds Rust proxy with cargo if available, otherwise falls back to the Node.js mock server with live traffic simulation. <strong>No cloud, no external downloads.</strong></p>
     </div>
 
     <div class="install-panel" id="panel-npm">
@@ -426,32 +482,6 @@ Active  → iptables/nftables/UFW</code></pre>
       <p style="color:var(--text-dim);font-size:13px">Local npm package under <code>npm-package/</code>. Provides <code>trakshya-waf</code>, <code>trakshya-cli</code>, and <code>trakshya-install</code> commands. <strong>For development use; not published to the npm registry.</strong></p>
     </div>
 
-    <div class="install-panel" id="panel-curl">
-      <div class="code-block">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># One-liner local install</span>
-<span class="code-prompt">$</span> <span class="code-cmd">cd ~ && git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git && cd TRAKSHYA-WAF && bash install.sh</span>
-<span class="code-comment"># Or install systemd services</span>
-<span class="code-prompt">$</span> <span class="code-cmd">sudo bash deploy/production-setup.sh trakshya trakshya</span>
-<span class="code-comment"># Launch</span>
-<span class="code-prompt">$</span> <span class="code-cmd">trakshya-waf</span></code>
-      </div>
-      <p style="color:var(--text-dim);font-size:13px">Quick install from source. Builds Rust proxy with cargo if available, otherwise uses the Node.js mock server. <strong>No cloud, no external downloads.</strong></p>
-    </div>
-
-    <div class="install-panel" id="panel-manual">
-      <div class="code-block">
-        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        <code><span class="code-comment"># Systemd production install</span>
-<span class="code-prompt">$</span> <span class="code-cmd">sudo bash deploy/production-setup.sh trakshya trakshya</span>
-<span class="code-comment"># Verify services</span>
-<span class="code-prompt">$</span> <span class="code-cmd">systemctl status trakshya-dashboard trakshya-proxy trakshya-api</span>
-<span class="code-comment"># Dashboard</span>
-<span class="code-prompt">$</span> <span class="code-cmd">http://localhost:8000</span></code>
-      </div>
-      <p style="color:var(--text-dim);font-size:13px">Production deployment to <code>/opt/trakshya-waf</code> with systemd services. Suitable for servers and dedicated hosts.</p>
-    </div>
-
     <div class="install-panel" id="panel-docker">
       <div class="code-block">
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
@@ -463,6 +493,19 @@ Active  → iptables/nftables/UFW</code></pre>
 <span class="code-comment"># Dashboard at http://localhost:8000</span></code>
       </div>
       <p style="color:var(--text-dim);font-size:13px">Starts the Rust proxy, Go API, C monitor, and dashboard. Great for development and CI environments.</p>
+    </div>
+
+    <div class="install-panel" id="panel-production">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <code><span class="code-comment"># Systemd production install</span>
+<span class="code-prompt">$</span> <span class="code-cmd">sudo bash deploy/production-setup.sh trakshya trakshya</span>
+<span class="code-comment"># Verify services</span>
+<span class="code-prompt">$</span> <span class="code-cmd">systemctl status trakshya-dashboard trakshya-proxy trakshya-api</span>
+<span class="code-comment"># Dashboard</span>
+<span class="code-prompt">$</span> <span class="code-cmd">http://localhost:8000</span></code>
+      </div>
+      <p style="color:var(--text-dim);font-size:13px">Production deployment to <code>/opt/trakshya-waf</code> with systemd services, nginx reverse proxy, and auto-restart. Suitable for servers and dedicated hosts.</p>
     </div>
   </div>
 </section>

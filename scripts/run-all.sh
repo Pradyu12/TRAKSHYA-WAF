@@ -6,18 +6,18 @@ BUILD_DIR="${ROOT_DIR}/build"
 CONFIG="${ROOT_DIR}/config/trakshya.yaml"
 
 if [ ! -f "${BUILD_DIR}/trakshya-proxy" ] || [ ! -f "${BUILD_DIR}/trakshya-api" ] || [ ! -f "${BUILD_DIR}/trakshya-systemd" ]; then
-    echo "Build artifacts not found. Run 'scripts/build-all.sh' first."
-    exit 1
+  echo "Build artifacts not found. Run 'scripts/build-all.sh' first."
+  exit 1
 fi
 
 mkdir -p /var/lib/trakshya 2>/dev/null || sudo mkdir -p /var/lib/trakshya 2>/dev/null
 
 cleanup() {
-    echo ""
-    echo "Shutting down TRAKSHYA-WAF..."
-    kill $PID_API $PID_SYSTEMD $PID_PROXY 2>/dev/null || true
-    wait 2>/dev/null || true
-    echo "All components stopped."
+  echo ""
+  echo "Shutting down TRAKSHYA-WAF..."
+  kill $PID_API $PID_SYSTEMD $PID_PROXY 2>/dev/null || true
+  wait 2>/dev/null || true
+  echo "All components stopped."
 }
 trap cleanup SIGINT SIGTERM EXIT
 
@@ -33,7 +33,7 @@ echo "  Starting Go management API on :8000..."
 PID_API=$!
 sleep 1
 
-# Start C system monitor 
+# Start C system monitor
 export TRAKSHYA_CONFIG="${CONFIG}"
 echo "  Starting C system monitor on :9001..."
 sudo "${BUILD_DIR}/trakshya-systemd" &

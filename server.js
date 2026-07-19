@@ -183,102 +183,20 @@ function scoreFor(sev) {
 const { execSync } = require('child_process');
 const scanCache = { result: null, ts: 0 };
 
-function runLocalScan() {
-  if (scanCache.result && Date.now() - scanCache.ts < 30000) {
-    return Promise.resolve(scanCache.result);
-  }
+function isLinux() {
+  return process.platform === 'linux';
+}
 
-  return new Promise((resolve) => {
-    const scanId = require('crypto').randomUUID();
-    const findings = [];
-    let totalPkgs = 0;
+function isMac() {
+  return process.platform === 'darwin';
+}
 
-    try {
-      const aptOut = execSync('apt list --upgradable 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
-      const securityRe = /\bsecurity\b/i;
-      const criticalPkgs = ['libc6', 'libssl3', 'openssl', 'openssh', 'linux-image', 'systemd', 'sudo', 'bash', 'dpkg', 'apt', 'curl', 'wget'];
-
-      aptOut.split('\n').forEach(line => {
-        line = line.trim();
-        if (!line || !line.includes('/')) return;
-        const parts = line.split(' ');
-        const pkgFull = parts[0] || '';
-        const pkgName = pkgFull.split('/')[0];
-        if (!pkgName) return;
-
-        const installed = getInstalledVersion(pkgName);
-        let available = '';
-        if (parts.length >= 2) available = parts[1];
-
-        let severity = 'medium';
-        let description = `Package ${pkgName} has an update available (${installed} -> ${available})`;
-
-        if (securityRe.test(line)) {
-          severity = 'high';
-          description = `Security update available for ${pkgName} (${installed} -> ${available})`;
-        }
-        if (criticalPkgs.some(c => pkgName.toLowerCase().includes(c))) {
-          severity = 'critical';
-          description = `Critical security update for ${pkgName} (${installed} -> ${available})`;
-        }
-
-        findings.push({
-          id: require('crypto').randomUUID(),
-          scan_id: scanId,
-          package: pkgName,
-          installed_version: installed,
-          available_version: available,
-          severity,
-          cve: generateCVE(pkgName, available),
-          description,
-          category: 'outdated',
-        });
-      });
-    } catch (e) {}
-
-    try {
-      const dpkgOut = execSync('dpkg-query -W -f="${Package}\\t${Version}\\t${Status}\\n" 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
-      dpkgOut.split('\n').forEach(line => {
-        if (line.trim()) totalPkgs++;
-      });
-    } catch (e) {}
-
-    try {
-      const auditOut = execSync('dpkg --audit 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
-      auditOut.split('\n').forEach(line => {
-        line = line.trim();
-        if (!line) return;
-        findings.push({
-          id: require('crypto').randomUUID(),
-          scan_id: scanId,
-          package: line.split(' ')[0] || 'unknown',
-          installed_version: '',
-          available_version: '',
-          severity: 'high',
-          cve: '',
-          description: `Package files modified from upstream: ${line}`,
-          category: 'modified',
-        });
-      });
-    } catch (e) {}
-
-    const result = {
-      id: scanId,
-      status: 'completed',
-      target: require('os').hostname(),
-      started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
-      total_packages: totalPkgs,
-      total_cves: findings.length,
-      findings,
-    };
-    scanCache.result = result;
-    scanCache.ts = Date.now();
-    resolve(result);
-  });
+function isWindows() {
+  return process.platform === 'win32';
 }
 
 function getInstalledVersion(pkg) {
+  if (!isLinux()) return 'unknown';
   try {
     return execSync(`dpkg-query -W -f="\${Version}" ${pkg} 2>/dev/null`, { encoding: 'utf8' }).trim() || 'unknown';
   } catch (e) {
@@ -291,6 +209,184 @@ function generateCVE(pkg, ver) {
   for (const c of (pkg + ver)) hash = ((hash << 5) - hash + c.charCodeAt(0)) | 0;
   return `CVE-${new Date().getFullYear()}-${Math.abs(hash) % 9999}`;
 }
+
+function runLinuxScan(scanId) {
+  const findings = [];
+  let totalPkgs = 0;
+
+  try {
+    const aptOut = execSync('apt list --upgradable 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
+    const securityRe = /\bsecurity\b/i;
+    const criticalPkgs = ['libc6', 'libssl3', 'openssl', 'openssh', 'linux-image', 'systemd', 'sudo', 'bash', 'dpkg', 'apt', 'curl', 'wget'];
+
+    aptOut.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line || !line.includes('/')) return;
+      const parts = line.split(' ');
+      const pkgFull = parts[0] || '';
+      const pkgName = pkgFull.split('/')[0];
+      if (!pkgName) return;
+
+      const installed = getInstalledVersion(pkgName);
+      let available = '';
+      if (parts.length >= 2) available = parts[1];
+
+      let severity = 'medium';
+      let description = `Package ${pkgName} has an update available (${installed} -> ${available})`;
+
+      if (securityRe.test(line)) {
+        severity = 'high';
+        description = `Security update available for ${pkgName} (${installed} -> ${available})`;
+      }
+      if (criticalPkgs.some(c => pkgName.toLowerCase().includes(c))) {
+        severity = 'critical';
+        description = `Critical security update for ${pkgName} (${installed} -> ${available})`;
+      }
+
+      findings.push({
+        id: require('crypto').randomUUID(),
+        scan_id: scanId,
+        package: pkgName,
+        installed_version: installed,
+        available_version: available,
+        severity,
+        cve: generateCVE(pkgName, available),
+        description,
+        category: 'outdated',
+      });
+    });
+  } catch (e) {}
+
+  try {
+    const dpkgOut = execSync('dpkg-query -W -f="${Package}\\t${Version}\\t${Status}\\n" 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
+    dpkgOut.split('\n').forEach(line => {
+      if (line.trim()) totalPkgs++;
+    });
+  } catch (e) {}
+
+  try {
+    const auditOut = execSync('dpkg --audit 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
+    auditOut.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line) return;
+      findings.push({
+        id: require('crypto').randomUUID(),
+        scan_id: scanId,
+        package: line.split(' ')[0] || 'unknown',
+        installed_version: '',
+        available_version: '',
+        severity: 'high',
+        cve: '',
+        description: `Package files modified from upstream: ${line}`,
+        category: 'modified',
+      });
+    });
+  } catch (e) {}
+
+  return { findings, totalPkgs };
+}
+
+function runMacScan(scanId) {
+  const findings = [];
+  let totalPkgs = 0;
+
+  try {
+    const brewOut = execSync('brew outdated 2>/dev/null', { timeout: 10000, encoding: 'utf8' });
+    brewOut.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line) return;
+      const pkgName = line.split(' ')[0];
+      if (!pkgName) return;
+      totalPkgs++;
+      findings.push({
+        id: require('crypto').randomUUID(),
+        scan_id: scanId,
+        package: pkgName,
+        installed_version: '',
+        available_version: '',
+        severity: 'medium',
+        cve: generateCVE(pkgName, ''),
+        description: `Outdated Homebrew package: ${pkgName}`,
+        category: 'outdated',
+      });
+    });
+  } catch (e) {}
+
+  return { findings, totalPkgs };
+}
+
+function runWindowsScan(scanId) {
+  const findings = [];
+  let totalPkgs = 0;
+
+  try {
+    const wingetOut = execSync('winget list --upgrade-available 2>/dev/null', { timeout: 15000, encoding: 'utf8' });
+    wingetOut.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line || line.startsWith('Name') || line.startsWith('-')) return;
+      const parts = line.split(/\s{2,}/);
+      const pkgName = parts[0];
+      if (!pkgName) return;
+      totalPkgs++;
+      findings.push({
+        id: require('crypto').randomUUID(),
+        scan_id: scanId,
+        package: pkgName,
+        installed_version: parts[2] || '',
+        available_version: parts[3] || '',
+        severity: 'medium',
+        cve: generateCVE(pkgName, ''),
+        description: `Updatable Windows package: ${pkgName}`,
+        category: 'outdated',
+      });
+    });
+  } catch (e) {}
+
+  return { findings, totalPkgs };
+}
+
+function runLocalScan() {
+  if (scanCache.result && Date.now() - scanCache.ts < 30000) {
+    return Promise.resolve(scanCache.result);
+  }
+
+  return new Promise((resolve) => {
+    const scanId = require('crypto').randomUUID();
+    let findings = [];
+    let totalPkgs = 0;
+
+    if (isLinux()) {
+      const linux = runLinuxScan(scanId);
+      findings = linux.findings;
+      totalPkgs = linux.totalPkgs;
+    } else if (isMac()) {
+      const mac = runMacScan(scanId);
+      findings = mac.findings;
+      totalPkgs = mac.totalPkgs;
+    } else if (isWindows()) {
+      const win = runWindowsScan(scanId);
+      findings = win.findings;
+      totalPkgs = win.totalPkgs;
+    }
+
+    const result = {
+      id: scanId,
+      status: 'completed',
+      target: require('os').hostname(),
+      platform: process.platform,
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      total_packages: totalPkgs,
+      total_cves: findings.length,
+      findings,
+    };
+    scanCache.result = result;
+    scanCache.ts = Date.now();
+    resolve(result);
+  });
+}
+
+
 
 const server = http.createServer(handleRequest);
 const httpsServer = (() => {

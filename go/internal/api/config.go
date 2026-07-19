@@ -11,7 +11,6 @@ func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
 		"upstream_url":    s.cfg.UpstreamURL,
 		"management_port": s.cfg.ManagementPort,
 		"posture":         s.cfg.Posture,
-		"db_path":         s.cfg.DBPath,
 	})
 }
 

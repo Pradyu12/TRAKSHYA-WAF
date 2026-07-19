@@ -49,7 +49,7 @@ Internet → [Rust Proxy :8080] → Upstream Web App
                │
         (reports incidents via REST/JSON)
                ↓
-         [Go API :8000] ←→ SQLite
+         [Go API :8000] ←→ PostgreSQL
                ↑
         (C daemon reports via HTTP)
                │
@@ -61,12 +61,12 @@ Internet → [Rust Proxy :8080] → Upstream Web App
 ```
 TRAKSHYA-WAF/
 ├── rust/                    # Rust workspace (performance-critical)
-│   ├── krsna-proxy/         # HTTP reverse proxy + request pipeline
-│   ├── krsna-rules/         # Regex-based attack detection engine
-│   ├── krsna-rate-limiter/  # Token bucket rate limiter
-│   ├── krsna-circuit-breaker/ # Upstream health monitoring
-│   ├── krsna-geoip/         # MaxMind GeoIP country blocking
-│   └── krsna-jwt/           # JWT token validation
+│   ├── trakshya-proxy/         # HTTP reverse proxy + request pipeline
+│   ├── trakshya-rules/         # Regex-based attack detection engine
+│   ├── trakshya-rate-limiter/  # Token bucket rate limiter
+│   ├── trakshya-circuit-breaker/ # Upstream health monitoring
+│   ├── trakshya-geoip/         # MaxMind GeoIP country blocking
+│   └── trakshya-jwt/           # JWT token validation
 ├── go/                      # Go module (orchestration & API)
 │   ├── cmd/trakshya-api/    # Management API server
 │   └── internal/
@@ -76,7 +76,7 @@ TRAKSHYA-WAF/
 │       ├── webhooks/        # Slack/Discord notification dispatcher
 │       ├── telemetry/       # Prometheus metrics + OTLP tracing
 │       ├── ws/              # WebSocket & SSE real-time events
-│       └── db/              # SQLite database layer
+│       └── db/              # PostgreSQL database layer
 ├── c/                       # C project (system-level monitoring)
 │   ├── include/trakshya.h   # Shared header
 │   ├── src/

@@ -41,13 +41,22 @@ smoke:
 regression:
 	@python3 scripts/regression.py
 
-test: smoke regression
+test: build
+	@bash scripts/test-all.sh
 
 lint:
-	pre-commit run --all-files
+	@if [ -x /tmp/precommit-venv/bin/pre-commit ]; then \
+		/tmp/precommit-venv/bin/pre-commit run --all-files; \
+	else \
+		pre-commit run --all-files; \
+	fi
 
 pre-commit-run:
-	pre-commit run --files
+	@if [ -x /tmp/precommit-venv/bin/pre-commit ]; then \
+		/tmp/precommit-venv/bin/pre-commit run --files; \
+	else \
+		pre-commit run --files; \
+	fi
 
 certs:
 	@bash scripts/generate-dev-certs.sh
