@@ -5,6 +5,7 @@ const path = require('path');
 
 const PORT = 8000;
 const HTTPS_PORT = 8443;
+const VERSION = '2.0.0';
 const FRONTEND_DIR = path.join(__dirname, 'frontend');
 const STATIC_DIR = path.join(FRONTEND_DIR, 'static');
 const LANDING_DIR = path.join(__dirname, 'landing');
@@ -396,6 +397,15 @@ function handleRequest(req, res) {
     res.end(JSON.stringify({ status: 'ok', service: 'trakshya-management-api' }));
     return;
   }
+  if (pathname === '/api/version') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      current: VERSION,
+      repo: 'Pradyu12/TRAKSHYA-WAF',
+      update_url: 'https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.sh',
+    }));
+    return;
+  }
 
   // Vulnerability management (real dpkg/apt scan)
   if (pathname === '/api/vulns/stats' && req.method === 'GET') {
@@ -550,8 +560,38 @@ function handleRequest(req, res) {
   });
 }
 
+function checkForUpdate() {
+  const options = {
+    hostname: 'raw.githubusercontent.com',
+    path: '/Pradyu12/TRAKSHYA-WAF/main/server.js',
+    headers: { 'User-Agent': 'trakshya-waf-updater' },
+    timeout: 5000,
+  };
+  https.get(options, (res) => {
+    let body = '';
+    res.on('data', (chunk) => { body += chunk; });
+    res.on('end', () => {
+      try {
+        const match = body.match(/const\s+VERSION\s*=\s*['"]([^'"]+)['"]/);
+        if (!match) return;
+        const latest = match[1];
+        if (latest && latest !== VERSION) {
+          console.log('');
+          console.log('  \x1b[36m╔══════════════════════════════════════════════════╗\x1b[0m');
+          console.log('  \x1b[36m║\x1b[0m  \x1b[1;33mUPDATE AVAILABLE: v' + latest + '\x1b[0m' + ' '.repeat(Math.max(0, 28 - latest.length)) + '\x1b[36m║\x1b[0m');
+          console.log('  \x1b[36m║\x1b[0m  Current version: v' + VERSION + ' '.repeat(Math.max(0, 29 - VERSION.length)) + '\x1b[36m║\x1b[0m');
+          console.log('  \x1b[36m║\x1b[0m  Update: bash <(curl -fsSL .../start.sh)        \x1b[36m║\x1b[0m');
+          console.log('  \x1b[36m╚══════════════════════════════════════════════════╝\x1b[0m');
+          console.log('');
+        }
+      } catch (e) {}
+    });
+  }).on('error', () => {}).on('timeout', function () { this.destroy(); });
+}
+
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`TRAKSHYA WAF mock server running at http://localhost:${PORT}`);
+  checkForUpdate();
 });
 
 if (httpsServer) {

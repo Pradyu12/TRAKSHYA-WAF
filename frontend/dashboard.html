@@ -825,6 +825,11 @@ option{background:var(--bg-dark);color:var(--text)}
       <span class="material-symbols-rounded" style="color:var(--neon-pink);font-size:16px">info</span>
       <span>Demo Mode — Showing sample data. Connect to the backend for live traffic.</span>
     </div>
+    <div id="update-banner" style="background:linear-gradient(90deg,rgba(0,240,255,0.1),rgba(0,200,255,0.05));border:1px solid rgba(0,240,255,0.25);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text-dim);display:none;align-items:center;gap:8px">
+      <span class="material-symbols-rounded" style="color:var(--neon-cyan);font-size:16px">system_update</span>
+      <span>Update available: <strong id="update-version" style="color:var(--neon-cyan)"></strong></span>
+      <span style="margin-left:auto;cursor:pointer;opacity:0.6;font-size:11px" onclick="dismissUpdate()">Dismiss</span>
+    </div>
     <!-- ===== OVERVIEW ===== -->
     <div class="section active" id="section-overview">
       <div class="health-grid" id="health-panel"></div>
@@ -1251,6 +1256,32 @@ Chart.defaults.plugins.tooltip.padding = 10;
 const chartColors = ['#ff2975','#00f0ff','#ffe74c','#b026ff','#ff6e27','#00ff88'];
 const severityColors = { critical:'#ff0055', high:'#ff6e27', medium:'#ffe74c', low:'#00ff88', info:'#b026ff' };
 let charts = {};
+
+// ============ VERSION ============
+const CURRENT_VERSION = '2.0.0';
+
+async function checkForUpdate() {
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/server.js');
+    if (!res.ok) return;
+    const text = await res.text();
+    const match = text.match(/const\s+VERSION\s*=\s*['"]([^'"]+)['"]/);
+    if (!match) return;
+    const latest = match[1];
+    if (!latest || latest === CURRENT_VERSION) return;
+    const dismissed = localStorage.getItem('trakshya-update-dismissed');
+    if (dismissed === latest) return;
+    document.getElementById('update-version').textContent = 'v' + latest;
+    document.getElementById('update-banner').style.display = 'flex';
+  } catch (e) {}
+}
+
+function dismissUpdate() {
+  const el = document.getElementById('update-version');
+  if (el) localStorage.setItem('trakshya-update-dismissed', el.textContent.replace(/^v/, ''));
+  const banner = document.getElementById('update-banner');
+  if (banner) banner.style.display = 'none';
+}
 
 // ============ STATE ============
 let currentSection = 'overview';
@@ -2249,6 +2280,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var banner = document.getElementById('demo-banner');
     if (banner) banner.style.display = 'flex';
   }
+  checkForUpdate();
   loadOverview();
   connectSSE();
   initParticles();
