@@ -1,6 +1,7 @@
 mod api;
 mod config;
 mod db;
+mod gateway;
 mod inspector;
 mod middleware;
 mod proxy;
@@ -21,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cfg = config::Config::load()?;
-    let state = Arc::new(config::AppState::new(&cfg).await?);
+    let state = Arc::new(config::AppState::new(&cfg)?);
 
     let proxy_state = state.clone();
     let proxy_handler = move |req: Request| {

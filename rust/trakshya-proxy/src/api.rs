@@ -1,6 +1,6 @@
 use crate::config::AppState;
 use crate::db::{
-    DashboardStats, GeoData, Incident, Rule, SIEMAStats,
+    DashboardStats, GeoData, Incident, SIEMAStats,
     VulnStats,
 };
 use axum::{
@@ -17,7 +17,6 @@ use chrono::Utc;
 use futures_util::StreamExt;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use sqlx::query_scalar;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_stream::wrappers::BroadcastStream;
@@ -147,17 +146,6 @@ async fn update_config(
         cfg.jwt.enabled = enabled;
     }
 
-    // Persist to database
-    if let Err(e) = crate::db::update_config(
-        &state.db_pool,
-        "posture",
-        &format!("{:?}", cfg.proxy.posture),
-    )
-    .await
-    {
-        tracing::error!("Failed to persist posture: {}", e);
-    }
-
     Ok(Json(
         serde_json::json!({"status": "ok", "message": "Configuration updated"}),
     ))
@@ -195,14 +183,8 @@ async fn set_posture(
     let mut cfg = state.config.write().await;
     cfg.proxy.posture = posture;
 
-    if let Err(e) =
-        crate::db::update_config(&state.db_pool, "posture", &format!("{:?}", posture)).await
-    {
-        tracing::error!("Failed to persist posture: {}", e);
-    }
-
     Ok(Json(
-        serde_json::json!({"status": "ok", "posture": format!("{:?}", posture)}),
+        serde_json::json!{"status": "ok", "posture": format!("{:?}", posture)},
     ))
 }
 
@@ -234,23 +216,28 @@ async fn get_dashboard_stats(
 ) -> Result<Json<DashboardStats>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
     let cfg = state.config.read().await;
-    let rule_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rules")
-        .fetch_one(&state.db_pool)
-        .await
-        .unwrap_or(0);
-    let stats = crate::db::get_dashboard_stats(
-        &state.db_pool,
-        &format!("{:?}", cfg.proxy.posture),
-        rule_count,
-        state.uptime_seconds() as i64,
-    )
+    let state_clone = state.clone();
+    let posture = format!("{:?}", cfg.proxy.posture);
+
+    let stats = tokio::task::spawn_blocking(move || {
+        let conn = state_clone.db_conn.lock().unwrap();
+        let rule_count = crate::db::get_rule_count(&conn);
+        crate::db::get_dashboard_stats(&conn, &posture, rule_count, state_clone.uptime_seconds() as i64)
+    })
     .await
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({"error": e.to_string()})),
         )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
     })?;
+
     Ok(Json(stats))
 }
 
@@ -259,10 +246,22 @@ async fn get_geo(
     headers: HeaderMap,
 ) -> Result<Json<GeoData>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    let data = crate::db::get_geo_data(&state.db_pool).await.map_err(|e| {
+    let state_clone = state.clone();
+    let data = tokio::task::spawn_blocking(move || {
+        let conn = state_clone.db_conn.lock().unwrap();
+        crate::db::get_geo_data(&conn)
+    })
+    .await
+    .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"error": e.to_string()})),
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
         )
     })?;
     Ok(Json(data))
@@ -273,14 +272,24 @@ async fn get_siem_stats(
     headers: HeaderMap,
 ) -> Result<Json<SIEMAStats>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    let stats = crate::db::get_siem_stats(&state.db_pool)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
+    let state_clone = state.clone();
+    let stats = tokio::task::spawn_blocking(move || {
+        let conn = state_clone.db_conn.lock().unwrap();
+        crate::db::get_siem_stats(&conn)
+    })
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?;
     Ok(Json(stats))
 }
 
@@ -298,14 +307,24 @@ async fn get_siem_alerts(
         .get("offset")
         .and_then(|s| s.parse().ok())
         .unwrap_or(0);
-    let alerts = crate::db::get_siem_alerts(&state.db_pool, limit, offset)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
+    let state_clone = state.clone();
+    let alerts = tokio::task::spawn_blocking(move || {
+        let conn = state_clone.db_conn.lock().unwrap();
+        crate::db::get_siem_alerts(&conn, limit, offset)
+    })
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?;
     Ok(Json(
         alerts
             .into_iter()
@@ -334,14 +353,24 @@ async fn get_rules(
     headers: HeaderMap,
 ) -> Result<Json<Vec<Rule>>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    let rules = crate::db::get_rules(&state.db_pool, None)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
+    let state_clone = state.clone();
+    let rules = tokio::task::spawn_blocking(move || {
+        let conn = state_clone.db_conn.lock().unwrap();
+        crate::db::get_rules(&conn, None)
+    })
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?;
     Ok(Json(rules))
 }
 
@@ -367,7 +396,6 @@ async fn create_rule(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
 
-    // Validate regex
     if regex::Regex::new(&req.pattern).is_err() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -375,29 +403,18 @@ async fn create_rule(
         ));
     }
 
-    let rule = Rule {
-        id: req.id,
-        pattern: req.pattern,
-        severity: req.severity,
-        category: req.category,
-        description: req.description,
-        enabled: req.enabled,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-    };
+    let result = state
+        .gateway
+        .create_rule(&req.pattern, &req.severity, &req.category, &req.description)
+        .await;
 
-    crate::db::create_rule(&state.db_pool, &rule)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
-
-    Ok(Json(
-        serde_json::json!({"status": "ok", "message": "Rule created"}),
-    ))
+    match result {
+        Ok(json) => Ok(Json(json)),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e})),
+        )),
+    }
 }
 
 async fn delete_rule(
@@ -406,17 +423,16 @@ async fn delete_rule(
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    crate::db::delete_rule(&state.db_pool, &id)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
-    Ok(Json(
-        serde_json::json!({"status": "ok", "message": "Rule deleted"}),
-    ))
+
+    match state.gateway.delete_rule(&id).await {
+        Ok(()) => Ok(Json(
+            serde_json::json!({"status": "ok", "message": "Rule deleted"}),
+        )),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e})),
+        )),
+    }
 }
 
 #[derive(Deserialize)]
@@ -457,14 +473,24 @@ async fn get_blacklist(
     headers: HeaderMap,
 ) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    let list = crate::db::get_blacklist(&state.db_pool)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
+    let state_clone = state.clone();
+    let list = tokio::task::spawn_blocking(move || {
+        let conn = state_clone.db_conn.lock().unwrap();
+        crate::db::get_blacklist(&conn)
+    })
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?;
     Ok(Json(
         list.into_iter()
             .map(|b| {
@@ -493,17 +519,20 @@ async fn add_blacklist(
     Json(req): Json<AddBlacklistRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    crate::db::add_to_blacklist(&state.db_pool, &req.ip, req.reason.as_deref())
+
+    match state
+        .gateway
+        .add_to_blacklist(&req.ip, req.reason.as_deref())
         .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
-    Ok(Json(
-        serde_json::json!({"status": "ok", "message": "IP added to blacklist"}),
-    ))
+    {
+        Ok(()) => Ok(Json(
+            serde_json::json!({"status": "ok", "message": "IP added to blacklist"}),
+        )),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e})),
+        )),
+    }
 }
 
 async fn remove_blacklist(
@@ -512,17 +541,16 @@ async fn remove_blacklist(
     Path(ip): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    crate::db::remove_from_blacklist(&state.db_pool, &ip)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
-    Ok(Json(
-        serde_json::json!({"status": "ok", "message": "IP removed from blacklist"}),
-    ))
+
+    match state.gateway.remove_from_blacklist(&ip).await {
+        Ok(()) => Ok(Json(
+            serde_json::json!({"status": "ok", "message": "IP removed from blacklist"}),
+        )),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e})),
+        )),
+    }
 }
 
 async fn get_vuln_stats(
@@ -530,14 +558,24 @@ async fn get_vuln_stats(
     headers: HeaderMap,
 ) -> Result<Json<VulnStats>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    let stats = crate::db::get_vuln_stats(&state.db_pool)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
+    let state_clone = state.clone();
+    let stats = tokio::task::spawn_blocking(move || {
+        let conn = state_clone.db_conn.lock().unwrap();
+        crate::db::get_vuln_stats(&conn)
+    })
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?;
     Ok(Json(stats))
 }
 
@@ -546,14 +584,24 @@ async fn get_vulns(
     headers: HeaderMap,
 ) -> Result<Json<Vec<serde_json::Value>>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    let vulns = crate::db::get_vulnerabilities(&state.db_pool)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
+    let state_clone = state.clone();
+    let vulns = tokio::task::spawn_blocking(move || {
+        let conn = state_clone.db_conn.lock().unwrap();
+        crate::db::get_vulnerabilities(&conn)
+    })
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!{"error": e.to_string()}),
+        )
+    })?;
     Ok(Json(vulns))
 }
 
@@ -562,7 +610,6 @@ async fn run_vuln_scan(
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
-    // TODO: Implement actual vulnerability scanning
     Ok(Json(
         serde_json::json!({"status": "started", "scan_id": "scan-123"}),
     ))
@@ -600,7 +647,6 @@ async fn simulate_attack(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     check_auth(&headers, &state).await?;
 
-    // Create a simulated incident
     let incident = Incident {
         id: Uuid::new_v4().to_string(),
         incident_type: "attack_blocked".to_string(),
@@ -618,14 +664,17 @@ async fn simulate_attack(
         acked_by: None,
     };
 
-    crate::db::record_incident(&state.db_pool, &incident)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": e.to_string()})),
-            )
-        })?;
+    state.gateway.record_incident(
+        &incident.incident_type,
+        &incident.rule_id,
+        &incident.attack_type,
+        &incident.client_ip,
+        &incident.path,
+        &incident.method,
+        &incident.severity,
+        &incident.message,
+        &incident.source,
+    ).await;
 
     let _ = state.broadcast_tx.send(serde_json::json!({
         "type": "incident",

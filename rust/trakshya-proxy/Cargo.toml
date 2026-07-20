@@ -38,7 +38,7 @@ clap_builder = "4.6"
 clap_derive = "4.6"
 
 # Database
-sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "migrate", "json"] }
+duckdb = { version = "0.10", features = ["bundled"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 futures-util = "0.3"

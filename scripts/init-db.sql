@@ -1,8 +1,5 @@
--- TRAKSHYA-WAF PostgreSQL initialization
--- This script runs automatically when the postgres container starts for the first time
-
--- Extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- TRAKSHYA-WAF DuckDB initialization
+-- This script creates the schema for DuckDB (no PostgreSQL extensions needed)
 
 -- Incidents table
 CREATE TABLE IF NOT EXISTS incidents (
@@ -88,6 +85,27 @@ CREATE TABLE IF NOT EXISTS system_config (
     value TEXT NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Analytics tables (DuckDB-native)
+CREATE TABLE IF NOT EXISTS raw_events (
+    timestamp    TIMESTAMPTZ NOT NULL,
+    source_ip    VARCHAR NOT NULL,
+    method       VARCHAR NOT NULL DEFAULT '',
+    path         VARCHAR NOT NULL DEFAULT '',
+    query        VARCHAR NOT NULL DEFAULT '',
+    status_code  INTEGER NOT NULL DEFAULT 0,
+    blocked      BOOLEAN NOT NULL DEFAULT false,
+    attack_type  VARCHAR NOT NULL DEFAULT '',
+    rule_matched VARCHAR NOT NULL DEFAULT '',
+    severity     VARCHAR NOT NULL DEFAULT '',
+    response_ms  DOUBLE NOT NULL DEFAULT 0,
+    user_agent   VARCHAR NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_re_ts ON raw_events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_re_ip_ts ON raw_events(source_ip, timestamp);
+CREATE INDEX IF NOT EXISTS idx_re_attack ON raw_events(attack_type, timestamp);
+CREATE INDEX IF NOT EXISTS idx_re_blocked ON raw_events(blocked, timestamp);
 
 -- Seed data
 INSERT INTO system_config (key, value) VALUES

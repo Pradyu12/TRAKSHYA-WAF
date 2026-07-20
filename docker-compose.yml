@@ -1,6 +1,24 @@
 version: "3.8"
 
 services:
+  trakshya-api:
+    build:
+      context: ./go
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - TRAKSHYA_MGMT_PORT=8000
+      - TRAKSHYA_DUCKDB_PATH=/data/trakshya_events.duckdb
+      - TRAKSHYA_FRONTEND_DIR=/opt/trakshya/frontend
+      - TRAKSHYA_API_KEY=${TRAKSHYA_API_KEY:-}
+    volumes:
+      - trakshya-duckdb:/data
+      - ./frontend:/opt/trakshya/frontend:ro
+    networks:
+      - trakshya-net
+    restart: unless-stopped
+
   trakshya-proxy:
     build:
       context: ./rust
@@ -10,32 +28,15 @@ services:
     environment:
       - TRAKSHYA_CONFIG=/etc/trakshya/config.yaml
       - TRAKSHYA_PROXY_PORT=8080
-      - TRAKSHYA_UPSTREAM_URL=http://localhost:3000
+      - TRAKSHYA_UPSTREAM_URL=http://trakshya-api:8000
       - TRAKSHYA_MGMT_API_URL=http://trakshya-api:8000
+      - TRAKSHYA_DUCKDB_PATH=/data/trakshya_events.duckdb
       - RUST_LOG=info
     volumes:
       - ./config/trakshya.yaml:/etc/trakshya/config.yaml:ro
-      - trakshya-data:/var/lib/trakshya
+      - trakshya-duckdb:/data:ro
     depends_on:
       - trakshya-api
-    networks:
-      - trakshya-net
-    restart: unless-stopped
-
-  trakshya-api:
-    build:
-      context: ./go
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - TRAKSHYA_MGMT_PORT=8000
-      - TRAKSHYA_DB_PATH=/var/lib/trakshya/trakshya.db
-      - TRAKSHYA_FRONTEND_DIR=/opt/trakshya/frontend
-      - TRAKSHYA_API_KEY=${TRAKSHYA_API_KEY:-}
-    volumes:
-      - trakshya-data:/var/lib/trakshya
-      - ./frontend:/opt/trakshya/frontend:ro
     networks:
       - trakshya-net
     restart: unless-stopped
@@ -49,7 +50,7 @@ services:
     volumes:
       - /var/log:/var/log:ro
       - /etc:/etc:ro
-      - trakshya-data:/var/lib/trakshya
+      - trakshya-duckdb:/var/lib/trakshya
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -77,4 +78,4 @@ networks:
     driver: bridge
 
 volumes:
-  trakshya-data:
+  trakshya-duckdb:

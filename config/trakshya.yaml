@@ -1,7 +1,7 @@
 # TRAKSHYA-WAF Configuration
 # Shared configuration for all components (Rust proxy, Go API)
 
-database_url: postgres://trakshya:***@localhost:5432/trakshya?sslmode=disable
+database_path: /data/trakshya_events.duckdb
 
 global:
   log_level: info

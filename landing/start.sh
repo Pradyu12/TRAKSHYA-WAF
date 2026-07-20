@@ -77,59 +77,44 @@ sleep 0.4
 echo ""
 echo -e "  ${B}${G}── DEPENDENCY CHECK ─────────────────────────────────────${RST}"
 
-spinner "Checking Node.js..." 2
+spinner "Checking Docker..." 2
 
-if ! command -v node &>/dev/null; then
-  echo -e "  ${R}✗${RST} Node.js ${R}NOT FOUND${RST}"
-  echo -e "    Install: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -"
-  echo -e "    Or visit: https://nodejs.org/"
+if ! command -v docker &>/dev/null; then
+  echo -e "  ${R}✗${RST} Docker ${R}NOT FOUND${RST}"
+  echo -e "    Install: https://docs.docker.com/get-docker/"
   exit 1
 fi
 
-NODE_VER=$(node -v 2>/dev/null)
-echo -e "  ${G}✓${RST} Node.js ${G}${NODE_VER}${RST}"
+DOCKER_VER=$(docker --version 2>/dev/null | awk '{print $3}' | tr -d ',')
+echo -e "  ${G}✓${RST} Docker ${G}${DOCKER_VER}${RST}"
 
-spinner "Checking curl..." 1
+spinner "Checking Docker Compose..." 2
 
-if ! command -v curl &>/dev/null; then
-  echo -e "  ${R}✗${RST} curl ${R}NOT FOUND${RST}"
+if ! docker compose version &>/dev/null 2>&1; then
+  echo -e "  ${R}✗${RST} Docker Compose ${R}NOT FOUND${RST}"
+  echo -e "    Install: https://docs.docker.com/compose/install/"
   exit 1
 fi
 
-echo -e "  ${G}✓${RST} curl ${G}$(curl --version 2>/dev/null | head -1 | awk '{print $2}')${RST}"
-sleep 0.3
+COMPOSE_VER=$(docker compose version 2>/dev/null | awk '{print $4}')
+echo -e "  ${G}✓${RST} Docker Compose ${G}${COMPOSE_VER}${RST}"
 
-# ── Download phase ──────────────────────────────────────
+# ── Clone phase ─────────────────────────────────────────
 echo ""
 echo -e "  ${B}${G}── ACQUISITION ──────────────────────────────────────────${RST}"
 
-if [ -f "server.js" ] && [ -d "frontend" ]; then
+if [ -f "docker-compose.stack.yml" ] && [ -d "frontend" ]; then
   REPO_DIR="$(pwd)"
   echo -e "  ${CY}●${RST} Local repo detected: ${CY}${REPO_DIR}${RST}"
 else
   REPO_DIR="/tmp/trakshya-waf-$$"
   rm -rf "${REPO_DIR}"
-  mkdir -p "${REPO_DIR}/frontend/static"
+  mkdir -p "${REPO_DIR}"
 
-  BASE="https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main"
-
-  echo -e "  ${CY}●${RST} Target: ${CY}${REPO_DIR}${RST}"
-  echo ""
-
-  progress "server.js" &
-  curl -fsSL "${BASE}/server.js" -o "${REPO_DIR}/server.js" 2>/dev/null
-  wait
-
-  progress "dashboard.html" &
-  curl -fsSL "${BASE}/frontend/dashboard.html" -o "${REPO_DIR}/frontend/dashboard.html" 2>/dev/null
-  wait
-
-  echo -e "  ${CY}●${RST} Fetching globe assets..."
-  curl -fsSL "${BASE}/frontend/static/earth.glb" -o "${REPO_DIR}/frontend/static/earth.glb" 2>/dev/null &
-  curl -fsSL "${BASE}/frontend/static/earth.jpg" -o "${REPO_DIR}/frontend/static/earth.jpg" 2>/dev/null &
-  wait
-
-  echo -e "  ${G}✓${RST} All files acquired"
+  echo -e "  ${CY}●${RST} Cloning TRAKSHYA-WAF..."
+  spinner "Cloning repository..." 3
+  git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git "${REPO_DIR}" 2>/dev/null
+  echo -e "  ${G}✓${RST} Repository cloned"
 fi
 
 cd "${REPO_DIR}"
@@ -137,14 +122,46 @@ cd "${REPO_DIR}"
 # ── Cleanup on exit ─────────────────────────────────────
 cleanup() {
   echo ""
-  echo -e "  ${DIM} shutting down defense systems...${RST}"
+  echo -e "  ${DIM}shutting down defense systems...${RST}"
+  docker compose -f docker-compose.stack.yml down 2>/dev/null || true
   if [[ "${REPO_DIR}" == /tmp/* ]] && [ -d "${REPO_DIR}" ]; then
     rm -rf "${REPO_DIR}"
   fi
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM
 
-# ── Launch ──────────────────────────────────────────────
+# ── Build & Launch ──────────────────────────────────────
+echo ""
+echo -e "  ${B}${G}── BUILDING CONTAINERS ──────────────────────────────────${RST}"
+
+progress "Building images" &
+docker compose -f docker-compose.stack.yml up --build -d 2>&1 | tail -1 &
+wait
+
+echo -e "  ${G}✓${RST} Containers built and started"
+
+# ── Wait for health ─────────────────────────────────────
+echo ""
+echo -e "  ${B}${G}── HEALTH CHECK ────────────────────────────────────────${RST}"
+
+MAX_WAIT=60
+WAITED=0
+while [ $WAITED -lt $MAX_WAIT ]; do
+  if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
+    echo -e "  ${G}✓${RST} API is healthy"
+    break
+  fi
+  spinner "Waiting for API..." 2
+  WAITED=$((WAITED + 2))
+done
+
+if [ $WAITED -ge $MAX_WAIT ]; then
+  echo -e "  ${R}✗${RST} API failed to start within ${MAX_WAIT}s"
+  echo -e "  ${DIM}Check logs: docker compose -f docker-compose.stack.yml logs${RST}"
+  exit 1
+fi
+
+# ── System Ready ────────────────────────────────────────
 PORT="${TRAKSHYA_PORT:-8000}"
 echo ""
 echo -e "  ${B}${G}── SYSTEM READY ─────────────────────────────────────────${RST}"
@@ -159,4 +176,5 @@ echo ""
 echo -e "  ${DIM}Press Ctrl+C to terminate.${RST}"
 echo ""
 
-exec node server.js
+# ── Follow logs ─────────────────────────────────────────
+docker compose -f docker-compose.stack.yml logs -f --tail=50

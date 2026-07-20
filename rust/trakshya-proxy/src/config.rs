@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
@@ -20,8 +19,12 @@ pub struct Config {
     pub trusted_ips: Vec<String>,
     #[serde(default)]
     pub api_key: String,
-    #[serde(default)]
-    pub database_url: String,
+    #[serde(default = "default_db_path")]
+    pub database_path: String,
+}
+
+fn default_db_path() -> String {
+    std::env::var("TRAKSHYA_DUCKDB_PATH").unwrap_or_else(|_| "trakshya_events.duckdb".to_string())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,9 +177,7 @@ impl Config {
             jwt: JWTConfig::default(),
             trusted_ips: vec![],
             api_key: std::env::var("TRAKSHYA_API_KEY").unwrap_or_default(),
-            database_url: std::env::var("TRAKSHYA_DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://trakshya:***@localhost:5432/trakshya?sslmode=disable".to_string()
-            }),
+            database_path: default_db_path(),
         })
     }
 }
@@ -184,23 +185,32 @@ impl Config {
 pub struct AppState {
     pub config: RwLock<Config>,
     pub http_client: reqwest::Client,
-    pub db_pool: PgPool,
+    pub db_conn: std::sync::Mutex<duckdb::Connection>,
+    pub gateway: crate::gateway::Gateway,
     pub start_time: Instant,
     pub broadcast_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
 }
 
 impl AppState {
-    pub async fn new(cfg: &Config) -> anyhow::Result<Self> {
-        let db_pool = crate::db::init_pool(&cfg.database_url).await?;
+    pub fn new(cfg: &Config) -> anyhow::Result<Self> {
+        let db_config = duckdb::Config::default()
+            .access_mode(duckdb::AccessMode::READ_ONLY)?;
+        let conn = duckdb::Connection::open_with_flags(&cfg.database_path, db_config)?;
 
         let (tx, _rx) = tokio::sync::broadcast::channel(100);
+
+        let gateway = crate::gateway::Gateway::new(
+            &cfg.proxy.management_api_url,
+            &cfg.api_key,
+        );
 
         Ok(Self {
             config: RwLock::new(cfg.clone()),
             http_client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(30))
                 .build()?,
-            db_pool,
+            db_conn: std::sync::Mutex::new(conn),
+            gateway,
             start_time: Instant::now(),
             broadcast_tx: tx,
         })

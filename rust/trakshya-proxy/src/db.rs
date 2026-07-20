@@ -1,11 +1,8 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use duckdb::{params, Connection};
 use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgPoolOptions, PgPool, Row};
-use std::time::Duration;
 use uuid::Uuid;
-
-pub type DbPool = PgPool;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Incident {
@@ -106,134 +103,190 @@ pub struct VulnStats {
     pub last_scan_status: String,
 }
 
-pub async fn init_pool(database_url: &str) -> Result<DbPool> {
-    let pool = PgPoolOptions::new()
-        .max_connections(10)
-        .acquire_timeout(Duration::from_secs(30))
-        .connect(database_url)
-        .await?;
-
-    sqlx::migrate!(".//migrations").run(&pool).await?;
-
-    Ok(pool)
-}
-
-pub async fn record_incident(pool: &DbPool, incident: &Incident) -> Result<()> {
-    sqlx::query(
+pub fn init_db(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
         r#"
-        INSERT INTO incidents (id, incident_type, rule_id, attack_type, client_ip, path, method, severity, message, source, timestamp, acknowledged)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        "#
-    )
-    .bind(&incident.id)
-    .bind(&incident.incident_type)
-    .bind(&incident.rule_id)
-    .bind(&incident.attack_type)
-    .bind(&incident.client_ip)
-    .bind(&incident.path)
-    .bind(&incident.method)
-    .bind(&incident.severity)
-    .bind(&incident.message)
-    .bind(&incident.source)
-    .bind(incident.timestamp.to_rfc3339())
-    .bind(incident.acknowledged)
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
-
-pub async fn record_request(pool: &DbPool, client_ip: &str, blocked: bool) -> Result<()> {
-    let blocked_val = if blocked { 1 } else { 0 };
-
-    sqlx::query(
-        r#"
-        INSERT INTO request_stats (client_ip, request_count, blocked_count, last_seen)
-        VALUES ($1, 1, $2, CURRENT_TIMESTAMP)
-        ON CONFLICT(client_ip) DO UPDATE SET
-            request_count = request_stats.request_count + 1,
-            blocked_count = request_stats.blocked_count + $3,
-            last_seen = CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS incidents (
+            id TEXT PRIMARY KEY,
+            incident_type TEXT NOT NULL,
+            rule_id TEXT,
+            attack_type TEXT,
+            client_ip TEXT NOT NULL,
+            path TEXT,
+            method TEXT,
+            severity TEXT NOT NULL,
+            message TEXT,
+            source TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            acknowledged INTEGER DEFAULT 0,
+            acked_at TIMESTAMP,
+            acked_by TEXT
+        );
+        CREATE TABLE IF NOT EXISTS rules (
+            id TEXT PRIMARY KEY,
+            pattern TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            category TEXT NOT NULL,
+            description TEXT,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS blacklist (
+            id TEXT PRIMARY KEY,
+            ip TEXT NOT NULL UNIQUE,
+            reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS request_stats (
+            client_ip TEXT PRIMARY KEY,
+            request_count INTEGER NOT NULL DEFAULT 0,
+            blocked_count INTEGER NOT NULL DEFAULT 0,
+            last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS vulnerabilities (
+            id TEXT PRIMARY KEY,
+            package_name TEXT NOT NULL,
+            installed_version TEXT NOT NULL,
+            available_version TEXT,
+            severity TEXT NOT NULL,
+            cve_id TEXT,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS system_config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
         "#,
-    )
-    .bind(client_ip)
-    .bind(blocked_val)
-    .bind(blocked_val)
-    .execute(pool)
-    .await?;
-
+    )?;
     Ok(())
 }
 
-pub async fn get_dashboard_stats(
-    pool: &DbPool,
+pub fn record_incident(conn: &Connection, incident: &Incident) -> Result<()> {
+    conn.execute(
+        "INSERT INTO incidents (id, incident_type, rule_id, attack_type, client_ip, path, method, severity, message, source, timestamp, acknowledged)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+        params![
+            incident.id,
+            incident.incident_type,
+            incident.rule_id,
+            incident.attack_type,
+            incident.client_ip,
+            incident.path,
+            incident.method,
+            incident.severity,
+            incident.message,
+            incident.source,
+            incident.timestamp.to_rfc3339(),
+            incident.acknowledged as i64,
+        ],
+    )?;
+    Ok(())
+}
+
+pub fn record_request(conn: &Connection, client_ip: &str, blocked: bool) -> Result<()> {
+    let blocked_val = if blocked { 1 } else { 0 };
+    conn.execute(
+        "INSERT INTO request_stats (client_ip, request_count, blocked_count, last_seen)
+         VALUES ($1, 1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT(client_ip) DO UPDATE SET
+             request_count = request_stats.request_count + 1,
+             blocked_count = request_stats.blocked_count + $3,
+             last_seen = CURRENT_TIMESTAMP",
+        params![client_ip, blocked_val, blocked_val],
+    )?;
+    Ok(())
+}
+
+pub fn get_dashboard_stats(
+    conn: &Connection,
     posture: &str,
     rule_count: i64,
     uptime: i64,
 ) -> Result<DashboardStats> {
-    let total_requests: i64 =
-        sqlx::query_scalar("SELECT COALESCE(SUM(request_count), 0) FROM request_stats")
-            .fetch_one(pool)
-            .await?;
+    let total_requests: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(request_count), 0) FROM request_stats",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let blocked_requests: i64 =
-        sqlx::query_scalar("SELECT COALESCE(SUM(blocked_count), 0) FROM request_stats")
-            .fetch_one(pool)
-            .await?;
+    let blocked_requests: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(blocked_count), 0) FROM request_stats",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let active_ips: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM request_stats WHERE last_seen > NOW() - INTERVAL '5 minutes'",
-    )
-    .fetch_one(pool)
-    .await?;
+    let active_ips: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM request_stats WHERE last_seen > NOW() - INTERVAL '5 minutes'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let incidents_today: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM incidents WHERE timestamp > NOW() - INTERVAL '1 day'",
-    )
-    .fetch_one(pool)
-    .await?;
+    let incidents_today: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM incidents WHERE timestamp > NOW() - INTERVAL '1 day'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let top_attacks_rows = sqlx::query(
-        "SELECT attack_type, COUNT(*) as count FROM incidents WHERE timestamp > NOW() - INTERVAL '1 day' GROUP BY attack_type ORDER BY count DESC LIMIT 10"
-    )
-    .fetch_all(pool)
-    .await?;
+    let mut top_attacks = Vec::new();
+    if let Ok(mut stmt) = conn.prepare(
+        "SELECT attack_type, COUNT(*) as count FROM incidents WHERE timestamp > NOW() - INTERVAL '1 day' GROUP BY attack_type ORDER BY count DESC LIMIT 10",
+    ) {
+        if let Ok(rows) = stmt.query_map([], |row| {
+            Ok(AttackCount {
+                attack_type: row.get(0)?,
+                count: row.get(1)?,
+            })
+        }) {
+            for r in rows.flatten() {
+                top_attacks.push(r);
+            }
+        }
+    }
 
-    let top_attacks = top_attacks_rows
-        .into_iter()
-        .map(|r| AttackCount {
-            attack_type: r.get("attack_type"),
-            count: r.get("count"),
-        })
-        .collect();
-
-    let recent_incidents_rows = sqlx::query(
-        "SELECT id, incident_type, rule_id, attack_type, client_ip, path, method, severity, message, source, timestamp, acknowledged FROM incidents ORDER BY timestamp DESC LIMIT 20"
-    )
-    .fetch_all(pool)
-    .await?;
-
-    let recent_incidents = recent_incidents_rows
-        .into_iter()
-        .map(|r| Incident {
-            id: r.get("id"),
-            incident_type: r.get("incident_type"),
-            rule_id: r.get("rule_id"),
-            attack_type: r.get("attack_type"),
-            client_ip: r.get("client_ip"),
-            path: r.get("path"),
-            method: r.get("method"),
-            severity: r.get("severity"),
-            message: r.get("message"),
-            source: r.get("source"),
-            timestamp: DateTime::parse_from_rfc3339(&r.get::<String, _>("timestamp"))
-                .unwrap()
-                .with_timezone(&Utc),
-            acknowledged: r.get::<i64, _>("acknowledged") != 0,
-            acked_at: None,
-            acked_by: None,
-        })
-        .collect();
+    let mut recent_incidents = Vec::new();
+    if let Ok(mut stmt) = conn.prepare(
+        "SELECT id, incident_type, rule_id, attack_type, client_ip, path, method, severity, message, source, timestamp, acknowledged FROM incidents ORDER BY timestamp DESC LIMIT 20",
+    ) {
+        if let Ok(rows) = stmt.query_map([], |row| {
+            let ts_str: String = row.get(10)?;
+            let ts = DateTime::parse_from_rfc3339(&ts_str)
+                .unwrap_or_default()
+                .with_timezone(&Utc);
+            Ok(Incident {
+                id: row.get(0)?,
+                incident_type: row.get(1)?,
+                rule_id: row.get(2)?,
+                attack_type: row.get(3)?,
+                client_ip: row.get(4)?,
+                path: row.get(5)?,
+                method: row.get(6)?,
+                severity: row.get(7)?,
+                message: row.get(8)?,
+                source: row.get(9)?,
+                timestamp: ts,
+                acknowledged: row.get::<_, i64>(11)? != 0,
+                acked_at: None,
+                acked_by: None,
+            })
+        }) {
+            for r in rows.flatten() {
+                recent_incidents.push(r);
+            }
+        }
+    }
 
     Ok(DashboardStats {
         total_requests,
@@ -249,12 +302,30 @@ pub async fn get_dashboard_stats(
     })
 }
 
-pub async fn get_geo_data(pool: &DbPool) -> Result<GeoData> {
-    let total_ips: i64 = sqlx::query_scalar("SELECT COUNT(DISTINCT client_ip) FROM incidents WHERE timestamp > NOW() - INTERVAL '1 day'")
-        .fetch_one(pool)
-        .await?;
+pub fn get_geo_data(conn: &Connection) -> Result<GeoData> {
+    let total_ips: i64 = conn
+        .query_row(
+            "SELECT COUNT(DISTINCT client_ip) FROM incidents WHERE timestamp > NOW() - INTERVAL '1 day'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let locations_rows = sqlx::query(
+    let country_coords = [
+        ("US", 40.7128, -74.0060),
+        ("DE", 52.5200, 13.4050),
+        ("IN", 28.6139, 77.2090),
+        ("RU", 55.7558, 37.6173),
+        ("CN", 39.9042, 116.4074),
+        ("BR", -15.7942, -47.8825),
+        ("GB", 51.5074, -0.1278),
+        ("FR", 48.8566, 2.3522),
+        ("JP", 35.6762, 139.6503),
+        ("AU", -33.8688, 151.2093),
+    ];
+
+    let mut locations = Vec::new();
+    if let Ok(mut stmt) = conn.prepare(
         r#"
         SELECT
             CASE
@@ -273,44 +344,28 @@ pub async fn get_geo_data(pool: &DbPool) -> Result<GeoData> {
         WHERE timestamp > NOW() - INTERVAL '1 day'
         GROUP BY country_code
         "#,
-    )
-    .fetch_all(pool)
-    .await?;
-
-    let country_coords = [
-        ("US", 40.7128, -74.0060),
-        ("DE", 52.5200, 13.4050),
-        ("IN", 28.6139, 77.2090),
-        ("RU", 55.7558, 37.6173),
-        ("CN", 39.9042, 116.4074),
-        ("BR", -15.7942, -47.8825),
-        ("GB", 51.5074, -0.1278),
-        ("FR", 48.8566, 2.3522),
-        ("JP", 35.6762, 139.6503),
-        ("AU", -33.8688, 151.2093),
-    ];
-
-    let mut locations = Vec::new();
-    for row in locations_rows {
-        let country_code: String = row.get("country_code");
-        let count: i64 = row.get("count");
-
-        if let Some((_, lat, lng)) = country_coords
-            .iter()
-            .find(|(c, _, _)| *c == country_code.as_str())
-        {
-            locations.push(GeoLocation {
-                country_code,
-                country_name: None,
-                count,
-                latitude: *lat,
-                longitude: *lng,
-            });
+    ) {
+        if let Ok(rows) = stmt.query_map([], |row| {
+            let code: String = row.get(0)?;
+            let count: i64 = row.get(1)?;
+            Ok((code, count))
+        }) {
+            for r in rows.flatten() {
+                let (code, count) = r;
+                if let Some((_, lat, lng)) = country_coords.iter().find(|(c, _, _)| *c == code.as_str()) {
+                    locations.push(GeoLocation {
+                        country_code: code,
+                        country_name: None,
+                        count,
+                        latitude: *lat,
+                        longitude: *lng,
+                    });
+                }
+            }
         }
     }
 
     let total_countries = locations.len() as i64;
-
     Ok(GeoData {
         total_ips,
         total_countries,
@@ -318,32 +373,54 @@ pub async fn get_geo_data(pool: &DbPool) -> Result<GeoData> {
     })
 }
 
-pub async fn get_siem_stats(pool: &DbPool) -> Result<SIEMAStats> {
-    let total: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM incidents WHERE timestamp > NOW() - INTERVAL '7 days'",
-    )
-    .fetch_one(pool)
-    .await?;
+pub fn get_siem_stats(conn: &Connection) -> Result<SIEMAStats> {
+    let total: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM incidents WHERE timestamp > NOW() - INTERVAL '7 days'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let critical: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM incidents WHERE severity = 'critical' AND timestamp > NOW() - INTERVAL '7 days'")
-        .fetch_one(pool)
-        .await?;
+    let critical: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM incidents WHERE severity = 'critical' AND timestamp > NOW() - INTERVAL '7 days'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let high: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM incidents WHERE severity = 'high' AND timestamp > NOW() - INTERVAL '7 days'")
-        .fetch_one(pool)
-        .await?;
+    let high: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM incidents WHERE severity = 'high' AND timestamp > NOW() - INTERVAL '7 days'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let medium: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM incidents WHERE severity = 'medium' AND timestamp > NOW() - INTERVAL '7 days'")
-        .fetch_one(pool)
-        .await?;
+    let medium: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM incidents WHERE severity = 'medium' AND timestamp > NOW() - INTERVAL '7 days'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let low: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM incidents WHERE severity = 'low' AND timestamp > NOW() - INTERVAL '7 days'")
-        .fetch_one(pool)
-        .await?;
+    let low: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM incidents WHERE severity = 'low' AND timestamp > NOW() - INTERVAL '7 days'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let unacknowledged: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM incidents WHERE acknowledged = 0 AND timestamp > NOW() - INTERVAL '7 days'")
-        .fetch_one(pool)
-        .await?;
+    let unacknowledged: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM incidents WHERE acknowledged = 0 AND timestamp > NOW() - INTERVAL '7 days'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
     Ok(SIEMAStats {
         total,
@@ -357,168 +434,189 @@ pub async fn get_siem_stats(pool: &DbPool) -> Result<SIEMAStats> {
     })
 }
 
-pub async fn get_siem_alerts(pool: &DbPool, limit: i64, offset: i64) -> Result<Vec<Incident>> {
-    let rows = sqlx::query(
-        "SELECT id, incident_type, rule_id, attack_type, client_ip, path, method, severity, message, source, timestamp, acknowledged FROM incidents WHERE timestamp > NOW() - INTERVAL '7 days' ORDER BY timestamp DESC LIMIT $1 OFFSET $2"
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(pool)
-    .await?;
+pub fn get_siem_alerts(conn: &Connection, limit: i64, offset: i64) -> Result<Vec<Incident>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, incident_type, rule_id, attack_type, client_ip, path, method, severity, message, source, timestamp, acknowledged FROM incidents WHERE timestamp > NOW() - INTERVAL '7 days' ORDER BY timestamp DESC LIMIT $1 OFFSET $2",
+    )?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| Incident {
-            id: r.get("id"),
-            incident_type: r.get("incident_type"),
-            rule_id: r.get("rule_id"),
-            attack_type: r.get("attack_type"),
-            client_ip: r.get("client_ip"),
-            path: r.get("path"),
-            method: r.get("method"),
-            severity: r.get("severity"),
-            message: r.get("message"),
-            source: r.get("source"),
-            timestamp: DateTime::parse_from_rfc3339(&r.get::<String, _>("timestamp"))
-                .unwrap()
-                .with_timezone(&Utc),
-            acknowledged: r.get::<i64, _>("acknowledged") != 0,
+    let rows = stmt.query_map(params![limit, offset], |row| {
+        let ts_str: String = row.get(10)?;
+        let ts = DateTime::parse_from_rfc3339(&ts_str)
+            .unwrap_or_default()
+            .with_timezone(&Utc);
+        Ok(Incident {
+            id: row.get(0)?,
+            incident_type: row.get(1)?,
+            rule_id: row.get(2)?,
+            attack_type: row.get(3)?,
+            client_ip: row.get(4)?,
+            path: row.get(5)?,
+            method: row.get(6)?,
+            severity: row.get(7)?,
+            message: row.get(8)?,
+            source: row.get(9)?,
+            timestamp: ts,
+            acknowledged: row.get::<_, i64>(11)? != 0,
             acked_at: None,
             acked_by: None,
         })
-        .collect())
+    })?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
-pub async fn get_rules(pool: &DbPool, enabled: Option<bool>) -> Result<Vec<Rule>> {
-    let rows = if let Some(enabled_val) = enabled {
-        sqlx::query("SELECT id, pattern, severity, category, description, enabled, created_at, updated_at FROM rules WHERE enabled = $1 ORDER BY id")
-            .bind(enabled_val as i64)
-            .fetch_all(pool)
-            .await?
+pub fn get_rules(conn: &Connection, enabled: Option<bool>) -> Result<Vec<Rule>> {
+    let mut stmt = if let Some(enabled_val) = enabled {
+        conn.prepare("SELECT id, pattern, severity, category, description, enabled, created_at, updated_at FROM rules WHERE enabled = $1 ORDER BY id")?
     } else {
-        sqlx::query("SELECT id, pattern, severity, category, description, enabled, created_at, updated_at FROM rules ORDER BY id")
-            .fetch_all(pool)
-            .await?
+        conn.prepare("SELECT id, pattern, severity, category, description, enabled, created_at, updated_at FROM rules ORDER BY id")?
     };
 
-    Ok(rows
-        .into_iter()
-        .map(|r| Rule {
-            id: r.get("id"),
-            pattern: r.get("pattern"),
-            severity: r.get("severity"),
-            category: r.get("category"),
-            description: r.get("description"),
-            enabled: r.get::<i64, _>("enabled") != 0,
-            created_at: DateTime::parse_from_rfc3339(&r.get::<String, _>("created_at"))
-                .unwrap()
+    let params: Vec<Box<dyn duckdb::types::ToSql>> = if let Some(v) = enabled {
+        vec![Box::new(v as i64)]
+    } else {
+        vec![]
+    };
+
+    let param_refs: Vec<&dyn duckdb::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    let rows = stmt.query_map(param_refs.as_slice(), |row| {
+        let created_str: String = row.get(6)?;
+        let updated_str: String = row.get(7)?;
+        Ok(Rule {
+            id: row.get(0)?,
+            pattern: row.get(1)?,
+            severity: row.get(2)?,
+            category: row.get(3)?,
+            description: row.get(4)?,
+            enabled: row.get::<_, i64>(5)? != 0,
+            created_at: DateTime::parse_from_rfc3339(&created_str)
+                .unwrap_or_default()
                 .with_timezone(&Utc),
-            updated_at: DateTime::parse_from_rfc3339(&r.get::<String, _>("updated_at"))
-                .unwrap()
+            updated_at: DateTime::parse_from_rfc3339(&updated_str)
+                .unwrap_or_default()
                 .with_timezone(&Utc),
         })
-        .collect())
+    })?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
-pub async fn create_rule(pool: &DbPool, rule: &Rule) -> Result<()> {
-    sqlx::query(
-        "INSERT INTO rules (id, pattern, severity, category, description, enabled, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-    )
-    .bind(&rule.id)
-    .bind(&rule.pattern)
-    .bind(&rule.severity)
-    .bind(&rule.category)
-    .bind(&rule.description)
-    .bind(rule.enabled as i64)
-    .bind(rule.created_at.to_rfc3339())
-    .bind(rule.updated_at.to_rfc3339())
-    .execute(pool)
-    .await?;
-
+pub fn create_rule(conn: &Connection, rule: &Rule) -> Result<()> {
+    conn.execute(
+        "INSERT INTO rules (id, pattern, severity, category, description, enabled, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        params![
+            rule.id,
+            rule.pattern,
+            rule.severity,
+            rule.category,
+            rule.description,
+            rule.enabled as i64,
+            rule.created_at.to_rfc3339(),
+            rule.updated_at.to_rfc3339(),
+        ],
+    )?;
     Ok(())
 }
 
-pub async fn delete_rule(pool: &DbPool, id: &str) -> Result<()> {
-    sqlx::query("DELETE FROM rules WHERE id = $1")
-        .bind(id)
-        .execute(pool)
-        .await?;
-
+pub fn delete_rule(conn: &Connection, id: &str) -> Result<()> {
+    conn.execute("DELETE FROM rules WHERE id = $1", params![id])?;
     Ok(())
 }
 
-pub async fn get_blacklist(pool: &DbPool) -> Result<Vec<BlacklistEntry>> {
-    let rows = sqlx::query("SELECT id, ip, reason, created_at, expires_at FROM blacklist WHERE expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP ORDER BY created_at DESC")
-        .fetch_all(pool)
-        .await?;
+pub fn get_blacklist(conn: &Connection) -> Result<Vec<BlacklistEntry>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, ip, reason, created_at, expires_at FROM blacklist WHERE expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP ORDER BY created_at DESC",
+    )?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| BlacklistEntry {
-            id: r.get("id"),
-            ip: r.get("ip"),
-            reason: r.get("reason"),
-            created_at: DateTime::parse_from_rfc3339(&r.get::<String, _>("created_at"))
-                .unwrap()
+    let rows = stmt.query_map([], |row| {
+        let created_str: String = row.get(3)?;
+        let expires_str: Option<String> = row.get(4)?;
+        Ok(BlacklistEntry {
+            id: row.get(0)?,
+            ip: row.get(1)?,
+            reason: row.get(2)?,
+            created_at: DateTime::parse_from_rfc3339(&created_str)
+                .unwrap_or_default()
                 .with_timezone(&Utc),
-            expires_at: r.get::<Option<String>, _>("expires_at").map(|s| {
+            expires_at: expires_str.and_then(|s| {
                 DateTime::parse_from_rfc3339(&s)
-                    .unwrap()
-                    .with_timezone(&Utc)
+                    .ok()
+                    .map(|dt| dt.with_timezone(&Utc))
             }),
         })
-        .collect())
+    })?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
-pub async fn add_to_blacklist(pool: &DbPool, ip: &str, reason: Option<&str>) -> Result<()> {
+pub fn add_to_blacklist(conn: &Connection, ip: &str, reason: Option<&str>) -> Result<()> {
     let id = Uuid::new_v4().to_string();
-    sqlx::query(
+    conn.execute(
         "INSERT INTO blacklist (id, ip, reason) VALUES ($1, $2, $3) ON CONFLICT(ip) DO NOTHING",
-    )
-    .bind(&id)
-    .bind(ip)
-    .bind(reason)
-    .execute(pool)
-    .await?;
-
+        params![id, ip, reason],
+    )?;
     Ok(())
 }
 
-pub async fn remove_from_blacklist(pool: &DbPool, ip: &str) -> Result<()> {
-    sqlx::query("DELETE FROM blacklist WHERE ip = $1")
-        .bind(ip)
-        .execute(pool)
-        .await?;
-
+pub fn remove_from_blacklist(conn: &Connection, ip: &str) -> Result<()> {
+    conn.execute("DELETE FROM blacklist WHERE ip = $1", params![ip])?;
     Ok(())
 }
 
-pub async fn get_vuln_stats(pool: &DbPool) -> Result<VulnStats> {
-    let total_cves: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM vulnerabilities")
-        .fetch_one(pool)
-        .await?;
-    let avg_cvss: f64 = sqlx::query_scalar("SELECT COALESCE(AVG(CASE severity WHEN 'critical' THEN 9.5 WHEN 'high' THEN 7.5 WHEN 'medium' THEN 5.0 WHEN 'low' THEN 2.5 ELSE 0 END), 0) FROM vulnerabilities").fetch_one(pool).await?;
-    let total_packages: i64 =
-        sqlx::query_scalar("SELECT COUNT(DISTINCT package_name) FROM vulnerabilities")
-            .fetch_one(pool)
-            .await?;
+pub fn get_vuln_stats(conn: &Connection) -> Result<VulnStats> {
+    let total_cves: i64 = conn
+        .query_row("SELECT COUNT(*) FROM vulnerabilities", [], |row| {
+            row.get(0)
+        })
+        .unwrap_or(0);
 
-    let critical: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM vulnerabilities WHERE severity = 'critical'")
-            .fetch_one(pool)
-            .await?;
-    let high: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM vulnerabilities WHERE severity = 'high'")
-            .fetch_one(pool)
-            .await?;
-    let medium: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM vulnerabilities WHERE severity = 'medium'")
-            .fetch_one(pool)
-            .await?;
-    let low: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM vulnerabilities WHERE severity = 'low'")
-            .fetch_one(pool)
-            .await?;
+    let avg_cvss: f64 = conn
+        .query_row(
+            "SELECT COALESCE(AVG(CASE severity WHEN 'critical' THEN 9.5 WHEN 'high' THEN 7.5 WHEN 'medium' THEN 5.0 WHEN 'low' THEN 2.5 ELSE 0 END), 0) FROM vulnerabilities",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0.0);
+
+    let total_packages: i64 = conn
+        .query_row(
+            "SELECT COUNT(DISTINCT package_name) FROM vulnerabilities",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+
+    let critical: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM vulnerabilities WHERE severity = 'critical'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+
+    let high: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM vulnerabilities WHERE severity = 'high'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+
+    let medium: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM vulnerabilities WHERE severity = 'medium'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+
+    let low: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM vulnerabilities WHERE severity = 'low'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
     Ok(VulnStats {
         total_cves,
@@ -534,37 +632,37 @@ pub async fn get_vuln_stats(pool: &DbPool) -> Result<VulnStats> {
     })
 }
 
-pub async fn get_vulnerabilities(pool: &DbPool) -> Result<Vec<serde_json::Value>> {
-    let rows = sqlx::query(
+pub fn get_vulnerabilities(conn: &Connection) -> Result<Vec<serde_json::Value>> {
+    let mut stmt = conn.prepare(
         "SELECT id, package_name, installed_version, available_version, severity, cve_id, description FROM vulnerabilities ORDER BY
             CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END,
-            package_name"
-    )
-    .fetch_all(pool)
-    .await?;
+            package_name",
+    )?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| {
-            serde_json::json!({
-                "id": r.get::<String, _>("id"),
-                "package": r.get::<String, _>("package_name"),
-                "installed_version": r.get::<String, _>("installed_version"),
-                "available_version": r.get::<String, _>("available_version"),
-                "severity": r.get::<String, _>("severity"),
-                "cve": r.get::<String, _>("cve_id"),
-                "description": r.get::<String, _>("description"),
-            })
-        })
-        .collect())
+    let rows = stmt.query_map([], |row| {
+        Ok(serde_json::json!({
+            "id": row.get::<_, String>(0)?,
+            "package": row.get::<_, String>(1)?,
+            "installed_version": row.get::<_, String>(2)?,
+            "available_version": row.get::<_, String>(3)?,
+            "severity": row.get::<_, String>(4)?,
+            "cve": row.get::<_, String>(5)?,
+            "description": row.get::<_, String>(6)?,
+        }))
+    })?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
-pub async fn update_config(pool: &DbPool, key: &str, value: &str) -> Result<()> {
-    sqlx::query("INSERT INTO system_config (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP")
-        .bind(key)
-        .bind(value)
-        .execute(pool)
-        .await?;
-
+pub fn update_config(conn: &Connection, key: &str, value: &str) -> Result<()> {
+    conn.execute(
+        "INSERT INTO system_config (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2, updated_at = CURRENT_TIMESTAMP",
+        params![key, value],
+    )?;
     Ok(())
+}
+
+pub fn get_rule_count(conn: &Connection) -> i64 {
+    conn.query_row("SELECT COUNT(*) FROM rules", [], |row| row.get(0))
+        .unwrap_or(0)
 }

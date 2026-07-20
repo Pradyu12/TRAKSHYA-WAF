@@ -69,21 +69,23 @@ impl RequestInspector {
                 acked_by: None,
             };
 
-            // Record to database
+            // Record to Go API (sole DuckDB writer)
             let state_clone = self.state.clone();
             let incident_clone = incident.clone();
             let client_ip_owned = client_ip.to_string();
             tokio::spawn(async move {
-                if let Err(e) =
-                    crate::db::record_incident(&state_clone.db_pool, &incident_clone).await
-                {
-                    tracing::error!("Failed to record incident: {}", e);
-                }
-                if let Err(e) =
-                    crate::db::record_request(&state_clone.db_pool, &client_ip_owned, true).await
-                {
-                    tracing::error!("Failed to record request: {}", e);
-                }
+                state_clone.gateway.record_incident(
+                    &incident_clone.incident_type,
+                    &incident_clone.rule_id,
+                    &incident_clone.attack_type,
+                    &incident_clone.client_ip,
+                    &incident_clone.path,
+                    &incident_clone.method,
+                    &incident_clone.severity,
+                    &incident_clone.message,
+                    &incident_clone.source,
+                ).await;
+                state_clone.gateway.record_request(&client_ip_owned, true).await;
 
                 // Broadcast to SSE clients
                 let _ = state_clone.broadcast_tx.send(serde_json::json!({
@@ -95,16 +97,12 @@ impl RequestInspector {
             return Err(self.block_response(&format!("Blocked: {}", rule.attack_type)));
         }
 
-        // Record successful request
+        // Record successful request via Go API
         let state_clone = self.state.clone();
         let client_ip_owned = client_ip.to_string();
         let client_ip_for_rate_limit = client_ip_owned.clone();
         tokio::spawn(async move {
-            if let Err(e) =
-                crate::db::record_request(&state_clone.db_pool, &client_ip_owned, false).await
-            {
-                tracing::error!("Failed to record request: {}", e);
-            }
+            state_clone.gateway.record_request(&client_ip_owned, false).await;
         });
 
         if cfg.proxy.posture != Posture::Monitor && cfg.rate_limiter.enabled {
@@ -135,11 +133,17 @@ impl RequestInspector {
                 let state_clone = self.state.clone();
                 let incident_clone = incident.clone();
                 tokio::spawn(async move {
-                    if let Err(e) =
-                        crate::db::record_incident(&state_clone.db_pool, &incident_clone).await
-                    {
-                        tracing::error!("Failed to record rate limit incident: {}", e);
-                    }
+                    state_clone.gateway.record_incident(
+                        &incident_clone.incident_type,
+                        &incident_clone.rule_id,
+                        &incident_clone.attack_type,
+                        &incident_clone.client_ip,
+                        &incident_clone.path,
+                        &incident_clone.method,
+                        &incident_clone.severity,
+                        &incident_clone.message,
+                        &incident_clone.source,
+                    ).await;
                     let _ = state_clone.broadcast_tx.send(serde_json::json!({
                         "type": "incident",
                         "data": incident_clone

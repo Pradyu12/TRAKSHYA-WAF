@@ -14,13 +14,11 @@ import (
 	"github.com/trakshya/trakshya-api/internal/telemetry"
 )
 
-
-
 type Config struct {
 	ProxyPort        int      `yaml:"proxy_port"`
 	UpstreamURL      string   `yaml:"upstream_url"`
 	ManagementPort   int      `yaml:"management_port"`
-	DatabaseURL      string   `yaml:"database_url"`
+	DatabasePath     string   `yaml:"database_path"`
 	Posture          string   `yaml:"posture"`
 	LogLevel         string   `yaml:"log_level"`
 	FrontendDir      string   `yaml:"frontend_dir"`
@@ -29,17 +27,15 @@ type Config struct {
 
 type Server struct {
 	cfg     *Config
-	db      *db.Postgres
-	duck    *db.DuckDB
+	db      *db.Store
 	metrics *telemetry.Metrics
 	startAt time.Time
 }
 
-func NewRouter(cfg *Config, database *db.Postgres, duckdb *db.DuckDB, metrics *telemetry.Metrics) http.Handler {
+func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Handler {
 	srv := &Server{
 		cfg:     cfg,
-		db:      database,
-		duck:    duckdb,
+		db:      store,
 		metrics: metrics,
 		startAt: time.Now(),
 	}
@@ -80,36 +76,30 @@ func NewRouter(cfg *Config, database *db.Postgres, duckdb *db.DuckDB, metrics *t
 		r.Get("/agents", srv.listAgents)
 		r.Post("/agents/register", srv.registerAgent)
 
-		// Rules
 		r.Get("/rules", srv.listRules)
 		r.Post("/rules", srv.createRule)
 		r.Put("/rules/{id}/toggle", srv.toggleRule)
 		r.Delete("/rules/{id}", srv.deleteRule)
 
-		// Blacklist
 		r.Get("/blacklist", srv.listBlacklist)
 		r.Post("/blacklist", srv.addBlacklist)
 		r.Delete("/blacklist/{ip}", srv.removeBlacklist)
 
-		// SIEM (backed by incidents table)
 		r.Get("/siem/stats", srv.getSIEMStats)
 		r.Get("/siem/alerts", srv.listSIEMAlerts)
 		r.Post("/siem/alerts/{id}/ack", srv.ackSIEMAlert)
 
-		// DuckDB analytics (high-volume event data)
 		r.Get("/analytics/events", srv.getEventStats)
 		r.Post("/analytics/ingest", srv.ingestEvent)
+		r.Post("/analytics/request-stats", srv.recordRequestStats)
 
-		// Geo-location data for map visualization
 		r.Get("/geo", srv.getGeoData)
 
-		// Vulnerability scanning
 		r.Get("/vulns/stats", srv.getVulnStats)
 		r.Get("/vulns", srv.listVulnFindings)
 		r.Post("/vulns/scan", srv.startVulnScan)
 		r.Get("/vulns/scan/{id}", srv.getVulnScan)
 
-		// VAPT scanning
 		r.Get("/vapt/stats", srv.getVaptStats)
 		r.Get("/vapt", srv.listVaptFindings)
 		r.Get("/vapt/scans", srv.listVaptScans)
@@ -117,14 +107,12 @@ func NewRouter(cfg *Config, database *db.Postgres, duckdb *db.DuckDB, metrics *t
 		r.Get("/vapt/scan/{id}", srv.getVaptScan)
 		r.Get("/vapt/scan/{id}/findings", srv.getVaptScanFindings)
 
-		// Mitigation posture (frontend-compatible alias)
 		r.Get("/mitigation-posture", srv.getPosture)
 		r.Post("/mitigation-posture", srv.setMitigationPosture)
 
 		r.Handle("/metrics", srv.metrics.Handler())
 	})
 
-	// Long-lived connections (no timeout)
 	r.Get("/api/stream", srv.streamTelemetry)
 	r.Get("/ws", srv.handleWebSocket)
 
@@ -161,9 +149,6 @@ func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func isPrivateHost(host string) bool {
-	if isPrivateHost(host) {
-		return true
-	}
 	if ip := net.ParseIP(host); ip != nil {
 		return ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified()
 	}
@@ -208,10 +193,8 @@ func (s *Server) getDashboardStats(w http.ResponseWriter, r *http.Request) {
 	s.json(w, http.StatusOK, stats)
 }
 
-// ── DuckDB Analytics Endpoints ──────────────────────────────────────────────
-
 func (s *Server) getEventStats(w http.ResponseWriter, r *http.Request) {
-	stats, err := s.duck.GetEventStats()
+	stats, err := s.db.GetEventStats()
 	if err != nil {
 		log.Printf("Failed to get event stats: %v", err)
 		s.errorJSON(w, http.StatusInternalServerError, "failed to get event stats")
@@ -229,6 +212,23 @@ func (s *Server) ingestEvent(w http.ResponseWriter, r *http.Request) {
 	if evt.Timestamp.IsZero() {
 		evt.Timestamp = time.Now()
 	}
-	s.duck.Ingest(evt)
+	s.db.Ingest(evt)
 	s.json(w, http.StatusAccepted, map[string]string{"status": "queued"})
+}
+
+func (s *Server) recordRequestStats(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ClientIP string `json:"client_ip"`
+		Blocked  bool   `json:"blocked"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		s.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.ClientIP == "" {
+		s.errorJSON(w, http.StatusBadRequest, "client_ip is required")
+		return
+	}
+	s.db.RecordRequest(body.ClientIP, body.Blocked)
+	s.json(w, http.StatusAccepted, map[string]string{"status": "ok"})
 }

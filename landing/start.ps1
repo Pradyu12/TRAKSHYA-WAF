@@ -63,56 +63,84 @@ Start-Sleep -Milliseconds 400
 Write-Host ""
 Write-Host "  ── DEPENDENCY CHECK ─────────────────────────────────────" -ForegroundColor Green
 
-Show-Spinner "Checking Node.js..." 2500
+Show-Spinner "Checking Docker..." 2500
 
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    Write-Host "`r  X Node.js NOT FOUND                          " -ForegroundColor Red
-    Write-Host "    Install: winget install OpenJS.NodeJS.LTS"
-    Write-Host "    Or visit: https://nodejs.org/"
+if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+    Write-Host "`r  X Docker NOT FOUND                              " -ForegroundColor Red
+    Write-Host "    Install: https://docs.docker.com/get-docker/"
     exit 1
 }
 
-$nodeVer = node -v 2>$null
-Write-Host "`r  [OK] Node.js $nodeVer                         " -ForegroundColor Green
+$dockerVer = docker --version 2>$null
+Write-Host "`r  [OK] Docker                                    " -ForegroundColor Green
 
-Show-Spinner "Checking PowerShell..." 1500
-Write-Host "`r  [OK] PowerShell $($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)                       " -ForegroundColor Green
+Show-Spinner "Checking Docker Compose..." 2500
+
+try {
+    docker compose version 2>$null | Out-Null
+    Write-Host "`r  [OK] Docker Compose                             " -ForegroundColor Green
+} catch {
+    Write-Host "`r  X Docker Compose NOT FOUND                     " -ForegroundColor Red
+    Write-Host "    Install: https://docs.docker.com/compose/install/"
+    exit 1
+}
+
 Start-Sleep -Milliseconds 300
 
-# ── Download phase ──────────────────────────────────────
+# ── Clone phase ─────────────────────────────────────────
 Write-Host ""
 Write-Host "  ── ACQUISITION ──────────────────────────────────────────" -ForegroundColor Green
 
-$base = "https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main"
-
-if ((Test-Path "server.js") -and (Test-Path "frontend")) {
+if ((Test-Path "docker-compose.stack.yml") -and (Test-Path "frontend")) {
     $repoDir = (Get-Location).Path
     Write-Host "  [*] Local repo detected: $repoDir" -ForegroundColor Cyan
 } else {
     $repoDir = Join-Path $env:TEMP "trakshya-waf-$([guid]::NewGuid().ToString('N').Substring(0,8))"
-    $frontendDir = Join-Path $repoDir "frontend"
-    $staticDir = Join-Path $frontendDir "static"
-    New-Item -ItemType Directory -Path $staticDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $repoDir -Force | Out-Null
 
-    Write-Host "  [*] Target: $repoDir" -ForegroundColor Cyan
-    Write-Host ""
-
-    Show-Progress "server.js"
-    Invoke-WebRequest "$base/server.js" -OutFile (Join-Path $repoDir "server.js") -UseBasicParsing
-
-    Show-Progress "dashboard.html"
-    Invoke-WebRequest "$base/frontend/dashboard.html" -OutFile (Join-Path $frontendDir "dashboard.html") -UseBasicParsing
-
-    Write-Host "  [*] Fetching globe assets..." -ForegroundColor Cyan
-    try { Invoke-WebRequest "$base/frontend/static/earth.glb" -OutFile (Join-Path $staticDir "earth.glb") -UseBasicParsing } catch { Write-Host "  ! globe.glb skipped (optional)" -ForegroundColor DarkYellow }
-    try { Invoke-WebRequest "$base/frontend/static/earth.jpg" -OutFile (Join-Path $staticDir "earth.jpg") -UseBasicParsing } catch { Write-Host "  ! globe.jpg skipped (optional)" -ForegroundColor DarkYellow }
-
-    Write-Host "  [OK] All files acquired" -ForegroundColor Green
+    Write-Host "  [*] Cloning TRAKSHYA-WAF..." -ForegroundColor Cyan
+    Show-Spinner "Cloning repository..." 3000
+    git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git $repoDir 2>$null
+    Write-Host "  [OK] Repository cloned" -ForegroundColor Green
 }
 
 Set-Location $repoDir
 
-# ── Launch ──────────────────────────────────────────────
+# ── Build & Launch ──────────────────────────────────────
+Write-Host ""
+Write-Host "  ── BUILDING CONTAINERS ──────────────────────────────────" -ForegroundColor Green
+
+docker compose -f docker-compose.stack.yml up --build -d 2>&1 | Out-Null
+Write-Host "  [OK] Containers built and started" -ForegroundColor Green
+
+# ── Wait for health ─────────────────────────────────────
+Write-Host ""
+Write-Host "  ── HEALTH CHECK ────────────────────────────────────────" -ForegroundColor Green
+
+$maxWait = 60
+$waited = 0
+$healthy = $false
+
+while ($waited -lt $maxWait) {
+    try {
+        $response = Invoke-WebRequest -Uri "http://localhost:8000/health" -UseBasicParsing -TimeoutSec 2
+        if ($response.StatusCode -eq 200) {
+            Write-Host "  [OK] API is healthy" -ForegroundColor Green
+            $healthy = $true
+            break
+        }
+    } catch {}
+    Show-Spinner "Waiting for API..." 2000
+    $waited += 2
+}
+
+if (-not $healthy) {
+    Write-Host "`r  X API failed to start within ${maxWait}s          " -ForegroundColor Red
+    Write-Host "    Check logs: docker compose -f docker-compose.stack.yml logs"
+    exit 1
+}
+
+# ── System Ready ────────────────────────────────────────
 $port = if ($env:TRAKSHYA_PORT) { $env:TRAKSHYA_PORT } else { "8000" }
 Write-Host ""
 Write-Host "  ── SYSTEM READY ─────────────────────────────────────────" -ForegroundColor Green
@@ -128,4 +156,10 @@ Write-Host ""
 Write-Host "  Press Ctrl+C to terminate." -ForegroundColor DarkGray
 Write-Host ""
 
-node server.js
+# ── Follow logs ─────────────────────────────────────────
+try {
+    docker compose -f docker-compose.stack.yml logs -f --tail=50
+} finally {
+    Write-Host "`n  Shutting down..." -ForegroundColor DarkGray
+    docker compose -f docker-compose.stack.yml down 2>$null
+}

@@ -1,46 +1,23 @@
 version: "3.8"
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: trakshya
-      POSTGRES_PASSWORD: trakshya
-      POSTGRES_DB: trakshya
-    volumes:
-      - trakshya-data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-    networks:
-      - trakshya-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U trakshya"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  trakshya-dashboard:
+  trakshya-api:
     build:
       context: .
-      dockerfile: dashboard/Dockerfile
+      dockerfile: go/Dockerfile
     ports:
       - "8000:8000"
-      - "8443:8443"
     environment:
-      - NODE_ENV=production
-      - TRAKSHYA_API_URL=http://trakshya-api:8000
-      - TRAKSHYA_DATABASE_URL=postgres://trakshya:trakshya@postgres:5432/trakshya?sslmode=disable
+      - TRAKSHYA_MGMT_PORT=8000
+      - TRAKSHYA_DUCKDB_PATH=/data/trakshya_events.duckdb
+      - TRAKSHYA_FRONTEND_DIR=/opt/trakshya/frontend
+      - TRAKSHYA_API_KEY=${TRAKSHYA_API_KEY:-}
     volumes:
-      - ./dev-certs:/app/dev-certs:ro
-      - trakshya-logs:/var/log/trakshya
+      - trakshya-duckdb:/data
+      - ./frontend:/opt/trakshya/frontend:ro
     networks:
       - trakshya-net
     restart: unless-stopped
-    depends_on:
-      trakshya-api:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -56,16 +33,15 @@ services:
     environment:
       - TRAKSHYA_CONFIG=/etc/trakshya/config.yaml
       - TRAKSHYA_PROXY_PORT=8080
-      - TRAKSHYA_UPSTREAM_URL=http://trakshya-dashboard:8000
+      - TRAKSHYA_UPSTREAM_URL=http://trakshya-api:8000
       - TRAKSHYA_MGMT_API_URL=http://trakshya-api:8000
-      - TRAKSHYA_DATABASE_URL=postgres://trakshya:trakshya@postgres:5432/trakshya?sslmode=disable
+      - TRAKSHYA_DUCKDB_PATH=/data/trakshya_events.duckdb
       - RUST_LOG=info
     volumes:
       - ./config/trakshya.yaml:/etc/trakshya/config.yaml:ro
+      - trakshya-duckdb:/data:ro
     depends_on:
       trakshya-api:
-        condition: service_healthy
-      postgres:
         condition: service_healthy
     networks:
       - trakshya-net
@@ -76,35 +52,9 @@ services:
       timeout: 3s
       retries: 3
 
-  trakshya-api:
-    build:
-      context: .
-      dockerfile: go/Dockerfile
-    ports:
-      - "8001:8000"
-    environment:
-      - TRAKSHYA_MGMT_PORT=8000
-      - TRAKSHYA_DATABASE_URL=postgres://trakshya:trakshya@postgres:5432/trakshya?sslmode=disable
-      - TRAKSHYA_FRONTEND_DIR=/opt/trakshya/frontend
-      - TRAKSHYA_API_KEY=${TRAKSHYA_API_KEY:-}
-    volumes:
-      - ./frontend:/opt/trakshya/frontend:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - trakshya-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
 networks:
   trakshya-net:
     driver: bridge
 
 volumes:
-  trakshya-data:
-  trakshya-logs:
+  trakshya-duckdb:
