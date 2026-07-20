@@ -11,7 +11,7 @@ proxy:
   port: 8080
   upstream_url: http://localhost:3000
   posture: monitor  # monitor | standard | under_attack
-  management_api_url: http://localhost:8000
+  management_api_url: http://trakshya-api:8000
 
 rate_limiter:
   enabled: true

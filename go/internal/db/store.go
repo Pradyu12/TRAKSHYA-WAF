@@ -442,8 +442,8 @@ func (s *Store) GetDashboardStats() (*models.DashboardStats, error) {
 	stats := &models.DashboardStats{}
 	s.roDB.QueryRow("SELECT COUNT(*) FROM incidents").Scan(&stats.TotalRequests)
 	s.roDB.QueryRow("SELECT COUNT(*) FROM incidents WHERE severity IN ('critical', 'high')").Scan(&stats.BlockedRequests)
-	s.roDB.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM incidents WHERE timestamp > NOW() - INTERVAL '1 hour'").Scan(&stats.ActiveIPs)
-	s.roDB.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > CURRENT_TIMESTAMP - INTERVAL '1 day'").Scan(&stats.IncidentsToday)
+	s.roDB.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM incidents WHERE timestamp > NOW() - INTERVAL '1' HOUR").Scan(&stats.ActiveIPs)
+	s.roDB.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > CURRENT_TIMESTAMP - INTERVAL '1' DAY").Scan(&stats.IncidentsToday)
 	s.roDB.QueryRow("SELECT COUNT(*) FROM system_config").Scan(&stats.AgentsOnline)
 	s.roDB.QueryRow("SELECT COUNT(*) FROM rules WHERE enabled = 1").Scan(&stats.RuleCount)
 
@@ -966,7 +966,7 @@ const bruteForceSQL = `
 	SELECT source_ip, COUNT(*) AS cnt
 	FROM   raw_events
 	WHERE  blocked = true
-	  AND  timestamp >= now() - INTERVAL '5 minutes'
+	  AND  timestamp >= now() - INTERVAL '5' MINUTE
 	GROUP  BY source_ip
 	HAVING COUNT(*) >= 10
 	ORDER  BY cnt DESC
@@ -993,7 +993,7 @@ func scanBruteForce(row *sql.Row) (models.Incident, bool, error) {
 const portScanSQL = `
 	SELECT source_ip, COUNT(DISTINCT path) AS paths
 	FROM   raw_events
-	WHERE  timestamp >= now() - INTERVAL '10 minutes'
+	WHERE  timestamp >= now() - INTERVAL '10' MINUTE
 	GROUP  BY source_ip
 	HAVING COUNT(DISTINCT path) >= 15
 	ORDER  BY paths DESC
@@ -1021,7 +1021,7 @@ const xssWaveSQL = `
 	SELECT COUNT(*) AS cnt
 	FROM   raw_events
 	WHERE  attack_type = 'xss'
-	  AND  timestamp >= now() - INTERVAL '5 minutes'
+	  AND  timestamp >= now() - INTERVAL '5' MINUTE
 `
 
 func scanXssWave(row *sql.Row) (models.Incident, bool, error) {
@@ -1046,7 +1046,7 @@ const sqliWaveSQL = `
 	SELECT COUNT(*) AS cnt
 	FROM   raw_events
 	WHERE  attack_type = 'sql_injection'
-	  AND  timestamp >= now() - INTERVAL '5 minutes'
+	  AND  timestamp >= now() - INTERVAL '5' MINUTE
 `
 
 func scanSqlWave(row *sql.Row) (models.Incident, bool, error) {
@@ -1070,7 +1070,7 @@ func scanSqlWave(row *sql.Row) (models.Incident, bool, error) {
 const rapidScanSQL = `
 	SELECT source_ip, COUNT(*) AS cnt
 	FROM   raw_events
-	WHERE  timestamp >= now() - INTERVAL '10 seconds'
+	WHERE  timestamp >= now() - INTERVAL '10' SECOND
 	GROUP  BY source_ip
 	HAVING COUNT(*) >= 20
 	ORDER  BY cnt DESC
@@ -1099,7 +1099,7 @@ const dataExfilSQL = `
 	FROM   raw_events
 	WHERE  blocked = false
 	  AND  status_code BETWEEN 200 AND 299
-	  AND  timestamp >= now() - INTERVAL '1 hour'
+	  AND  timestamp >= now() - INTERVAL '1' HOUR
 	GROUP  BY source_ip
 	HAVING COUNT(*) >= 50
 	ORDER  BY cnt DESC
@@ -1126,7 +1126,7 @@ func scanDataExfil(row *sql.Row) (models.Incident, bool, error) {
 const geoAnomalySQL = `
 	SELECT source_ip, COUNT(DISTINCT user_agent) AS agents
 	FROM   raw_events
-	WHERE  timestamp >= now() - INTERVAL '10 minutes'
+	WHERE  timestamp >= now() - INTERVAL '10' MINUTE
 	  AND  user_agent != ''
 	GROUP  BY source_ip
 	HAVING COUNT(DISTINCT user_agent) >= 3
@@ -1181,7 +1181,7 @@ func (s *Store) GetEventStats() (*EventStats, error) {
 	_ = s.roDB.QueryRow(`SELECT COUNT(*) FROM raw_events`).Scan(&stats.TotalEvents)
 	_ = s.roDB.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE blocked = true`).Scan(&stats.BlockedEvents)
 	_ = s.roDB.QueryRow(`SELECT COUNT(DISTINCT source_ip) FROM raw_events`).Scan(&stats.UniqueIPs)
-	_ = s.roDB.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE timestamp >= now() - INTERVAL '1 hour'`).Scan(&stats.EventsLastHour)
+	_ = s.roDB.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE timestamp >= now() - INTERVAL '1' HOUR`).Scan(&stats.EventsLastHour)
 
 	rows, err := s.roDB.Query(`
 		SELECT severity, COUNT(*) AS cnt
@@ -1221,7 +1221,7 @@ func (s *Store) GetEventStats() (*EventStats, error) {
 	tRows, err := s.roDB.Query(`
 		SELECT date_trunc('minute', timestamp) AS minute, COUNT(*) AS cnt
 		FROM   raw_events
-		WHERE  timestamp >= now() - INTERVAL '1 hour'
+		WHERE  timestamp >= now() - INTERVAL '1' HOUR
 		GROUP  BY date_trunc('minute', timestamp)
 		ORDER  BY minute
 	`)

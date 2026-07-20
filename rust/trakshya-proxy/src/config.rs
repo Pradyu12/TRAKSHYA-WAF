@@ -165,7 +165,16 @@ impl Config {
             .unwrap_or_else(|_| "/etc/trakshya/config.yaml".to_string());
 
         if let Ok(content) = std::fs::read_to_string(&config_path) {
-            let cfg: Config = serde_yaml::from_str(&content)?;
+            let mut cfg: Config = serde_yaml::from_str(&content)?;
+            if let Ok(url) = std::env::var("TRAKSHYA_MGMT_API_URL") {
+                cfg.proxy.management_api_url = url;
+            }
+            if let Ok(url) = std::env::var("TRAKSHYA_UPSTREAM_URL") {
+                cfg.proxy.upstream_url = url;
+            }
+            if let Ok(port) = std::env::var("TRAKSHYA_PROXY_PORT") {
+                cfg.proxy.port = port.parse()?;
+            }
             return Ok(cfg);
         }
 
@@ -194,7 +203,7 @@ pub struct AppState {
 impl AppState {
     pub fn new(cfg: &Config) -> anyhow::Result<Self> {
         let db_config = duckdb::Config::default()
-            .access_mode(duckdb::AccessMode::READ_ONLY)?;
+            .access_mode(duckdb::AccessMode::ReadOnly)?;
         let conn = duckdb::Connection::open_with_flags(&cfg.database_path, db_config)?;
 
         let (tx, _rx) = tokio::sync::broadcast::channel(100);

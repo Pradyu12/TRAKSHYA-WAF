@@ -1,6 +1,6 @@
 use crate::config::AppState;
 use crate::db::{
-    DashboardStats, GeoData, Incident, SIEMAStats,
+    DashboardStats, GeoData, Incident, Rule, SIEMAStats,
     VulnStats,
 };
 use axum::{
@@ -184,7 +184,7 @@ async fn set_posture(
     cfg.proxy.posture = posture;
 
     Ok(Json(
-        serde_json::json!{"status": "ok", "posture": format!("{:?}", posture)},
+        serde_json::json!({"status": "ok", "posture": format!("{:?}", posture)}),
     ))
 }
 
@@ -234,7 +234,7 @@ async fn get_dashboard_stats(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?;
 
@@ -255,13 +255,13 @@ async fn get_geo(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?;
     Ok(Json(data))
@@ -281,13 +281,13 @@ async fn get_siem_stats(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?;
     Ok(Json(stats))
@@ -316,13 +316,13 @@ async fn get_siem_alerts(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?;
     Ok(Json(
@@ -362,13 +362,13 @@ async fn get_rules(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?;
     Ok(Json(rules))
@@ -482,13 +482,13 @@ async fn get_blacklist(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?;
     Ok(Json(
@@ -567,13 +567,13 @@ async fn get_vuln_stats(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?;
     Ok(Json(stats))
@@ -593,13 +593,13 @@ async fn get_vulns(
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!{"error": e.to_string()}),
+            Json(serde_json::json!({"error": e.to_string()})),
         )
     })?;
     Ok(Json(vulns))
