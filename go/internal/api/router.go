@@ -131,6 +131,7 @@ func NewRouter(cfg *Config, store *db.Store, sqliteStore *db.SQLiteStore, metric
 		r.Post("/simulate-attack", srv.simulateAttack)
 
 		r.Get("/stream", srv.streamTelemetry)
+		r.Get("/logs/stream", srv.streamLogs)
 		r.Get("/ws", srv.handleWebSocket)
 	})
 

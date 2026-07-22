@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/trakshya/trakshya-api/internal/db"
 	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
@@ -315,6 +316,64 @@ func (s *Server) streamTelemetry(w http.ResponseWriter, r *http.Request) {
 			})
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
+		}
+	}
+}
+
+func (s *Server) streamLogs(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	notify := r.Context().Done()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	// send initial batch
+	initial, err := s.db.GetRecentEvents(50)
+	if err == nil && len(initial) > 0 {
+		data, _ := json.Marshal(map[string]interface{}{
+			"events": initial,
+			"init":   true,
+		})
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+	}
+
+	var lastTs time.Time
+	if len(initial) > 0 {
+		lastTs = initial[0].Timestamp
+	}
+
+	for {
+		select {
+		case <-notify:
+			return
+		case <-ticker.C:
+			events, err := s.db.GetRecentEvents(100)
+			if err != nil {
+				continue
+			}
+			var newEvents []db.RawEvent
+			for _, e := range events {
+				if e.Timestamp.After(lastTs) {
+					newEvents = append(newEvents, e)
+				}
+			}
+			if len(newEvents) > 0 {
+				lastTs = newEvents[0].Timestamp
+				data, _ := json.Marshal(map[string]interface{}{
+					"events": newEvents,
+				})
+				fmt.Fprintf(w, "data: %s\n\n", data)
+				flusher.Flush()
+			}
 		}
 	}
 }

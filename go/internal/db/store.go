@@ -1453,3 +1453,39 @@ func (s *Store) PruneOldEvents(retentionDays int) (int64, error) {
 	}
 	return deleted, nil
 }
+
+func (s *Store) GetRecentEvents(limit int) ([]RawEvent, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := s.db.Query(`
+		SELECT timestamp, source_ip, destination_ip, method, host, path, query,
+		       status_code, country, attack_type, rule_name, action, blocked,
+		       bytes_sent, bytes_received, latency_ms, user_agent
+		FROM   raw_events
+		ORDER  BY timestamp DESC
+		LIMIT  $1
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []RawEvent
+	for rows.Next() {
+		var e RawEvent
+		if err := rows.Scan(
+			&e.Timestamp, &e.SourceIP, &e.DestinationIP, &e.Method, &e.Host,
+			&e.Path, &e.Query, &e.StatusCode, &e.Country, &e.AttackType,
+			&e.RuleName, &e.Action, &e.Blocked, &e.BytesSent, &e.BytesReceived,
+			&e.LatencyMs, &e.UserAgent,
+		); err != nil {
+			continue
+		}
+		events = append(events, e)
+	}
+	if events == nil {
+		events = []RawEvent{}
+	}
+	return events, nil
+}
