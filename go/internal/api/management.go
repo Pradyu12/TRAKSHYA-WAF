@@ -221,7 +221,9 @@ func (s *Server) setMitigationPosture(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.cfgMu.Lock()
 	s.cfg.Posture = internal
+	s.cfgMu.Unlock()
 	s.json(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"posture": internal,
@@ -298,6 +300,9 @@ func (s *Server) streamTelemetry(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			cpu, memMB := readLiveMetrics()
+			s.cfgMu.RLock()
+			posture := s.cfg.Posture
+			s.cfgMu.RUnlock()
 			data, _ := json.Marshal(map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"total_ingress": stats.TotalRequests,
@@ -305,7 +310,7 @@ func (s *Server) streamTelemetry(w http.ResponseWriter, r *http.Request) {
 					"cpu_percent":   cpu,
 					"memory_mb":     memMB,
 				},
-				"posture":          s.cfg.Posture,
+				"posture":          posture,
 				"recent_incidents": stats.RecentIncidents,
 			})
 			fmt.Fprintf(w, "data: %s\n\n", data)
@@ -326,6 +331,11 @@ func (s *Server) simulateAttack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.AttackType == "" {
+		s.errorJSON(w, http.StatusBadRequest, "attack_type is required")
+		return
+	}
+
 	inc := models.Incident{
 		ID:         uuid.New().String(),
 		AttackType: req.AttackType,
@@ -342,6 +352,10 @@ func (s *Server) simulateAttack(w http.ResponseWriter, r *http.Request) {
 		s.errorJSON(w, http.StatusInternalServerError, "failed to record simulated incident")
 		return
 	}
+
+	s.db.CreateIncident(&inc)
+	s.metrics.IncidentsTotal.Inc()
+	BroadcastIncident(inc)
 
 	s.json(w, http.StatusOK, map[string]interface{}{
 		"status":   "simulated",

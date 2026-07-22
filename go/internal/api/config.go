@@ -6,6 +6,8 @@ import (
 )
 
 func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
+	s.cfgMu.RLock()
+	defer s.cfgMu.RUnlock()
 	s.json(w, http.StatusOK, map[string]interface{}{
 		"proxy_port":      s.cfg.ProxyPort,
 		"upstream_url":    s.cfg.UpstreamURL,
@@ -22,16 +24,29 @@ func (s *Server) updateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, ok := updates["upstream_url"].(string); ok {
+		s.cfgMu.Lock()
 		s.cfg.UpstreamURL = v
+		s.cfgMu.Unlock()
 	}
 	if v, ok := updates["posture"].(string); ok {
-		s.cfg.Posture = v
+		validPostures := map[string]bool{
+			"monitor":      true,
+			"standard":     true,
+			"under_attack": true,
+		}
+		if validPostures[v] {
+			s.cfgMu.Lock()
+			s.cfg.Posture = v
+			s.cfgMu.Unlock()
+		}
 	}
 
 	s.json(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) getPosture(w http.ResponseWriter, r *http.Request) {
+	s.cfgMu.RLock()
+	defer s.cfgMu.RUnlock()
 	s.json(w, http.StatusOK, map[string]string{
 		"posture": s.cfg.Posture,
 	})
@@ -57,7 +72,9 @@ func (s *Server) setPosture(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.cfgMu.Lock()
 	s.cfg.Posture = body.Posture
+	s.cfgMu.Unlock()
 	s.json(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"posture": body.Posture,

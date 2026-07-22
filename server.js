@@ -387,8 +387,8 @@ function handleRequest(req, res) {
     req.on('close', () => clearInterval(interval));
     return;
   }
-  if (pathname === '/ws') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
+  if (pathname === '/api/ws') {
+    res.writeHead(101, { 'Content-Type': 'text/plain' });
     res.end('WebSocket endpoint (mock)');
     return;
   }

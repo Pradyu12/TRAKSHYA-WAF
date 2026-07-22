@@ -1,8 +1,9 @@
 const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, nativeImage } = require('electron');
-const { execFile, spawn } = require('child_process');
+const { execFile } = require('child_process');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
 
 const BACKENDS = {
   api: { bin: 'trakshya-api', port: 8000, args: ['--config', '../config/trakshya.yaml'] },

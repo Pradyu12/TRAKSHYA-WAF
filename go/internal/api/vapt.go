@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -48,17 +49,6 @@ func (s *Server) listVaptScans(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) startVaptScan(w http.ResponseWriter, r *http.Request) {
-	vaptMu.Lock()
-	if activeVaptScan != "" {
-		vaptMu.Unlock()
-		s.json(w, http.StatusConflict, map[string]string{
-			"error":   "vapt scan already in progress",
-			"scan_id": activeVaptScan,
-		})
-		return
-	}
-	vaptMu.Unlock()
-
 	var req struct {
 		Target string `json:"target"`
 	}
@@ -72,15 +62,30 @@ func (s *Server) startVaptScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scanID := uuid.New().String()
+	if err := scanner.ValidateScanTarget(req.Target); err != nil {
+		s.errorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	vaptMu.Lock()
+	if activeVaptScan != "" {
+		vaptMu.Unlock()
+		s.json(w, http.StatusConflict, map[string]string{
+			"error":   "vapt scan already in progress",
+			"scan_id": activeVaptScan,
+		})
+		return
+	}
+
+	scanID := uuid.New().String()
 	activeVaptScan = scanID
 	vaptMu.Unlock()
 
 	scan := &models.VaptScan{
-		ID:     scanID,
-		Status: "running",
-		Target: req.Target,
+		ID:        scanID,
+		Status:    "running",
+		Target:    req.Target,
+		StartedAt: time.Now().UTC(),
 	}
 	if err := s.db.CreateVaptScan(scan); err != nil {
 		log.Printf("Failed to create vapt scan: %v", err)

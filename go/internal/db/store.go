@@ -13,18 +13,23 @@ import (
 )
 
 type RawEvent struct {
-	Timestamp   time.Time
-	SourceIP    string
-	Method      string
-	Path        string
-	Query       string
-	StatusCode  int
-	Blocked     bool
-	AttackType  string
-	RuleMatched string
-	Severity    string
-	ResponseMs  float64
-	UserAgent   string
+	Timestamp     time.Time
+	SourceIP      string
+	DestinationIP string
+	Method        string
+	Host          string
+	Path          string
+	Query         string
+	StatusCode    int
+	Country       string
+	AttackType    string
+	RuleName      string
+	Action        string
+	Blocked       bool
+	BytesSent     int64
+	BytesReceived int64
+	LatencyMs     int
+	UserAgent     string
 }
 
 func boolInt(v bool) int {
@@ -34,7 +39,6 @@ func boolInt(v bool) int {
 
 type Store struct {
 	db         *sql.DB           // single write connection (DuckDB constraint)
-	roDB       *sql.DB           // read-only pool for dashboard queries
 	writeCh    chan RawEvent      // buffered ingestion channel
 	flushMu    sync.Mutex
 	flushTimer *time.Ticker
@@ -49,12 +53,6 @@ func NewStore(dbPath string, onIncident func(*models.Incident)) (*Store, error) 
 	}
 	db.SetMaxOpenConns(1) // enforce single writer
 
-	roDB, err := sql.Open("duckdb", dbPath+"?access_mode=READ_ONLY")
-	if err != nil {
-		return nil, fmt.Errorf("failed to open duckdb read-only: %w", err)
-	}
-	roDB.SetMaxOpenConns(4)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
@@ -63,7 +61,6 @@ func NewStore(dbPath string, onIncident func(*models.Incident)) (*Store, error) 
 
 	s := &Store{
 		db:         db,
-		roDB:       roDB,
 		writeCh:    make(chan RawEvent, 8192),
 		flushSize:  1000,
 		onIncident: onIncident,
@@ -83,7 +80,6 @@ func (s *Store) Close() {
 	s.flushTimer.Stop()
 	s.drainBuffer()
 	s.db.Close()
-	s.roDB.Close()
 }
 
 func (s *Store) IsHealthy() bool {
@@ -208,18 +204,23 @@ func (s *Store) runMigrations() error {
 		`CREATE INDEX IF NOT EXISTS idx_vapt_findings_severity ON vapt_findings(severity)`,
 		// Analytics tables
 		`CREATE TABLE IF NOT EXISTS raw_events (
-			timestamp    TIMESTAMPTZ NOT NULL,
-			source_ip    VARCHAR NOT NULL,
-			method       VARCHAR NOT NULL DEFAULT '',
-			path         VARCHAR NOT NULL DEFAULT '',
-			query        VARCHAR NOT NULL DEFAULT '',
-			status_code  INTEGER NOT NULL DEFAULT 0,
-			blocked      BOOLEAN NOT NULL DEFAULT false,
-			attack_type  VARCHAR NOT NULL DEFAULT '',
-			rule_matched VARCHAR NOT NULL DEFAULT '',
-			severity     VARCHAR NOT NULL DEFAULT '',
-			response_ms  DOUBLE NOT NULL DEFAULT 0,
-			user_agent   VARCHAR NOT NULL DEFAULT ''
+			timestamp      TIMESTAMPTZ NOT NULL,
+			source_ip      VARCHAR NOT NULL,
+			destination_ip VARCHAR NOT NULL DEFAULT '',
+			method         VARCHAR NOT NULL DEFAULT '',
+			host           VARCHAR NOT NULL DEFAULT '',
+			path           VARCHAR NOT NULL DEFAULT '',
+			query          VARCHAR NOT NULL DEFAULT '',
+			status_code    INTEGER NOT NULL DEFAULT 0,
+			country        VARCHAR NOT NULL DEFAULT '',
+			attack_type    VARCHAR NOT NULL DEFAULT '',
+			rule_name      VARCHAR NOT NULL DEFAULT '',
+			action         VARCHAR NOT NULL DEFAULT '',
+			blocked        BOOLEAN NOT NULL DEFAULT false,
+			bytes_sent     BIGINT NOT NULL DEFAULT 0,
+			bytes_received BIGINT NOT NULL DEFAULT 0,
+			latency_ms     INTEGER NOT NULL DEFAULT 0,
+			user_agent     VARCHAR NOT NULL DEFAULT ''
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_re_ts ON raw_events(timestamp)`,
 		`CREATE INDEX IF NOT EXISTS idx_re_ip_ts ON raw_events(source_ip, timestamp)`,
@@ -246,7 +247,7 @@ func (s *Store) CreateIncident(inc *models.Incident) error {
 }
 
 func (s *Store) ListIncidents() ([]models.Incident, error) {
-	rows, err := s.roDB.Query(
+	rows, err := s.db.Query(
 		`SELECT id, incident_type, rule_id, attack_type, client_ip, path, method, severity, message, source, timestamp, acknowledged
 		FROM incidents ORDER BY timestamp DESC LIMIT 100`,
 	)
@@ -286,7 +287,26 @@ func (s *Store) CreateAgent(agent *models.Agent) error {
 }
 
 func (s *Store) ListAgents() ([]models.Agent, error) {
-	return nil, fmt.Errorf("not implemented for duckdb schema")
+	rows, err := s.db.Query(`SELECT key, value FROM system_config WHERE key LIKE 'agent:%'`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var agents []models.Agent
+	for rows.Next() {
+		var key, name string
+		if err := rows.Scan(&key, &name); err != nil {
+			continue
+		}
+		agentID := key[len("agent:"):]
+		agents = append(agents, models.Agent{
+			ID:     agentID,
+			Name:   name,
+			Status: "unknown",
+		})
+	}
+	return agents, nil
 }
 
 // ── Rule CRUD ───────────────────────────────────────────────────────────────
@@ -301,7 +321,7 @@ func (s *Store) CreateRule(r *models.Rule) error {
 }
 
 func (s *Store) ListRules() ([]models.Rule, error) {
-	rows, err := s.roDB.Query(`SELECT id, pattern, severity, category, description, enabled, created_at, updated_at FROM rules ORDER BY created_at DESC`)
+	rows, err := s.db.Query(`SELECT id, pattern, severity, category, description, enabled, created_at FROM rules ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +373,7 @@ func (s *Store) CreateBlacklistEntry(entry *models.BlacklistEntry) error {
 }
 
 func (s *Store) ListBlacklist() ([]models.BlacklistEntry, error) {
-	rows, err := s.roDB.Query("SELECT id, ip, reason, created_at FROM blacklist ORDER BY created_at DESC")
+	rows, err := s.db.Query("SELECT id, ip, reason, created_at FROM blacklist ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -386,10 +406,10 @@ func (s *Store) DeleteBlacklistEntry(ip string) error {
 
 func (s *Store) GetSIEMStats() (*models.SIEMStats, error) {
 	stats := &models.SIEMStats{BySeverity: make(map[string]int), ByType: make(map[string]int)}
-	if err := s.roDB.QueryRow("SELECT COUNT(*) FROM incidents").Scan(&stats.Total); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM incidents").Scan(&stats.Total); err != nil {
 		return nil, err
 	}
-	rows, err := s.roDB.Query("SELECT severity, COUNT(*) as cnt FROM incidents GROUP BY severity")
+	rows, err := s.db.Query("SELECT severity, COUNT(*) as cnt FROM incidents GROUP BY severity")
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -401,14 +421,14 @@ func (s *Store) GetSIEMStats() (*models.SIEMStats, error) {
 			stats.BySeverity[sev] = cnt
 		}
 	}
-	if err := s.roDB.QueryRow("SELECT COUNT(*) FROM incidents WHERE acknowledged = 0").Scan(&stats.Unacknowledged); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM incidents WHERE acknowledged = 0").Scan(&stats.Unacknowledged); err != nil {
 		return nil, err
 	}
 	return stats, nil
 }
 
 func (s *Store) GetSIEMAlerts(limit int) ([]models.SIEMAlert, error) {
-	rows, err := s.roDB.Query(`SELECT id, rule_id, severity, message, client_ip, path, timestamp, acknowledged FROM incidents ORDER BY timestamp DESC LIMIT $1`, limit)
+	rows, err := s.db.Query(`SELECT id, rule_id, severity, message, client_ip, path, timestamp, acknowledged FROM incidents ORDER BY timestamp DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -431,23 +451,33 @@ func (s *Store) GetSIEMAlerts(limit int) ([]models.SIEMAlert, error) {
 	return alerts, nil
 }
 
-func (s *Store) AckSIEMAlert(id int) error {
-	_, err := s.db.Exec("UPDATE incidents SET acknowledged = 1, acked_at = NOW(), acked_by = 'siem' WHERE id = $1", id)
-	return err
+func (s *Store) AckSIEMAlert(id string) error {
+	result, err := s.db.Exec("UPDATE incidents SET acknowledged = 1, acked_at = NOW(), acked_by = 'siem' WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("alert not found: %s", id)
+	}
+	return nil
 }
 
 // ── Dashboard ───────────────────────────────────────────────────────────────
 
 func (s *Store) GetDashboardStats() (*models.DashboardStats, error) {
 	stats := &models.DashboardStats{}
-	s.roDB.QueryRow("SELECT COUNT(*) FROM incidents").Scan(&stats.TotalRequests)
-	s.roDB.QueryRow("SELECT COUNT(*) FROM incidents WHERE severity IN ('critical', 'high')").Scan(&stats.BlockedRequests)
-	s.roDB.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM incidents WHERE timestamp > NOW() - INTERVAL '1' HOUR").Scan(&stats.ActiveIPs)
-	s.roDB.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > CURRENT_TIMESTAMP - INTERVAL '1' DAY").Scan(&stats.IncidentsToday)
-	s.roDB.QueryRow("SELECT COUNT(*) FROM system_config").Scan(&stats.AgentsOnline)
-	s.roDB.QueryRow("SELECT COUNT(*) FROM rules WHERE enabled = 1").Scan(&stats.RuleCount)
+	s.db.QueryRow("SELECT COALESCE(SUM(request_count), 0) FROM request_stats").Scan(&stats.TotalRequests)
+	s.db.QueryRow("SELECT COALESCE(SUM(blocked_count), 0) FROM request_stats").Scan(&stats.BlockedRequests)
+	s.db.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM request_stats WHERE last_seen > NOW() - INTERVAL '1' HOUR").Scan(&stats.ActiveIPs)
+	s.db.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > now()::TIMESTAMP - INTERVAL '1' DAY").Scan(&stats.IncidentsToday)
+	s.db.QueryRow("SELECT COUNT(*) FROM system_config").Scan(&stats.AgentsOnline)
+	s.db.QueryRow("SELECT COUNT(*) FROM rules WHERE enabled = 1").Scan(&stats.RuleCount)
 
-	rows, err := s.roDB.Query(`SELECT attack_type, COUNT(*) as cnt FROM incidents WHERE attack_type != '' GROUP BY attack_type ORDER BY cnt DESC LIMIT 10`)
+	rows, err := s.db.Query(`SELECT attack_type, COUNT(*) as cnt FROM incidents WHERE attack_type != '' GROUP BY attack_type ORDER BY cnt DESC LIMIT 10`)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -469,7 +499,7 @@ func (s *Store) GetDashboardStats() (*models.DashboardStats, error) {
 // ── Geo ─────────────────────────────────────────────────────────────────────
 
 func (s *Store) GetGeoData() (*models.GeoStats, error) {
-	rows, err := s.roDB.Query(`SELECT client_ip, COUNT(*) as cnt, MAX(timestamp) as last_seen FROM incidents WHERE client_ip != '' GROUP BY client_ip ORDER BY cnt DESC LIMIT 100`)
+	rows, err := s.db.Query(`SELECT client_ip, request_count as cnt, last_seen FROM request_stats WHERE client_ip != '' ORDER BY request_count DESC LIMIT 100`)
 	if err != nil {
 		return nil, err
 	}
@@ -518,7 +548,7 @@ func (s *Store) UpdateVulnScan(scan *models.VulnScan) error {
 func (s *Store) GetVulnScan(id string) (*models.VulnScan, error) {
 	var scan models.VulnScan
 	query := `SELECT id, status, target, started_at, completed_at, total_pkgs, total_cves FROM vuln_scans WHERE id=$1`
-	err := s.roDB.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalPkgs, &scan.TotalCVEs)
+	err := s.db.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalPkgs, &scan.TotalCVEs)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -534,7 +564,7 @@ func (s *Store) ListVulnScans(limit int) ([]models.VulnScan, error) {
 		limit = 20
 	}
 	query := `SELECT id, status, target, started_at, completed_at, total_pkgs, total_cves FROM vuln_scans ORDER BY started_at DESC LIMIT $1`
-	rows, err := s.roDB.Query(query, limit)
+	rows, err := s.db.Query(query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -565,7 +595,7 @@ func (s *Store) ListVulnFindings(scanID string) ([]models.VulnFinding, error) {
 	query := `SELECT id, scan_id, package, installed_version, available_version, severity, cve, description, category
 		FROM vuln_findings WHERE scan_id=$1 ORDER BY
 		CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`
-	rows, err := s.roDB.Query(query, scanID)
+	rows, err := s.db.Query(query, scanID)
 	if err != nil {
 		return nil, err
 	}
@@ -592,7 +622,7 @@ func (s *Store) ListAllVulnFindings() ([]models.VulnFinding, error) {
 		WHERE s.id = (SELECT id FROM vuln_scans ORDER BY started_at DESC LIMIT 1)
 		ORDER BY
 		CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`
-	rows, err := s.roDB.Query(query)
+	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -621,7 +651,7 @@ func (s *Store) GetVulnStats() (*models.VulnStats, error) {
 	var lastScanID, lastStatus string
 	var lastStarted sql.NullTime
 	var lastPkgs, lastCVEs int
-	err := s.roDB.QueryRow(lastScanQuery).Scan(&lastScanID, &lastStatus, &lastStarted, &lastPkgs, &lastCVEs)
+	err := s.db.QueryRow(lastScanQuery).Scan(&lastScanID, &lastStatus, &lastStarted, &lastPkgs, &lastCVEs)
 	if err == nil {
 		stats.LastScanStatus = lastStatus
 		stats.TotalPackages = lastPkgs
@@ -634,7 +664,7 @@ func (s *Store) GetVulnStats() (*models.VulnStats, error) {
 	sevQuery := `SELECT severity, COUNT(*) FROM vuln_findings
 		WHERE scan_id = (SELECT id FROM vuln_scans ORDER BY started_at DESC LIMIT 1)
 		GROUP BY severity`
-	rows, err := s.roDB.Query(sevQuery)
+	rows, err := s.db.Query(sevQuery)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -689,7 +719,7 @@ func (s *Store) UpdateVaptScan(scan *models.VaptScan) error {
 func (s *Store) GetVaptScan(id string) (*models.VaptScan, error) {
 	var scan models.VaptScan
 	query := `SELECT id, status, target, started_at, completed_at, total_probes FROM vapt_scans WHERE id=$1`
-	err := s.roDB.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalProbes)
+	err := s.db.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalProbes)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -705,7 +735,7 @@ func (s *Store) ListVaptScans(limit int) ([]models.VaptScan, error) {
 		limit = 20
 	}
 	query := `SELECT id, status, target, started_at, completed_at, total_probes FROM vapt_scans ORDER BY started_at DESC LIMIT $1`
-	rows, err := s.roDB.Query(query, limit)
+	rows, err := s.db.Query(query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -736,7 +766,7 @@ func (s *Store) ListVaptFindings(scanID string) ([]models.VaptFinding, error) {
 	query := `SELECT id, scan_id, category, severity, title, description, evidence, remediation
 		FROM vapt_findings WHERE scan_id=$1 ORDER BY
 		CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`
-	rows, err := s.roDB.Query(query, scanID)
+	rows, err := s.db.Query(query, scanID)
 	if err != nil {
 		return nil, err
 	}
@@ -763,7 +793,7 @@ func (s *Store) ListAllVaptFindings() ([]models.VaptFinding, error) {
 		WHERE s.id = (SELECT id FROM vapt_scans ORDER BY started_at DESC LIMIT 1)
 		ORDER BY
 		CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`
-	rows, err := s.roDB.Query(query)
+	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -790,7 +820,7 @@ func (s *Store) GetVaptStats() (*models.VaptStats, error) {
 	var lastScanID, lastStatus string
 	var lastStarted sql.NullTime
 	var lastProbes int
-	err := s.roDB.QueryRow(lastScanQuery).Scan(&lastScanID, &lastStatus, &lastStarted, &lastProbes)
+	err := s.db.QueryRow(lastScanQuery).Scan(&lastScanID, &lastStatus, &lastStarted, &lastProbes)
 	if err == nil {
 		stats.LastScanStatus = lastStatus
 		stats.TotalProbes = lastProbes
@@ -802,7 +832,7 @@ func (s *Store) GetVaptStats() (*models.VaptStats, error) {
 	sevQuery := `SELECT severity, COUNT(*) FROM vapt_findings
 		WHERE scan_id = (SELECT id FROM vapt_scans ORDER BY started_at DESC LIMIT 1)
 		GROUP BY severity`
-	rows, err := s.roDB.Query(sevQuery)
+	rows, err := s.db.Query(sevQuery)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -849,10 +879,10 @@ func (s *Store) RecordRequest(clientIP string, blocked bool) {
 	}
 	_, err := s.db.Exec(
 		`INSERT INTO request_stats (client_ip, request_count, blocked_count, last_seen)
-		 VALUES (?, 1, ?, CURRENT_TIMESTAMP)
+		 VALUES ($1, 1, $2, CURRENT_TIMESTAMP)
 		 ON CONFLICT(client_ip) DO UPDATE SET
 		     request_count = request_stats.request_count + 1,
-		     blocked_count = request_stats.blocked_count + ?,
+		     blocked_count = request_stats.blocked_count + $3,
 		     last_seen = CURRENT_TIMESTAMP`,
 		clientIP, blockedVal, blockedVal,
 	)
@@ -899,9 +929,9 @@ func (s *Store) writeBatch(batch []RawEvent) error {
 	}
 
 	stmt, err := tx.PrepareContext(ctx, `INSERT INTO raw_events
-		(timestamp, source_ip, method, path, query, status_code, blocked,
-		 attack_type, rule_matched, severity, response_ms, user_agent)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		(timestamp, source_ip, destination_ip, method, host, path, query, status_code, country,
+		 attack_type, rule_name, action, blocked, bytes_sent, bytes_received, latency_ms, user_agent)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("prepare: %w", err)
@@ -910,9 +940,9 @@ func (s *Store) writeBatch(batch []RawEvent) error {
 
 	for _, e := range batch {
 		if _, err := stmt.ExecContext(ctx,
-			e.Timestamp, e.SourceIP, e.Method, e.Path, e.Query,
-			e.StatusCode, e.Blocked, e.AttackType, e.RuleMatched,
-			e.Severity, e.ResponseMs, e.UserAgent,
+			e.Timestamp, e.SourceIP, e.DestinationIP, e.Method, e.Host, e.Path, e.Query,
+			e.StatusCode, e.Country, e.AttackType, e.RuleName, e.Action, e.Blocked,
+			e.BytesSent, e.BytesReceived, e.LatencyMs, e.UserAgent,
 		); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("exec insert: %w", err)
@@ -942,16 +972,19 @@ func (s *Store) RunCorrelationRules() []models.Incident {
 		{"rapid_scan", rapidScanSQL, scanRapidScan},
 		{"data_exfil", dataExfilSQL, scanDataExfil},
 		{"geo_anomaly", geoAnomalySQL, scanGeoAnomaly},
+		{"beaconing", beaconingSQL, scanBeaconing},
 	}
 
 	for _, c := range checks {
-		row := s.roDB.QueryRow(c.sql)
+		row := s.db.QueryRow(c.sql)
 		inc, found, err := c.fn(row)
 		if err != nil {
 			log.Printf("SIEM correlation error [%s]: %v", c.name, err)
 			continue
 		}
 		if found {
+			inc.ID = fmt.Sprintf("siem-%s-%d", c.name, time.Now().UnixNano())
+			s.CreateIncident(&inc)
 			incidents = append(incidents, inc)
 			if s.onIncident != nil {
 				s.onIncident(&inc)
@@ -966,7 +999,7 @@ const bruteForceSQL = `
 	SELECT source_ip, COUNT(*) AS cnt
 	FROM   raw_events
 	WHERE  blocked = true
-	  AND  timestamp >= now() - INTERVAL '5' MINUTE
+	  AND  timestamp >= now()::TIMESTAMP - INTERVAL '5' MINUTE
 	GROUP  BY source_ip
 	HAVING COUNT(*) >= 10
 	ORDER  BY cnt DESC
@@ -977,6 +1010,9 @@ func scanBruteForce(row *sql.Row) (models.Incident, bool, error) {
 	var ip string
 	var cnt int
 	if err := row.Scan(&ip, &cnt); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Incident{}, false, nil
+		}
 		return models.Incident{}, false, err
 	}
 	return models.Incident{
@@ -993,7 +1029,7 @@ func scanBruteForce(row *sql.Row) (models.Incident, bool, error) {
 const portScanSQL = `
 	SELECT source_ip, COUNT(DISTINCT path) AS paths
 	FROM   raw_events
-	WHERE  timestamp >= now() - INTERVAL '10' MINUTE
+	WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '10' MINUTE
 	GROUP  BY source_ip
 	HAVING COUNT(DISTINCT path) >= 15
 	ORDER  BY paths DESC
@@ -1004,6 +1040,9 @@ func scanPortScan(row *sql.Row) (models.Incident, bool, error) {
 	var ip string
 	var paths int
 	if err := row.Scan(&ip, &paths); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Incident{}, false, nil
+		}
 		return models.Incident{}, false, err
 	}
 	return models.Incident{
@@ -1021,12 +1060,15 @@ const xssWaveSQL = `
 	SELECT COUNT(*) AS cnt
 	FROM   raw_events
 	WHERE  attack_type = 'xss'
-	  AND  timestamp >= now() - INTERVAL '5' MINUTE
+	  AND  timestamp >= now()::TIMESTAMP - INTERVAL '5' MINUTE
 `
 
 func scanXssWave(row *sql.Row) (models.Incident, bool, error) {
 	var cnt int
 	if err := row.Scan(&cnt); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Incident{}, false, nil
+		}
 		return models.Incident{}, false, err
 	}
 	if cnt < 5 {
@@ -1046,12 +1088,15 @@ const sqliWaveSQL = `
 	SELECT COUNT(*) AS cnt
 	FROM   raw_events
 	WHERE  attack_type = 'sql_injection'
-	  AND  timestamp >= now() - INTERVAL '5' MINUTE
+	  AND  timestamp >= now()::TIMESTAMP - INTERVAL '5' MINUTE
 `
 
 func scanSqlWave(row *sql.Row) (models.Incident, bool, error) {
 	var cnt int
 	if err := row.Scan(&cnt); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Incident{}, false, nil
+		}
 		return models.Incident{}, false, err
 	}
 	if cnt < 5 {
@@ -1070,7 +1115,7 @@ func scanSqlWave(row *sql.Row) (models.Incident, bool, error) {
 const rapidScanSQL = `
 	SELECT source_ip, COUNT(*) AS cnt
 	FROM   raw_events
-	WHERE  timestamp >= now() - INTERVAL '10' SECOND
+	WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '10' SECOND
 	GROUP  BY source_ip
 	HAVING COUNT(*) >= 20
 	ORDER  BY cnt DESC
@@ -1081,6 +1126,9 @@ func scanRapidScan(row *sql.Row) (models.Incident, bool, error) {
 	var ip string
 	var cnt int
 	if err := row.Scan(&ip, &cnt); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Incident{}, false, nil
+		}
 		return models.Incident{}, false, err
 	}
 	return models.Incident{
@@ -1095,49 +1143,56 @@ func scanRapidScan(row *sql.Row) (models.Incident, bool, error) {
 }
 
 const dataExfilSQL = `
-	SELECT source_ip, COUNT(*) AS cnt
+	SELECT source_ip, SUM(bytes_sent) AS total_sent
 	FROM   raw_events
 	WHERE  blocked = false
 	  AND  status_code BETWEEN 200 AND 299
-	  AND  timestamp >= now() - INTERVAL '1' HOUR
+	  AND  timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR
 	GROUP  BY source_ip
-	HAVING COUNT(*) >= 50
-	ORDER  BY cnt DESC
+	HAVING SUM(bytes_sent) >= 100000000
+	ORDER  BY total_sent DESC
 	LIMIT  1
 `
 
 func scanDataExfil(row *sql.Row) (models.Incident, bool, error) {
 	var ip string
-	var cnt int
-	if err := row.Scan(&ip, &cnt); err != nil {
+	var total int64
+	if err := row.Scan(&ip, &total); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Incident{}, false, nil
+		}
 		return models.Incident{}, false, err
 	}
+	mb := float64(total) / (1024 * 1024)
 	return models.Incident{
 		Type:       "siem_alert",
 		AttackType: "data_exfiltration",
 		ClientIP:   ip,
 		Severity:   "high",
-		Message:    fmt.Sprintf("Possible exfiltration: %d successful requests from %s in 1h", cnt, ip),
+		Message:    fmt.Sprintf("Possible exfiltration: %.2f MB sent from %s in 1h", mb, ip),
 		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 	}, true, nil
 }
 
 const geoAnomalySQL = `
-	SELECT source_ip, COUNT(DISTINCT user_agent) AS agents
+	SELECT source_ip, COUNT(DISTINCT country) AS countries
 	FROM   raw_events
-	WHERE  timestamp >= now() - INTERVAL '10' MINUTE
-	  AND  user_agent != ''
+	WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '30' MINUTE
+	  AND  country != ''
 	GROUP  BY source_ip
-	HAVING COUNT(DISTINCT user_agent) >= 3
-	ORDER  BY agents DESC
+	HAVING COUNT(DISTINCT country) >= 3
+	ORDER  BY countries DESC
 	LIMIT  1
 `
 
 func scanGeoAnomaly(row *sql.Row) (models.Incident, bool, error) {
 	var ip string
-	var agents int
-	if err := row.Scan(&ip, &agents); err != nil {
+	var countries int
+	if err := row.Scan(&ip, &countries); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Incident{}, false, nil
+		}
 		return models.Incident{}, false, err
 	}
 	return models.Incident{
@@ -1145,9 +1200,47 @@ func scanGeoAnomaly(row *sql.Row) (models.Incident, bool, error) {
 		AttackType: "geo_anomaly",
 		ClientIP:   ip,
 		Severity:   "medium",
-		Message:    fmt.Sprintf("Geo anomaly: %s using %d distinct user-agents in 10m (possible spoofing)", ip, agents),
+		Message:    fmt.Sprintf("Geo anomaly: %s observed from %d distinct countries in 30m", ip, countries),
 		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
+	}, true, nil
+}
+
+const beaconingSQL = `
+	WITH grouped AS (
+		SELECT source_ip, host,
+			   COUNT(*) AS cnt,
+			   MIN(timestamp) AS first_seen,
+			   MAX(timestamp) AS last_seen
+		FROM   raw_events
+		WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '10' MINUTE
+		GROUP  BY source_ip, host
+		HAVING COUNT(*) >= 12
+	)
+	SELECT source_ip, host, cnt
+	FROM   grouped
+	ORDER  BY cnt DESC
+	LIMIT  1
+`
+
+func scanBeaconing(row *sql.Row) (models.Incident, bool, error) {
+	var ip, host string
+	var cnt int
+	if err := row.Scan(&ip, &host, &cnt); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Incident{}, false, nil
+		}
+		return models.Incident{}, false, err
+	}
+	return models.Incident{
+		Type:       "siem_alert",
+		AttackType: "beaconing",
+		ClientIP:   ip,
+		Severity:   "medium",
+		Message:    fmt.Sprintf("Beaconing: %d periodic requests from %s to %s in 10m", cnt, ip, host),
+		Source:     "duckdb-siem",
+		Timestamp:  time.Now(),
+		Path:       host,
 	}, true, nil
 }
 
@@ -1178,29 +1271,14 @@ func (s *Store) GetEventStats() (*EventStats, error) {
 		BySeverity: make(map[string]int64),
 	}
 
-	_ = s.roDB.QueryRow(`SELECT COUNT(*) FROM raw_events`).Scan(&stats.TotalEvents)
-	_ = s.roDB.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE blocked = true`).Scan(&stats.BlockedEvents)
-	_ = s.roDB.QueryRow(`SELECT COUNT(DISTINCT source_ip) FROM raw_events`).Scan(&stats.UniqueIPs)
-	_ = s.roDB.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE timestamp >= now() - INTERVAL '1' HOUR`).Scan(&stats.EventsLastHour)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM raw_events`).Scan(&stats.TotalEvents)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE blocked = true`).Scan(&stats.BlockedEvents)
+	_ = s.db.QueryRow(`SELECT COUNT(DISTINCT source_ip) FROM raw_events`).Scan(&stats.UniqueIPs)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR`).Scan(&stats.EventsLastHour)
 
-	rows, err := s.roDB.Query(`
-		SELECT severity, COUNT(*) AS cnt
-		FROM   raw_events
-		WHERE  severity != ''
-		GROUP  BY severity
-	`)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var sev string
-			var cnt int64
-			if rows.Scan(&sev, &cnt) == nil {
-				stats.BySeverity[sev] = cnt
-			}
-		}
-	}
+	stats.BySeverity = make(map[string]int64)
 
-	aRows, err := s.roDB.Query(`
+	aRows, err := s.db.Query(`
 		SELECT attack_type, COUNT(*) AS cnt
 		FROM   raw_events
 		WHERE  attack_type != ''
@@ -1218,10 +1296,10 @@ func (s *Store) GetEventStats() (*EventStats, error) {
 		}
 	}
 
-	tRows, err := s.roDB.Query(`
+	tRows, err := s.db.Query(`
 		SELECT date_trunc('minute', timestamp) AS minute, COUNT(*) AS cnt
 		FROM   raw_events
-		WHERE  timestamp >= now() - INTERVAL '1' HOUR
+		WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR
 		GROUP  BY date_trunc('minute', timestamp)
 		ORDER  BY minute
 	`)
@@ -1229,11 +1307,149 @@ func (s *Store) GetEventStats() (*EventStats, error) {
 		defer tRows.Close()
 		for tRows.Next() {
 			var tb TimeBucket
-			if tRows.Scan(&tb.Time, &tb.Count) == nil {
+			var t time.Time
+			if tRows.Scan(&t, &tb.Count) == nil {
+				tb.Time = t.UTC().Format(time.RFC3339)
 				stats.Timeline = append(stats.Timeline, tb)
 			}
 		}
 	}
 
 	return stats, nil
+}
+
+func (s *Store) GetTopAttackers(limit int) ([]AttackCount, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	rows, err := s.db.Query(`
+		SELECT source_ip, COUNT(*) AS cnt
+		FROM   raw_events
+		GROUP  BY source_ip
+		ORDER  BY cnt DESC
+		LIMIT  $1
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []AttackCount
+	for rows.Next() {
+		var ip string
+		var cnt int64
+		if err := rows.Scan(&ip, &cnt); err != nil {
+			continue
+		}
+		out = append(out, AttackCount{AttackType: ip, Count: cnt})
+	}
+	if out == nil {
+		out = []AttackCount{}
+	}
+	return out, nil
+}
+
+func (s *Store) GetTimeline() ([]TimeBucket, error) {
+	rows, err := s.db.Query(`
+		SELECT date_trunc('minute', timestamp) AS minute, COUNT(*) AS cnt
+		FROM   raw_events
+		WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR
+		GROUP  BY date_trunc('minute', timestamp)
+		ORDER  BY minute
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []TimeBucket
+	for rows.Next() {
+		var tb TimeBucket
+		var t time.Time
+		if err := rows.Scan(&t, &tb.Count); err != nil {
+			continue
+		}
+		tb.Time = t.UTC().Format(time.RFC3339)
+		out = append(out, tb)
+	}
+	if out == nil {
+		out = []TimeBucket{}
+	}
+	return out, nil
+}
+
+func (s *Store) GetCountryStats() ([]AttackCount, error) {
+	rows, err := s.db.Query(`
+		SELECT country, COUNT(*) AS cnt
+		FROM   raw_events
+		WHERE  country != ''
+		GROUP  BY country
+		ORDER  BY cnt DESC
+		LIMIT  20
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []AttackCount
+	for rows.Next() {
+		var c AttackCount
+		if err := rows.Scan(&c.AttackType, &c.Count); err != nil {
+			continue
+		}
+		out = append(out, c)
+	}
+	if out == nil {
+		out = []AttackCount{}
+	}
+	return out, nil
+}
+
+func (s *Store) GetRuleTriggers() ([]AttackCount, error) {
+	rows, err := s.db.Query(`
+		SELECT rule_name, COUNT(*) AS cnt
+		FROM   raw_events
+		WHERE  rule_name != ''
+		GROUP  BY rule_name
+		ORDER  BY cnt DESC
+		LIMIT  20
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []AttackCount
+	for rows.Next() {
+		var r AttackCount
+		if err := rows.Scan(&r.AttackType, &r.Count); err != nil {
+			continue
+		}
+		out = append(out, r)
+	}
+	if out == nil {
+		out = []AttackCount{}
+	}
+	return out, nil
+}
+
+func (s *Store) PruneOldEvents(retentionDays int) (int64, error) {
+	if retentionDays <= 0 {
+		retentionDays = 30
+	}
+
+	res, err := s.db.Exec(fmt.Sprintf(`
+		DELETE FROM raw_events
+		WHERE timestamp < now()::TIMESTAMP - INTERVAL '%d' DAY
+	`, retentionDays))
+	if err != nil {
+		return 0, fmt.Errorf("prune events delete: %w", err)
+	}
+	deleted, _ := res.RowsAffected()
+
+	if _, err := s.db.Exec(`VACUUM`); err != nil {
+		log.Printf("WARN: duckdb vacuum failed: %v", err)
+	}
+	return deleted, nil
 }

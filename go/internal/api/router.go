@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -29,11 +30,12 @@ type Config struct {
 }
 
 type Server struct {
-	cfg     *Config
-	db      *db.Store
+	cfg      *Config
+	db       *db.Store
 	sqliteDB *db.SQLiteStore
-	metrics *telemetry.Metrics
-	startAt time.Time
+	metrics  *telemetry.Metrics
+	startAt  time.Time
+	cfgMu    sync.RWMutex
 }
 
 func NewRouter(cfg *Config, store *db.Store, sqliteStore *db.SQLiteStore, metrics *telemetry.Metrics) http.Handler {
