@@ -70,69 +70,72 @@ func NewRouter(cfg *Config, store *db.Store, sqliteStore *db.SQLiteStore, metric
 	r.Get("/health", srv.healthCheck)
 
 	r.Route("/api", func(r chi.Router) {
-		r.Use(chimw.Timeout(30 * time.Second))
 		r.Use(srv.authMiddleware)
-
-		r.Get("/dashboard/stats", srv.getDashboardStats)
-
-		r.Get("/incidents", srv.listIncidents)
-		r.Post("/incidents", srv.createIncident)
-		r.Put("/incidents/{id}/acknowledge", srv.acknowledgeIncident)
-
-		r.Get("/config", srv.getConfig)
-		r.Put("/config", srv.updateConfig)
-
-		r.Get("/posture", srv.getPosture)
-		r.Put("/posture", srv.setPosture)
-
-		r.Get("/agents", srv.listAgents)
-		r.Post("/agents/register", srv.registerAgent)
-
-		r.Get("/rules", srv.listRules)
-		r.Post("/rules", srv.createRule)
-		r.Put("/rules/{id}/toggle", srv.toggleRule)
-		r.Delete("/rules/{id}", srv.deleteRule)
-
-		r.Get("/blacklist", srv.listBlacklist)
-		r.Post("/blacklist", srv.addBlacklist)
-		r.Delete("/blacklist/{ip}", srv.removeBlacklist)
-
-		r.Get("/siem/stats", srv.getSIEMStats)
-		r.Get("/siem/alerts", srv.listSIEMAlerts)
-		r.Post("/siem/alerts/{id}/ack", srv.ackSIEMAlert)
-
-		r.Get("/analytics/events", srv.getEventStats)
-		r.Post("/analytics/ingest", srv.ingestEvent)
-		r.Post("/analytics/request-stats", srv.recordRequestStats)
-		r.Get("/analytics/top_attackers", srv.getTopAttackers)
-		r.Get("/analytics/timeline", srv.getTimeline)
-		r.Get("/analytics/countries", srv.getCountryStats)
-		r.Get("/analytics/rules", srv.getRuleTriggers)
-
-		r.Get("/geo", srv.getGeoData)
-
-		r.Get("/vulns/stats", srv.getVulnStats)
-		r.Get("/vulns", srv.listVulnFindings)
-		r.Post("/vulns/scan", srv.startVulnScan)
-		r.Get("/vulns/scan/{id}", srv.getVulnScan)
-
-		r.Get("/vapt/stats", srv.getVaptStats)
-		r.Get("/vapt", srv.listVaptFindings)
-		r.Get("/vapt/scans", srv.listVaptScans)
-		r.Post("/vapt/scan", srv.startVaptScan)
-		r.Get("/vapt/scan/{id}", srv.getVaptScan)
-		r.Get("/vapt/scan/{id}/findings", srv.getVaptScanFindings)
-
-		r.Get("/mitigation-posture", srv.getPosture)
-		r.Post("/mitigation-posture", srv.setMitigationPosture)
-
-		r.Handle("/metrics", srv.metrics.Handler())
-
-		r.Post("/simulate-attack", srv.simulateAttack)
 
 		r.Get("/stream", srv.streamTelemetry)
 		r.Get("/logs/stream", srv.streamLogs)
 		r.Get("/ws", srv.handleWebSocket)
+
+		r.Group(func(r chi.Router) {
+			r.Use(chimw.Timeout(30 * time.Second))
+
+			r.Get("/dashboard/stats", srv.getDashboardStats)
+
+			r.Get("/incidents", srv.listIncidents)
+			r.Post("/incidents", srv.createIncident)
+			r.Put("/incidents/{id}/acknowledge", srv.acknowledgeIncident)
+
+			r.Get("/config", srv.getConfig)
+			r.Put("/config", srv.updateConfig)
+
+			r.Get("/posture", srv.getPosture)
+			r.Put("/posture", srv.setPosture)
+
+			r.Get("/agents", srv.listAgents)
+			r.Post("/agents/register", srv.registerAgent)
+
+			r.Get("/rules", srv.listRules)
+			r.Post("/rules", srv.createRule)
+			r.Put("/rules/{id}/toggle", srv.toggleRule)
+			r.Delete("/rules/{id}", srv.deleteRule)
+
+			r.Get("/blacklist", srv.listBlacklist)
+			r.Post("/blacklist", srv.addBlacklist)
+			r.Delete("/blacklist/{ip}", srv.removeBlacklist)
+
+			r.Get("/siem/stats", srv.getSIEMStats)
+			r.Get("/siem/alerts", srv.listSIEMAlerts)
+			r.Post("/siem/alerts/{id}/ack", srv.ackSIEMAlert)
+
+			r.Get("/analytics/events", srv.getEventStats)
+			r.Post("/analytics/ingest", srv.ingestEvent)
+			r.Post("/analytics/request-stats", srv.recordRequestStats)
+			r.Get("/analytics/top_attackers", srv.getTopAttackers)
+			r.Get("/analytics/timeline", srv.getTimeline)
+			r.Get("/analytics/countries", srv.getCountryStats)
+			r.Get("/analytics/rules", srv.getRuleTriggers)
+
+			r.Get("/geo", srv.getGeoData)
+
+			r.Get("/vulns/stats", srv.getVulnStats)
+			r.Get("/vulns", srv.listVulnFindings)
+			r.Post("/vulns/scan", srv.startVulnScan)
+			r.Get("/vulns/scan/{id}", srv.getVulnScan)
+
+			r.Get("/vapt/stats", srv.getVaptStats)
+			r.Get("/vapt", srv.listVaptFindings)
+			r.Get("/vapt/scans", srv.listVaptScans)
+			r.Post("/vapt/scan", srv.startVaptScan)
+			r.Get("/vapt/scan/{id}", srv.getVaptScan)
+			r.Get("/vapt/scan/{id}/findings", srv.getVaptScanFindings)
+
+			r.Get("/mitigation-posture", srv.getPosture)
+			r.Post("/mitigation-posture", srv.setMitigationPosture)
+
+			r.Handle("/metrics", srv.metrics.Handler())
+
+			r.Post("/simulate-attack", srv.simulateAttack)
+		})
 	})
 
 	if srv.cfg.FrontendDir != "" {
