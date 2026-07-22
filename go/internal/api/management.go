@@ -134,6 +134,7 @@ func (s *Server) addBlacklist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entry := &models.BlacklistEntry{
+		ID:        uuid.New().String(),
 		IPAddress: body.IPAddress,
 		Reason:    body.Reason,
 	}
@@ -190,13 +191,7 @@ func (s *Server) ackSIEMAlert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var intID int
-	if _, err := fmt.Sscanf(id, "%d", &intID); err != nil {
-		s.errorJSON(w, http.StatusBadRequest, "invalid alert id")
-		return
-	}
-
-	if err := s.db.AckSIEMAlert(intID); err != nil {
+	if err := s.db.AckSIEMAlert(id); err != nil {
 		s.errorJSON(w, http.StatusNotFound, "alert not found")
 		return
 	}
@@ -222,7 +217,8 @@ func (s *Server) setMitigationPosture(w http.ResponseWriter, r *http.Request) {
 
 	internal, ok := postureMap[body.Posture]
 	if !ok {
-		internal = body.Posture
+		s.errorJSON(w, http.StatusBadRequest, "invalid posture. use: Monitor Only, Standard Posture, or Under Attack")
+		return
 	}
 
 	s.cfg.Posture = internal
@@ -309,10 +305,47 @@ func (s *Server) streamTelemetry(w http.ResponseWriter, r *http.Request) {
 					"cpu_percent":   cpu,
 					"memory_mb":     memMB,
 				},
-				"posture": s.cfg.Posture,
+				"posture":          s.cfg.Posture,
+				"recent_incidents": stats.RecentIncidents,
 			})
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
 		}
 	}
+}
+
+type simulateAttackRequest struct {
+	AttackType string `json:"attack_type"`
+	Payload    string `json:"payload"`
+}
+
+func (s *Server) simulateAttack(w http.ResponseWriter, r *http.Request) {
+	var req simulateAttackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	inc := models.Incident{
+		ID:         uuid.New().String(),
+		AttackType: req.AttackType,
+		Type:       "simulated",
+		Path:       "/simulated",
+		ClientIP:   "127.0.0.1",
+		Severity:   "medium",
+		Message:    fmt.Sprintf("Simulated %s attack: %s", req.AttackType, req.Payload),
+		Source:     "dashboard",
+		Timestamp:  time.Now().UTC(),
+	}
+
+	if err := s.sqliteDB.CreateIncident(&inc); err != nil {
+		s.errorJSON(w, http.StatusInternalServerError, "failed to record simulated incident")
+		return
+	}
+
+	s.json(w, http.StatusOK, map[string]interface{}{
+		"status":   "simulated",
+		"attack":   req.AttackType,
+		"incident": inc,
+	})
 }

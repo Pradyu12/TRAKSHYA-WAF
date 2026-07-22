@@ -1,10 +1,13 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -28,16 +31,18 @@ type Config struct {
 type Server struct {
 	cfg     *Config
 	db      *db.Store
+	sqliteDB *db.SQLiteStore
 	metrics *telemetry.Metrics
 	startAt time.Time
 }
 
-func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Handler {
+func NewRouter(cfg *Config, store *db.Store, sqliteStore *db.SQLiteStore, metrics *telemetry.Metrics) http.Handler {
 	srv := &Server{
-		cfg:     cfg,
-		db:      store,
-		metrics: metrics,
-		startAt: time.Now(),
+		cfg:      cfg,
+		db:       store,
+		sqliteDB: sqliteStore,
+		metrics:  metrics,
+		startAt:  time.Now(),
 	}
 
 	r := chi.NewRouter()
@@ -47,8 +52,13 @@ func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Ha
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 
+	allowedOrigins := []string{"http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:8080", "http://127.0.0.1:8080"}
+	if envOrigins := os.Getenv("TRAKSHYA_CORS_ORIGINS"); envOrigins != "" {
+		allowedOrigins = strings.Split(envOrigins, ",")
+	}
+
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:8080", "http://127.0.0.1:8080"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-API-Key"},
 		AllowCredentials: false,
@@ -92,6 +102,10 @@ func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Ha
 		r.Get("/analytics/events", srv.getEventStats)
 		r.Post("/analytics/ingest", srv.ingestEvent)
 		r.Post("/analytics/request-stats", srv.recordRequestStats)
+		r.Get("/analytics/top_attackers", srv.getTopAttackers)
+		r.Get("/analytics/timeline", srv.getTimeline)
+		r.Get("/analytics/countries", srv.getCountryStats)
+		r.Get("/analytics/rules", srv.getRuleTriggers)
 
 		r.Get("/geo", srv.getGeoData)
 
@@ -111,10 +125,12 @@ func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Ha
 		r.Post("/mitigation-posture", srv.setMitigationPosture)
 
 		r.Handle("/metrics", srv.metrics.Handler())
-	})
 
-	r.Get("/api/stream", srv.streamTelemetry)
-	r.Get("/ws", srv.handleWebSocket)
+		r.Post("/simulate-attack", srv.simulateAttack)
+
+		r.Get("/stream", srv.streamTelemetry)
+		r.Get("/ws", srv.handleWebSocket)
+	})
 
 	if srv.cfg.FrontendDir != "" {
 		fileServer := http.FileServer(http.Dir(srv.cfg.FrontendDir))
@@ -150,7 +166,7 @@ func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func isPrivateHost(host string) bool {
 	if ip := net.ParseIP(host); ip != nil {
-		return ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified()
+		return ip.IsLoopback() || ip.IsUnspecified()
 	}
 	return false
 }
@@ -172,9 +188,11 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if key := r.Header.Get("X-API-Key"); key != "" && s.cfg.APIKey != "" && key == s.cfg.APIKey {
-			next.ServeHTTP(w, r)
-			return
+		if key := r.Header.Get("X-API-Key"); key != "" && s.cfg.APIKey != "" {
+			if subtle.ConstantTimeCompare([]byte(key), []byte(s.cfg.APIKey)) == 1 {
+				next.ServeHTTP(w, r)
+				return
+			}
 		}
 
 		s.errorJSON(w, http.StatusUnauthorized, "unauthorized: provide valid X-API-Key header or connect from localhost")
@@ -209,6 +227,20 @@ func (s *Server) ingestEvent(w http.ResponseWriter, r *http.Request) {
 		s.errorJSON(w, http.StatusBadRequest, "invalid event payload")
 		return
 	}
+	if len(evt.SourceIP) > 45 {
+		s.errorJSON(w, http.StatusBadRequest, "source_ip too long")
+		return
+	}
+	if len(evt.Path) > 2048 {
+		s.errorJSON(w, http.StatusBadRequest, "path too long")
+		return
+	}
+	if len(evt.UserAgent) > 1024 {
+		evt.UserAgent = evt.UserAgent[:1024]
+	}
+	if len(evt.Method) > 10 {
+		evt.Method = evt.Method[:10]
+	}
 	if evt.Timestamp.IsZero() {
 		evt.Timestamp = time.Now()
 	}
@@ -227,6 +259,10 @@ func (s *Server) recordRequestStats(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.ClientIP == "" {
 		s.errorJSON(w, http.StatusBadRequest, "client_ip is required")
+		return
+	}
+	if net.ParseIP(body.ClientIP) == nil {
+		s.errorJSON(w, http.StatusBadRequest, "invalid client_ip")
 		return
 	}
 	s.db.RecordRequest(body.ClientIP, body.Blocked)
