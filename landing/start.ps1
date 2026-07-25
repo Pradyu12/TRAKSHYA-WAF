@@ -100,7 +100,15 @@ if ((Test-Path "docker-compose.stack.yml") -and (Test-Path "frontend")) {
 
     Write-Host "  [*] Cloning TRAKSHYA-WAF..." -ForegroundColor Cyan
     Show-Spinner "Cloning repository..." 3000
-    git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git $repoDir 2>$null
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+    git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git $repoDir 2>&1 | Out-Null
+    $gitExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $prevEAP
+    if ($gitExitCode -ne 0) {
+        Write-Host "  [Error] Failed to clone repository" -ForegroundColor Red
+        exit 1
+    }
     Write-Host "  [OK] Repository cloned" -ForegroundColor Green
 }
 
