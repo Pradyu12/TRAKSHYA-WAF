@@ -4,85 +4,99 @@ set -euo pipefail
 REPO="Pradyu12/TRAKSHYA-WAF"
 BIN_NAME="trakshya-waf"
 INSTALL_DIR="${HOME}/.local/bin"
-APPIMAGE_PATH="${INSTALL_DIR}/${BIN_NAME}.AppImage"
-SYMLINK_PATH="${INSTALL_DIR}/${BIN_NAME}"
 
-# Colors
-PINK='\033[0;35m'
-CYAN='\033[0;36m'
 GREEN='\033[0;32m'
+CYAN='\033[0;36m'
 RED='\033[0;31m'
 BOLD='\033[1m'
-RESET='\033[0m'
+DIM='\033[2m'
+RST='\033[0m'
 
-echo -e "\n  ${BOLD}${PINK}TRAKSHYA WAF${RESET} — Installing...\n"
+echo ""
+echo -e "  ${BOLD}${CYAN}TRAKSHYA WAF v2.1${RST} — Installing via Docker"
+echo ""
 
 # Check dependencies
-if ! command -v curl &>/dev/null; then
-  echo -e "  ${RED}\u2716${RESET} curl is required. Install it: sudo apt install curl"
+if ! command -v docker &>/dev/null; then
+  echo -e "  ${RED}\u2716${RST} Docker is required."
+  echo -e "    Install: https://docs.docker.com/get-docker/"
   exit 1
 fi
 
-# Ensure install dir
-mkdir -p "${INSTALL_DIR}"
-
-# Get latest release info
-echo -e "  ${CYAN}\u25cf${RESET} Fetching latest release..."
-LATEST_JSON=$(curl -sfL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null || true)
-
-if [ -z "$LATEST_JSON" ]; then
-  echo -e "  ${RED}\u2716${RESET} Failed to fetch release info. Check your internet connection."
+if ! docker compose version &>/dev/null 2>&1; then
+  echo -e "  ${RED}\u2716${RST} Docker Compose is required."
+  echo -e "    Install: https://docs.docker.com/compose/install/"
   exit 1
 fi
 
-# Extract download URL for AppImage
-DOWNLOAD_URL=$(echo "$LATEST_JSON" | grep -o '"browser_download_url": *"[^"]*\.AppImage"' | cut -d'"' -f4)
+# Clone or detect repo
+if [ -f "docker-compose.yml" ] && [ -d "go" ] && [ -d "frontend" ]; then
+  REPO_DIR="$(pwd)"
+  echo -e "  ${CYAN}\u25cf${RST} Local repo detected: ${REPO_DIR}"
+else
+  REPO_DIR="/tmp/trakshya-waf-$$"
+  echo -e "  ${CYAN}\u25cf${RST} Cloning TRAKSHYA-WAF..."
+  git clone --depth 1 "https://github.com/${REPO}.git" "${REPO_DIR}" 2>/dev/null
+  echo -e "  ${GREEN}\u2714${RST} Repository cloned"
+fi
 
-if [ -z "$DOWNLOAD_URL" ]; then
-  echo -e "  ${RED}\u2716${RESET} No AppImage found in latest release."
-  echo -e "  Download manually: https://github.com/${REPO}/releases"
+cd "${REPO_DIR}"
+
+# Build and start services
+echo ""
+echo -e "  ${CYAN}\u25cf${RST} Building and starting services..."
+docker compose up --build -d 2>&1 | tail -1 || {
+  echo -e "  ${RED}\u2716${RST} Docker build failed."
+  echo -e "    Check: docker compose logs"
   exit 1
-fi
+}
 
-# Download
-echo -e "  ${CYAN}\u25cf${RESET} Downloading Trakshya WAF..."
-echo -e "  ${CYAN}\u25cf${RESET} URL: ${DOWNLOAD_URL}"
-
-curl -#fL "${DOWNLOAD_URL}" -o "${APPIMAGE_PATH}"
-
-if [ $? -ne 0 ] || [ ! -f "${APPIMAGE_PATH}" ]; then
-  echo -e "  ${RED}\u2716${RESET} Download failed."
-  exit 1
-fi
-
-chmod +x "${APPIMAGE_PATH}"
-
-# Create symlink
-if [ -L "${SYMLINK_PATH}" ] || [ -f "${SYMLINK_PATH}" ]; then
-  rm -f "${SYMLINK_PATH}"
-fi
-ln -sf "${APPIMAGE_PATH}" "${SYMLINK_PATH}"
-
-# Ensure INSTALL_DIR is in PATH
-if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
-  SHELL_CONFIG="${HOME}/.bashrc"
-  if [ -f "${HOME}/.zshrc" ]; then
-    SHELL_CONFIG="${HOME}/.zshrc"
+# Wait for API health
+MAX_WAIT=60
+WAITED=0
+while [ $WAITED -lt $MAX_WAIT ]; do
+  if curl -sf http://localhost:8000/ready >/dev/null 2>&1; then
+    echo -e "  ${GREEN}\u2714${RST} API is healthy (DuckDB ready)"
+    break
   fi
-  echo "export PATH=\"\${PATH}:${INSTALL_DIR}\"" >>"${SHELL_CONFIG}"
-  echo -e "  ${CYAN}\u25cf${RESET} Added ${INSTALL_DIR} to PATH in ${SHELL_CONFIG}"
+  sleep 2
+  WAITED=$((WAITED + 2))
+done
+
+if [ $WAITED -ge $MAX_WAIT ]; then
+  echo -e "  ${RED}\u2716${RST} API failed to start within ${MAX_WAIT}s"
+  echo -e "    Check: docker compose logs trakshya-api"
+  exit 1
 fi
 
-echo -e "\n  ${GREEN}\u2714${RESET} Installed successfully!\n"
-echo -e "  Binary:  ${APPIMAGE_PATH}"
-echo -e "  Symlink: ${SYMLINK_PATH}"
-echo -e "\n  Run ${BOLD}${BIN_NAME}${RESET} to start the dashboard.\n"
-echo -e "  Or reopen your terminal and just type: ${BOLD}${BIN_NAME}${RESET}\n"
+# Install launcher
+mkdir -p "${INSTALL_DIR}"
+LAUNCHER="${INSTALL_DIR}/${BIN_NAME}"
+cat >"${LAUNCHER}" <<'LAUNCHER'
+#!/usr/bin/env bash
+set -euo pipefail
+REPO_DIR="'"${REPO_DIR}"'"
+echo "Starting TRAKSHYA WAF..."
+cd "$REPO_DIR"
+docker compose up -d
+echo "Dashboard: http://localhost:8000"
+echo "Press Ctrl+C to stop logs."
+docker compose logs -f --tail=30
+LAUNCHER
+chmod +x "${LAUNCHER}"
 
-# Offer to start now
-read -r -p "  Start Trakshya WAF now? [Y/n] " yn
-yn=${yn:-Y}
-if [[ $yn =~ ^[Yy]$ ]]; then
-  echo -e "\n  ${CYAN}\u25b6${RESET} Launching..."
-  "${APPIMAGE_PATH}"
+echo ""
+echo -e "  ${GREEN}\u2714${RST} Installed successfully!"
+echo ""
+echo -e "  Dashboard: ${CYAN}http://localhost:8000${RST}"
+echo -e "  Proxy:     ${CYAN}http://localhost:8080${RST}"
+echo ""
+echo -e "  ${DIM}Run '${BIN_NAME}' to restart later.${RST}"
+echo ""
+
+# Open browser
+if command -v xdg-open &>/dev/null; then
+  xdg-open "http://localhost:8000" 2>/dev/null || true
+elif command -v open &>/dev/null; then
+  open "http://localhost:8000" 2>/dev/null || true
 fi

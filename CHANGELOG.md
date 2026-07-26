@@ -6,21 +6,31 @@ Dates are in ISO format.
 ## Unreleased
 
 ### Added
-- Automated regression script for VAPT + WAF rule detection: `scripts/regression.py`
-- CI smoke test and validation workflows: `.github/workflows/validate.yml`, `.github/workflows/regression.yml`
-- CI dependency scanning: `.github/workflows/dependency-scan.yml`
-- OpenAPI schema for management API: `openapi.yml`
-- Docker multi-stage build and compose stack: `rust/trakshya-proxy/Dockerfile`, `go/Dockerfile`, `dashboard/Dockerfile`, `docker-compose.stack.yml`
-- Management CLI subcommands: `npm-package/bin/trakshya-cli.js`
-- Figlet-style ASCII logo: `scripts/trakshya-ascii.sh`
-- Local dev CA and HTTPS runtime listener on `8443`
-- Pre-commit hooks: `.pre-commit-config.yaml`
-- Makefile entrypoints: `Makefile`
-- GitHub issue/PR templates and `SECURITY.md`
+- Real-time analytics engine: event ingestion, top attackers, timeline, country stats, rule triggers, data retention
+- 3 new Rust rule modules: SSRF (cloud metadata, localhost), CRLF injection (header, response splitting), JNDI/Log4Shell
+- Input evasion detection: double URL decode, HTML entity decode, full-width Unicode normalization
+- Kubernetes Helm chart with Recreate strategy for single-writer DuckDB
+- K8s readiness/liveness probes (`/healthz`, `/ready`) for all deployments
+- API integration tests: auth middleware, ready check, scan dedup, store idempotency
+- Analytics store tests: event ingestion, correlations, prune, live updates
+- Traffic generator utility: `scripts/traffic-generator.py`
+- Nginx dashboard template with envsubst: `deploy/nginx/k8s-dashboard.conf.template`
 
 ### Changed
-- Rebrand from KALKI-WAF to TRAKSHYA-WAF across source, CI, docs, and configs
-- Refactored `server.js` to share request handling across HTTP and HTTPS listeners
+- **Replaced Node.js mock server with live Go/DuckDB management API** (core change)
+- Replaced SQLite with DuckDB as sole database across Go API and Rust proxy
+- Removed all Datadog, Firebase, and n8n integrations (zero SaaS dependencies)
+- Dashboard Dockerfile: Node → nginx:alpine with envsubst template
+- Go Dockerfile: build context from repo root (was `./go`)
+- WebSocket hub: RWMutex → Mutex, safe concurrent client cleanup
+- SIEM correlation engine: threshold-based rules, graceful goroutine shutdown
+- C FIM engine: null-pointer guards, baseline init check, return written count
+- C HIDS engine: fixed variable shadowing, goto-based error handling
+- VAPT scanner: private IP validation, unreachable cipher variable fix
+- Blacklist/SIEM alert IDs: `int` → `string` (UUID-based)
+- Config field: `database_url` → `database_path` in Go models
+- Env var normalization: `TRAKSHYA_DUCKDB_PATH` used consistently everywhere
+- CI workflows: regression/validate now build and run live Go API (no mock server)
 
 ## 2.0.0
 

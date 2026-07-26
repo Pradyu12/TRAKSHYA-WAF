@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TRAKSHYA WAF — Divine Eagle Guardian for Your Web Applications</title>
-<meta name="description" content="Trakshya WAF is a high-performance polyglot Web Application Firewall with SIEM/XDR. Built with Rust, Go, and C. Desktop dashboard with synthwave UI.">
+<title>TRAKSHYA WAF v2.1 — Live DuckDB-Powered Web Application Firewall</title>
+<meta name="description" content="Trakshya WAF is a high-performance polyglot Web Application Firewall with SIEM/XDR, DuckDB analytics, and real-time threat detection. Built with Rust, Go, and C. No cloud dependency.">
 <meta name="theme-color" content="#050010">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#x1f6e1;</text></svg>">
@@ -124,9 +124,9 @@
       <circle cx="50" cy="50" r="3" fill="#00f0ff" opacity="0.9"/>
     </svg>
   </div>
-  <div class="hero-badge">v2.0.0 &middot; WAF + SIEM/XDR</div>
+  <div class="hero-badge">v2.1.0 &middot; WAF + SIEM/XDR &middot; DuckDB</div>
   <h1>TRAKSHYA WAF</h1>
-  <p>The desktop WAF that runs entirely on your machine. Real-time threat detection powered by Rust, Go, and C. Zero cloud dependency. Full synthwave dashboard included.</p>
+  <p>The desktop WAF that runs entirely on your machine. Real-time threat detection powered by Rust, Go, and C with DuckDB live analytics. Zero cloud dependency. Full synthwave dashboard included.</p>
   <div class="hero-actions">
     <a href="#install" class="btn btn-primary"><span>&#11088;</span> Get Started</a>
     <a href="https://github.com/Pradyu12/TRAKSHYA-WAF" target="_blank" class="btn btn-secondary"><span>&#128190;</span> GitHub</a>
@@ -144,64 +144,70 @@
   </div>
   <div class="features">
     <div class="feature-card">
-      <div class="feature-icon green"><span>&#128295;</span></div>
-      <h3>npm CLI Installer</h3>
-      <p>Local npm package with <code>trakshya-waf</code>, <code>trakshya-cli</code>, and <code>trakshya-install</code> commands under <code>npm-package/</code>.</p>
+      <div class="feature-icon green"><span>&#128200;</span></div>
+      <h3>Live DuckDB Analytics</h3>
+      <p>Go management API with DuckDB persistence. Real-time event ingestion, top attackers timeline, country stats, and data retention pruning. No mock data — everything is live.</p>
       <div class="feature-details">
-        <strong>Quick start:</strong><br>
-        <code>cd npm-package && npm link</code><br>
-        <code>trakshya-install install --mode=local</code>
+        <strong>Pipeline:</strong><br>
+        Rust proxy &#8594; Go API &#8594; DuckDB (single-writer)<br>
+        <strong>Queries:</strong> timeline, geo map, rule triggers, event stats<br>
+        <strong>Retention:</strong> configurable auto-prune (default 30 days)
       </div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon cyan"><span>&#127759;</span></div>
-      <h3>Windows Support</h3>
-      <p>PowerShell installer for Windows with local and service modes. NSSM-backed Windows service installation.</p>
+      <div class="feature-icon cyan"><span>&#128737;</span></div>
+      <h3>11 Attack Vectors</h3>
+      <p>SQLi, XSS, RFI, CMDi, Path Traversal, LFI, XXE, SSTI — plus <strong>SSRF</strong>, <strong>CRLF Injection</strong>, and <strong>JNDI/Log4Shell</strong>. Evasion detection with double URL decode.</p>
       <div class="feature-details">
-        <strong>Commands:</strong><br>
-        <code>trakshya-install.ps1 install --mode=local</code><br>
-        <code>trakshya-install.ps1 install --mode=service</code>
+        <strong>New in v2.1:</strong><br>
+        <span class="rule-tag">SSRF</span> Cloud metadata, localhost/internal networks<br>
+        <span class="rule-tag">CRLF</span> Header injection, HTTP response splitting<br>
+        <span class="rule-tag">JNDI</span> Log4Shell ldap/rmi/dns lookups, obfuscation<br>
+        <span class="rule-tag">EVASION</span> Double URL decode, HTML entities, full-width Unicode
       </div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon purple"><span>&#128187;</span></div>
-      <h3>Production Deployment</h3>
-      <p>Systemd services, nginx reverse proxy config, and <code>/opt/trakshya-waf</code> layout for production servers.</p>
+      <div class="feature-icon purple"><span>&#127760;</span></div>
+      <h3>Kubernetes-Native</h3>
+      <p>Helm chart + raw K8s manifests with Recreate strategy for single-writer DuckDB. Resource-optimized probes (healthz/ready), ServiceMesh-ready labels.</p>
       <div class="feature-details">
-        <strong>Artifacts:</strong><br>
-        <code>deploy/production-setup.sh</code><br>
-        <code>deploy/systemd/*.service</code><br>
-        <code>deploy/nginx/trakshya-dashboard.conf</code>
+        <strong>Deploy:</strong><br>
+        <code>kubectl apply -f k8s/</code><br>
+        <code>helm install trakshya-waf ./helm/trakshya-waf/</code>
       </div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon yellow"><span>&#128200;</span></div>
-      <h3>CI/CD + Quality</h3>
-      <p>GitHub Actions for validation, regression, dependency scanning, OpenAPI schema checks, and compose healthgating.</p>
+      <div class="feature-icon yellow"><span>&#9889;</span></div>
+      <h3>Enhanced SIEM</h3>
+      <p>7 MITRE ATT&CK correlation rules with threshold-based detection, graceful shutdown, and safe concurrent access. Slack/Discord webhook notifications.</p>
       <div class="feature-details">
-        <strong>Workflows:</strong><br>
-        <code>validate.yml</code> · <code>regression.yml</code><br>
-        <code>dependency-scan.yml</code> · <code>openapi-validation.yml</code>
+        <strong>Improvements:</strong><br>
+        Threshold counters instead of single-match<br>
+        Graceful goroutine shutdown via <code>done</code> channel<br>
+        Batch event ingestion with 1s flush ticker
       </div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon red"><span>&#128717;</span></div>
-      <h3>Docker Stack</h3>
-      <p>Multi-service compose stack with healthchecks, Traefik-ready service names, and per-service Dockerfiles.</p>
+      <div class="feature-icon red"><span>&#128270;</span></div>
+      <h3>No Cloud Dependencies</h3>
+      <p>Zero egress to Datadog, Firebase, or n8n. Removed all SaaS integrations. DuckDB runs locally. Prometheus metrics + OTLP optional.</p>
       <div class="feature-details">
-        <strong>Files:</strong><br>
-        <code>docker-compose.stack.yml</code><br>
-        <code>dashboard/Dockerfile</code> · <code>go/Dockerfile</code> · <code>rust/krsna-proxy/Dockerfile</code>
+        <strong>Removed:</strong><br>
+        <del>Datadog agent + dashboards</del><br>
+        <del>Firebase config</del><br>
+        <del>n8n workflows</del><br>
+        <strong>Stack:</strong> Rust proxy + Go API + C daemon + DuckDB
       </div>
     </div>
     <div class="feature-card">
-      <div class="feature-icon"><span>&#128161;</span></div>
-      <h3>Local HTTPS Dev Certs</h3>
-      <p>Self-signed localhost CA + cert generator for testing TLS paths without external dependencies.</p>
+      <div class="feature-icon"><span>&#128187;</span></div>
+      <h3>Electron Desktop App</h3>
+      <p>Cross-platform desktop wrapper with system tray, desktop notifications, auto-launch, and backend process management. Synthwave UI with live 3D globe.</p>
       <div class="feature-details">
-        <strong>Usage:</strong><br>
-        <code>make certs</code><br>
-        <code>cd go && go run ./cmd/trakshya-api/</code> → <code>http://127.0.0.1:8000</code>
+        <strong>Features:</strong><br>
+        <code>app/main.js</code> — Tray, SSE monitor, IPC handlers<br>
+        <code>make certs</code> — Local HTTPS dev certs<br>
+        <code>dashboard.html</code> — 7 themed variants
       </div>
     </div>
   </div>
@@ -219,7 +225,7 @@
     <div class="feature-card">
       <div class="feature-icon"><span>&#128737;</span></div>
       <h3>Attack Detection</h3>
-      <p>SQLi, XSS, RFI, CMDi, path traversal, LFI, XXE, SSTI — 8 attack vectors detected by the Rust proxy in real time.</p>
+      <p>SQLi, XSS, RFI, CMDi, path traversal, LFI, XXE, SSTI — plus SSRF, CRLF injection, and JNDI/Log4Shell. <strong>11 vectors</strong> detected by the Rust proxy in real time with evasion countermeasures.</p>
     </div>
 <div class="feature-card">
     <div class="feature-icon cyan"><span>&#127758;</span></div>
@@ -290,8 +296,8 @@
   </div>
   <div class="feature-card">
     <div class="feature-icon cyan"><span>&#128200;</span></div>
-    <h3>Attack Simulator</h3>
-    <p>8 built-in attack buttons that fire real HTTP requests to test your proxy. See results instantly in the SIEM dashboard.</p>
+      <h3>Attack Simulator</h3>
+     <p>11 built-in attack buttons that fire real HTTP requests to test your proxy. See results instantly in the SIEM dashboard.</p>
     <div class="feature-details">
       <strong>Attacks:</strong> SQLi (union, boolean, time), XSS (reflected, stored, DOM), CMDi (semicolon, backtick, subshell), Path Traversal (../, ..\, URL encoded), RFI, XXE, SSTI, LFI<br>
       <strong>Target:</strong> Configurable upstream (default localhost:8080)<br>
@@ -323,14 +329,21 @@
     </div>
     <div class="deep-dive-card">
       <h4>Go API & SIEM</h4>
-      <pre><code>REST API :8000
-├── /api/incidents    CRUD + acknowledge
-├── /api/config       Proxy config (YAML)
-├── /api/posture      Monitor/Standard/Under Attack
-├── /api/agents       Fleet registration
-├── /ws / /events     Real-time WebSocket/SSE
-└── /metrics          Prometheus exposition</code></pre>
-      <p>DuckDB for incidents/events/SIEM/rules (live, single-writer). 7 SIEM rules with sliding windows (5m-1h). Webhook dispatcher for Slack/Discord. Prometheus + OpenTelemetry OTLP exporter. Kubernetes-native.</p>
+       <pre><code>REST API :8000
+├── /api/incidents       CRUD + acknowledge
+├── /api/config          Proxy config
+├── /api/posture         Monitor/Standard/Under Attack
+├── /api/agents          Fleet registration
+├── /api/rules           CRUD + toggle
+├── /api/blacklist       IP blocklist management
+├── /api/analytics/*     Live DuckDB event queries
+├── /api/vulns/*         Vulnerability scanner
+├── /api/vapt/*          VAPT scanner
+├── /api/siem/alerts     SIEM alert list + acknowledge
+├── /ws / /stream        WebSocket + SSE real-time events
+├── /healthz /ready      K8s liveness + readiness probes
+└── /metrics             Prometheus exposition</code></pre>
+       <p>DuckDB for incidents/events/SIEM/rules (live, single-writer). 7 SIEM rules with sliding windows (5m-1h). Webhook dispatcher for Slack/Discord. Prometheus + OpenTelemetry OTLP exporter. Kubernetes-native.</p>
     </div>
     <div class="deep-dive-card">
       <h4>C Daemon (System Monitoring)</h4>
@@ -365,12 +378,12 @@ Active  → iptables/nftables/UFW</code></pre>
       <div class="diagram-box c"><div class="diagram-label">C</div><div class="diagram-value">Monitor :9001</div></div>
     </div>
     <div class="badges">
-      <span class="badge-tech">&#127760; Rust 1.96</span>
-      <span class="badge-tech">&#127760; Go 1.26</span>
-      <span class="badge-tech">&#127760; C11 (GCC 15)</span>
-      <span class="badge-tech">&#127760; DuckDB</span>
-      <span class="badge-tech">&#127760; Three.js Globe</span>
-      <span class="badge-tech">&#127760; Chart.js</span>
+      <span class="badge-tech">&#127760; Rust 1.85</span>
+       <span class="badge-tech">&#127760; Go 1.23</span>
+       <span class="badge-tech">&#127760; C11 (GCC 14)</span>
+       <span class="badge-tech">&#127760; DuckDB 1.2</span>
+       <span class="badge-tech">&#127760; Three.js Globe</span>
+       <span class="badge-tech">&#127760; Chart.js</span>
     </div>
   </div>
 </section>
@@ -428,9 +441,9 @@ Active  → iptables/nftables/UFW</code></pre>
     <!-- Live traffic indicator -->
     <div class="live-indicator">
       <span class="live-dot"></span>
-      <span class="live-text">Dashboard opens at <strong>http://localhost:8001</strong> with live traffic, SIEM alerts, and real-time SSE stream</span>
+      <span class="live-text">Dashboard opens at <strong>http://localhost:8000</strong> with live traffic, SIEM alerts, and real-time SSE stream</span>
     </div>
-    <p style="color:var(--text-dim);font-size:12px;text-align:center;margin-top:12px">Requires <a href="https://nodejs.org/" target="_blank" style="color:var(--neon-cyan);text-decoration:none">Node.js 18+</a> and <a href="https://curl.se/" target="_blank" style="color:var(--neon-cyan);text-decoration:none">curl</a>. Downloads only the essential files — no git, no build tools, no cloud accounts.</p>
+    <p style="color:var(--text-dim);font-size:12px;text-align:center;margin-top:12px">Requires <a href="https://git-scm.com/" target="_blank" style="color:var(--neon-cyan);text-decoration:none">git</a> and <a href="https://docker.com/" target="_blank" style="color:var(--neon-cyan);text-decoration:none">Docker</a>. All data stays local in DuckDB — no cloud accounts, no API keys, no data egress.</p>
   </div>
 
   <!-- Advanced install methods -->
@@ -449,7 +462,7 @@ Active  → iptables/nftables/UFW</code></pre>
 <span class="code-prompt">$</span> <span class="code-cmd">git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git</span>
 <span class="code-prompt">$</span> <span class="code-cmd">cd TRAKSHYA-WAF/go && go run ./cmd/trakshya-api/</span></code>
       </div>
-      <p style="color:var(--text-dim);font-size:13px">Runs locally from source or on Kubernetes. Builds Rust proxy with cargo if available, otherwise uses the Go management API with DuckDB for live traffic analytics. <strong>No cloud SaaS (no Datadog, n8n, or Firebase).</strong></p>
+      <p style="color:var(--text-dim);font-size:13px">Runs locally from source or via Docker. The Go management API with DuckDB provides live traffic analytics, SIEM correlation, and real-time dashboard data. <strong>No cloud SaaS (no Datadog, n8n, or Firebase).</strong></p>
     </div>
 
     <div class="install-panel" id="panel-npm">
@@ -473,9 +486,9 @@ Active  → iptables/nftables/UFW</code></pre>
 <span class="code-prompt">$</span> <span class="code-cmd">cd TRAKSHYA-WAF</span>
 <span class="code-comment"># Build and run all services</span>
 <span class="code-prompt">$</span> <span class="code-cmd">docker compose up --build</span>
-<span class="code-comment"># Dashboard at http://localhost:8001</span></code>
+<span class="code-comment"># Dashboard at http://localhost:8000</span></code>
       </div>
-      <p style="color:var(--text-dim);font-size:13px">Starts the Rust proxy, Go API, C monitor, and dashboard. Great for development and CI environments.</p>
+      <p style="color:var(--text-dim);font-size:13px">Starts the Go management API with DuckDB, and optionally the Rust proxy. Great for development and CI environments.</p>
     </div>
 
     <div class="install-panel" id="panel-production">
@@ -486,9 +499,9 @@ Active  → iptables/nftables/UFW</code></pre>
 <span class="code-comment"># Verify services</span>
 <span class="code-prompt">$</span> <span class="code-cmd">systemctl status trakshya-dashboard trakshya-proxy trakshya-api</span>
 <span class="code-comment"># Dashboard</span>
-<span class="code-prompt">$</span> <span class="code-cmd">http://localhost:8001</span></code>
+<span class="code-prompt">$</span> <span class="code-cmd">http://localhost:8000</span></code>
       </div>
-      <p style="color:var(--text-dim);font-size:13px">Production deployment to <code>/opt/trakshya-waf</code> with systemd services, nginx reverse proxy, and auto-restart. Suitable for servers and dedicated hosts.</p>
+      <p style="color:var(--text-dim);font-size:13px">Production deployment to <code>/opt/trakshya-waf</code> with systemd services, nginx reverse proxy, DuckDB persistence, and auto-restart. Suitable for servers and dedicated hosts.</p>
     </div>
   </div>
 </section>
@@ -566,7 +579,7 @@ Active  → iptables/nftables/UFW</code></pre>
     </div>
   </div>
   <div class="demo-note">
-    <p><strong>💡 Try it live:</strong> <code>docker compose up --build</code> → <a href="http://localhost:8001" target="_blank">http://localhost:8001</a> | Or clone and run <a href="#install">bash install.sh</a> for local setup.</p>
+    <p><strong>💡 Try it live:</strong> <code>docker compose up --build</code> → <a href="http://localhost:8000" target="_blank">http://localhost:8000</a> | Or clone and run <a href="#install">bash install.sh</a> for local setup.</p>
   </div>
 </section>
 
