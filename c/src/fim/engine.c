@@ -43,10 +43,13 @@ int fim_init(void) {
 }
 
 int fim_baseline_create(const char *paths[], int count) {
+    if (!initialized) fim_init();
+
     FILE *f = fopen(BASELINE_FILE, "w");
     if (!f) return -1;
 
-    for (int i = 0; i < count && i < MAX_FILES; i++) {
+    int written = 0;
+    for (int i = 0; i < count && baseline_count < MAX_FILES; i++) {
         char hash[65] = {0};
         if (sha256_file(paths[i], hash)) {
             fprintf(f, "%s|%s\n", paths[i], hash);
@@ -58,16 +61,24 @@ int fim_baseline_create(const char *paths[], int count) {
                 baseline[baseline_count].file_size = st.st_size;
             }
             baseline_count++;
+            written++;
         }
     }
 
     fclose(f);
-    return 0;
+    return written;
 }
 
 int fim_scan(FimReport *report) {
     if (!initialized) fim_init();
     memset(report, 0, sizeof(FimReport));
+
+    if (baseline_count == 0) {
+        report->changes = NULL;
+        report->count = 0;
+        report->capacity = 0;
+        return 0;
+    }
 
     report->changes = malloc(sizeof(FileChange) * baseline_count);
     if (!report->changes) return -1;

@@ -12,11 +12,10 @@ fi
 mkdir -p /var/lib/trakshya 2>/dev/null || true
 
 export TRAKSHYA_CONFIG="${ROOT_DIR}/config/trakshya.yaml"
-export TRAKSHYA_DATABASE_URL="postgres://trakshya:***@localhost:5432/trakshya?sslmode=disable"
+export TRAKSHYA_DUCKDB_PATH="${ROOT_DIR}/trakshya_events.duckdb"
 export TRAKSHYA_MGMT_PORT=8000
-export TRAKSHYA_API_PORT=8000
 export TRAKSHYA_PROXY_PORT=8080
-export TRAKSHYA_UPSTREAM_URL="http://localhost:3000"
+export TRAKSHYA_UPSTREAM_URL="http://localhost:8000"
 export TRAKSHYA_MGMT_API_URL="http://localhost:8000"
 export TRAKSHYA_FRONTEND_DIR="${ROOT_DIR}/frontend"
 export RUST_LOG=info

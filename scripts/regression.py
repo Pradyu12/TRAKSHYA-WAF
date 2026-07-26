@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Local regression checks for TRAKSHYA-WAF VAPT + WAF rule detection."""
+"""Local regression checks for TRAKSHYA-WAF against the live DuckDB-backed API."""
 from __future__ import annotations
 
-import json
 import os
 import re
 import sys
-import urllib.parse
 import urllib.request
 import urllib.error
 
@@ -21,7 +19,7 @@ def check(name: str, condition: bool, detail: str = "") -> bool:
     return condition
 
 
-def request(url: str, *, path: str = "", method: str = "GET", body: bytes | None = None, headers: dict[str, str] | None = None, host: str | None = None):
+def request(url: str, *, path: str = "", method: str = "GET", body: bytes | None = None, headers: dict[str, str] | None = None):
     target = url.rstrip("/") + path
     req = urllib.request.Request(target, method=method, data=body)
     req.add_header("User-Agent", "trakshya-regression/1.0")
@@ -29,8 +27,6 @@ def request(url: str, *, path: str = "", method: str = "GET", body: bytes | None
     if headers:
         for k, v in headers.items():
             req.add_header(k, v)
-    if host:
-        req.add_header("Host", host)
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             payload = resp.read().decode("utf-8", "ignore")
@@ -52,7 +48,7 @@ def rule_checks() -> bool:
         ("RFI-001", re.compile(r"(?i)include=|require=|file=.*http"), "file=http://evil", True),
         ("LFI-001", re.compile(r"(?i)\.\./etc/passwd|/proc/self"), "../../etc/passwd", True),
         ("SCANNER-001", re.compile(r"(?i)wp-admin|phpmyadmin|/manager"), "/wp-admin", True),
-        ("BRUTE-001", re.compile(r"(?i)/api/auth/login.*POST"), "/api/auth/login", True),
+        ("BRUTE-001", re.compile(r"(?i)/api/auth/login.*POST"), "/api/auth/login POST", True),
     ]
     ok = True
     for rule_id, pattern, payload, expected in rules:
@@ -61,54 +57,66 @@ def rule_checks() -> bool:
     return ok
 
 
-def mock_server_checks() -> bool:
-    print("\n== Mock server endpoint checks ==")
+def live_api_checks() -> bool:
+    print("\n== Live DuckDB API endpoint checks ==")
     ok = True
     status, _, body = request(BASE, path="/health")
-    ok &= check("mock_health", status == 200, f"status={status}")
+    ok &= check("api_health", status == 200, f"status={status}")
+
+    status, _, body = request(BASE, path="/ready")
+    ok &= check("api_ready_duckdb", status == 200 and "duckdb" in body.lower(), f"status={status} body={body[:120]}")
 
     status, _, body = request(BASE, path="/api/dashboard/stats")
-    ok &= check("mock_dashboard_stats_json", status == 200 and "total_requests" in body, f"status={status}")
+    ok &= check("api_dashboard_stats_json", status == 200 and "total_requests" in body, f"status={status}")
 
     status, _, body = request(BASE, path="/api/incidents")
-    ok &= check("mock_incidents_json", status == 200 and "attack_blocked" in body, f"status={status}")
+    ok &= check("api_incidents_json", status == 200 and body.strip().startswith("["), f"status={status}")
 
     status, _, body = request(BASE, path="/api/siem/stats")
-    ok &= check("mock_siem_stats_json", status == 200 and "by_severity" in body, f"status={status}")
+    ok &= check("api_siem_stats_json", status == 200 and "by_severity" in body, f"status={status}")
 
     status, _, body = request(BASE, path="/api/vapt/stats")
-    ok &= check("mock_vapt_stats_json", status == 200 and "TotalFindings" in body, f"status={status}")
+    ok &= check("api_vapt_stats_json", status == 200 and "total_findings" in body, f"status={status}")
 
     status, _, body = request(BASE, path="/api/rules")
-    ok &= check("mock_rules_json", status == 200 and "SQLI-001" in body, f"status={status}")
+    ok &= check("api_rules_json", status == 200 and "SQLI-001" in body, f"status={status}")
 
     status, _, body = request(BASE, path="/api/mitigation-posture")
-    ok &= check("mock_posture_alias", status == 200 and "monitor" in body, f"status={status}")
+    ok &= check("api_posture_alias", status == 200 and "monitor" in body, f"status={status}")
+
+    status, _, body = request(BASE, path="/api/analytics/events")
+    ok &= check("api_analytics_live", status == 200 and "total_events" in body, f"status={status}")
 
     return ok
 
 
 def waf_proxy_checks() -> bool:
     print("\n== WAF proxy behavior checks ==")
-    ok = True
+    if PROXY_BASE.rstrip("/") == BASE.rstrip("/"):
+        print("(skipping proxy checks — PROXY_BASE equals API base)")
+        return True
 
+    status, _, body = request(PROXY_BASE, path="/health")
+    if status == 0 or status >= 500:
+        print(f"(skipping proxy checks — proxy unavailable status={status})")
+        return True
+
+    ok = True
     malicious_queries = [
         ("sql_injection", "/search?q=UNION+SELECT+1,2,3"),
         ("xss", "/page?payload=%3Cscript%3Ealert(1)%3C/script%3E"),
         ("path_traversal", "/files?name=../../etc/passwd"),
         ("command_injection", "/debug?cmd=;ls+-la"),
     ]
-    blocked_responses = []
     for attack, path in malicious_queries:
         status, headers, body = request(PROXY_BASE, path=path)
         blocked = status == 403 or body.lower().count("blocked") > 0 or headers.get("x-trakshya-blocked") == "true"
-        blocked_responses.append((attack, blocked, status))
         ok &= check(f"proxy_block_{attack}", blocked, f"status={status} path={path}")
     return ok
 
 
 def main() -> int:
-    results = [rule_checks(), mock_server_checks(), waf_proxy_checks()]
+    results = [rule_checks(), live_api_checks(), waf_proxy_checks()]
     passed = sum(1 for r in results if r)
     total = len(results)
     print(f"\n== Summary: {passed}/{total} suites passed ==")

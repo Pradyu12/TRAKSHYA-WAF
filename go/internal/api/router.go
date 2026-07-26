@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/trakshya/trakshya-api/internal/db"
 	"github.com/trakshya/trakshya-api/internal/telemetry"
+	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
 type Config struct {
@@ -30,21 +31,19 @@ type Config struct {
 }
 
 type Server struct {
-	cfg      *Config
-	db       *db.Store
-	sqliteDB *db.SQLiteStore
-	metrics  *telemetry.Metrics
-	startAt  time.Time
-	cfgMu    sync.RWMutex
+	cfg     *Config
+	db      *db.Store
+	metrics *telemetry.Metrics
+	startAt time.Time
+	cfgMu   sync.RWMutex
 }
 
-func NewRouter(cfg *Config, store *db.Store, sqliteStore *db.SQLiteStore, metrics *telemetry.Metrics) http.Handler {
+func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Handler {
 	srv := &Server{
-		cfg:      cfg,
-		db:       store,
-		sqliteDB: sqliteStore,
-		metrics:  metrics,
-		startAt:  time.Now(),
+		cfg:     cfg,
+		db:      store,
+		metrics: metrics,
+		startAt: time.Now(),
 	}
 
 	r := chi.NewRouter()
@@ -68,6 +67,8 @@ func NewRouter(cfg *Config, store *db.Store, sqliteStore *db.SQLiteStore, metric
 	}))
 
 	r.Get("/health", srv.healthCheck)
+	r.Get("/healthz", srv.healthCheck)
+	r.Get("/ready", srv.readyCheck)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(srv.authMiddleware)
@@ -170,6 +171,17 @@ func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) readyCheck(w http.ResponseWriter, r *http.Request) {
+	if s.db == nil || !s.db.IsHealthy() {
+		s.errorJSON(w, http.StatusServiceUnavailable, "duckdb not ready")
+		return
+	}
+	s.json(w, http.StatusOK, map[string]string{
+		"status":   "ready",
+		"database": "duckdb",
+	})
+}
+
 func isPrivateHost(host string) bool {
 	if ip := net.ParseIP(host); ip != nil {
 		return ip.IsLoopback() || ip.IsUnspecified()
@@ -214,6 +226,9 @@ func (s *Server) getDashboardStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stats.UptimeSeconds = int64(time.Since(s.startAt).Seconds())
+	if stats.Posture == "" && s.cfg.Posture != "" {
+		stats.Posture = models.Posture(s.cfg.Posture)
+	}
 	s.json(w, http.StatusOK, stats)
 }
 

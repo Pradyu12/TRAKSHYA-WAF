@@ -3,8 +3,8 @@ version: "3.8"
 services:
   trakshya-api:
     build:
-      context: ./go
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: go/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -18,6 +18,11 @@ services:
     networks:
       - trakshya-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
   trakshya-proxy:
     build:
@@ -30,13 +35,12 @@ services:
       - TRAKSHYA_PROXY_PORT=8080
       - TRAKSHYA_UPSTREAM_URL=http://trakshya-api:8000
       - TRAKSHYA_MGMT_API_URL=http://trakshya-api:8000
-      - TRAKSHYA_DUCKDB_PATH=/data/trakshya_events.duckdb
       - RUST_LOG=info
     volumes:
       - ./config/trakshya.yaml:/etc/trakshya/config.yaml:ro
-      - trakshya-duckdb:/data:ro
     depends_on:
-      - trakshya-api
+      trakshya-api:
+        condition: service_healthy
     networks:
       - trakshya-net
     restart: unless-stopped
@@ -58,20 +62,8 @@ services:
     networks:
       - trakshya-net
     restart: unless-stopped
-
-  datadog-agent:
-    image: gcr.io/datadoghq/agent:latest
-    environment:
-      - DD_API_KEY=${DD_API_KEY:-}
-      - DD_SITE=datadoghq.com
-      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /proc/:/host/proc/:ro
-      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
-    networks:
-      - trakshya-net
-    restart: unless-stopped
+    profiles:
+      - full
 
 networks:
   trakshya-net:

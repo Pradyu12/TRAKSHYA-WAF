@@ -8,35 +8,21 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-
-    services:
-      waf:
-        image: node:22
-        ports:
-          - 8000:8000
-        options: >-
-          --health-cmd "curl -f http://127.0.0.1:8000/health || exit 1"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 30
-        volumes:
-          - ${{ github.workspace }}/server.js:/repo/server.js:ro
-          - ${{ github.workspace }}/frontend:/repo/frontend:ro
-          - ${{ github.workspace }}/landing:/repo/landing:ro
-        working_dir: /repo
-        run: |
-          node server.js
-
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Validate pyproject/metadata consistency
+      - name: Validate naming consistency
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -50,7 +36,7 @@ jobs:
           forbidden = ['kalki', 'KALKI', 'krsna-proxy', 'krsna-api']
           bad = []
           for path in files:
-              text = path.read_text(encoding='utf-8', errors='ignore')
+              text = Path(path).read_text(encoding='utf-8', errors='ignore')
               for token in forbidden:
                   if token in text:
                       bad.append((path, token))
@@ -62,7 +48,21 @@ jobs:
           print('VALIDATION OK')
           PY
 
-      - name: Run WAF regression suite
+      - name: Build and start live DuckDB API
+        working-directory: go
+        run: |
+          go build -o /tmp/trakshya-api ./cmd/trakshya-api/
+          TRAKSHYA_MGMT_PORT=8000 \
+          TRAKSHYA_DUCKDB_PATH=/tmp/trakshya_events.duckdb \
+          TRAKSHYA_FRONTEND_DIR=${{ github.workspace }}/frontend \
+          /tmp/trakshya-api &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8000/ready && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8000/ready
+
+      - name: Run WAF regression suite (live API)
         run: python scripts/regression.py
         env:
           TRAKSHYA_REGRESSION_BASE: 'http://127.0.0.1:8000'

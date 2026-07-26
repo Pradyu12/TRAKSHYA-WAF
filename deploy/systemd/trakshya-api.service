@@ -1,6 +1,6 @@
 [Unit]
-Description=TRAKSHYA WAF Management API
-Documentation=https://github.com/Pradyu12/KALKI-WAF
+Description=TRAKSHYA WAF Management API (DuckDB)
+Documentation=https://github.com/Pradyu12/TRAKSHYA-WAF
 After=network.target
 
 [Service]
@@ -8,6 +8,9 @@ Type=simple
 User=%i
 WorkingDirectory=/opt/trakshya-waf
 EnvironmentFile=/opt/trakshya-waf/.env
+Environment=TRAKSHYA_MGMT_PORT=8000
+Environment=TRAKSHYA_DUCKDB_PATH=/opt/trakshya-waf/data/trakshya_events.duckdb
+Environment=TRAKSHYA_FRONTEND_DIR=/opt/trakshya-waf/frontend
 ExecStart=/opt/trakshya-waf/build/trakshya-api
 Restart=on-failure
 RestartSec=5

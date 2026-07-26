@@ -60,9 +60,9 @@ def start_go_api():
     env = os.environ.copy()
     env.update(
         {
-            "TRAKSHYA_DB_PATH": os.path.join(REPO_ROOT, "build", "trakshya.db"),
+            "TRAKSHYA_DUCKDB_PATH": os.path.join(REPO_ROOT, "build", "trakshya_events.duckdb"),
             "TRAKSHYA_FRONTEND_DIR": os.path.join(REPO_ROOT, "frontend"),
-            "TRAKSHYA_API_PORT": str(API_PORT),
+            "TRAKSHYA_MGMT_PORT": str(API_PORT),
         }
     )
     proc = subprocess.Popen([api_bin], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

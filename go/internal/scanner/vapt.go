@@ -17,6 +17,44 @@ type VaptScanner struct{}
 
 func NewVaptScanner() *VaptScanner { return &VaptScanner{} }
 
+func isPrivateOrReservedIP(host string) bool {
+	ip := net.ParseIP(host)
+	if ip == nil {
+		if strings.HasSuffix(host, ".local") ||
+			strings.HasSuffix(host, ".internal") ||
+			strings.HasSuffix(host, ".localhost") ||
+			host == "localhost" ||
+			host == "metadata.google.internal" {
+			return true
+		}
+		return false
+	}
+	return ip.IsLoopback() ||
+		ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() ||
+		ip.IsPrivate() ||
+		ip.IsUnspecified() ||
+		ip.IsMulticast()
+}
+
+func ValidateScanTarget(target string) error {
+	u, err := url.Parse(target)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("only http/https schemes are allowed")
+	}
+	host := u.Hostname()
+	if host == "" {
+		return fmt.Errorf("missing host in target URL")
+	}
+	if isPrivateOrReservedIP(host) {
+		return fmt.Errorf("scanning private/reserved/internal targets is not allowed")
+	}
+	return nil
+}
+
 func (v *VaptScanner) Scan(target string) (*models.VaptScan, error) {
 	scanID := uuid.New().String()
 	scan := &models.VaptScan{
@@ -170,6 +208,9 @@ func (v *VaptScanner) scanCommonPorts(target string) []models.VaptFinding {
 	if host == "" {
 		host = target
 	}
+	if isPrivateOrReservedIP(host) {
+		return findings
+	}
 	ports := []int{21, 22, 23, 25, 53, 80, 443, 445, 3306, 5432, 6379, 27017, 3389}
 
 	for _, port := range ports {
@@ -238,9 +279,6 @@ func (v *VaptScanner) checkTLS(target string) []models.VaptFinding {
 			Remediation: "Disable TLS 1.0/1.1 and prefer TLS 1.2 or 1.3.",
 		})
 	}
-
-	cipher := state.CipherSuite
-	_ = cipher
 
 	if len(state.PeerCertificates) > 0 {
 		cert := state.PeerCertificates[0]

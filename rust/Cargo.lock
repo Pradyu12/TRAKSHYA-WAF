@@ -2746,10 +2746,11 @@ dependencies = [
 name = "trakshya-rules"
 version = "1.0.0"
 dependencies = [
- "once_cell",
+ "percent-encoding",
  "regex",
  "serde",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]

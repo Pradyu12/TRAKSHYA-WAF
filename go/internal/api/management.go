@@ -407,12 +407,11 @@ func (s *Server) simulateAttack(w http.ResponseWriter, r *http.Request) {
 		Timestamp:  time.Now().UTC(),
 	}
 
-	if err := s.sqliteDB.CreateIncident(&inc); err != nil {
+	if err := s.db.CreateIncident(&inc); err != nil {
 		s.errorJSON(w, http.StatusInternalServerError, "failed to record simulated incident")
 		return
 	}
 
-	s.db.CreateIncident(&inc)
 	s.metrics.IncidentsTotal.Inc()
 	BroadcastIncident(inc)
 

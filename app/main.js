@@ -101,7 +101,7 @@ function createWindow() {
   if (fs.existsSync(dashboardPath)) {
     mainWindow.loadFile(dashboardPath);
   } else {
-    mainWindow.loadURL('http://localhost:8000');
+    mainWindow.loadURL('http://localhost:8001');
   }
 
   mainWindow.on('close', (e) => {
@@ -189,7 +189,7 @@ ipcMain.on('minimize-to-tray', () => mainWindow && mainWindow.hide());
 
 // SSE monitoring for desktop notifications
 function monitorSSE() {
-  const req = http.get('http://localhost:8000/api/stream', (res) => {
+  const req = http.get('http://localhost:8001/api/stream', (res) => {
     res.on('data', (chunk) => {
       try {
         const data = chunk.toString();

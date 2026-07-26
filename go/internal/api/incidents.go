@@ -40,6 +40,7 @@ func (s *Server) createIncident(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.metrics.IncidentsTotal.Inc()
+	BroadcastIncident(inc)
 	s.json(w, http.StatusCreated, inc)
 }
 

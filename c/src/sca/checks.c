@@ -3,8 +3,6 @@
 #include <sys/stat.h>
 #include <stdio.h>
 
-/* Additional SCA check functions (placeholder) */
-
 int check_file_permissions(const char *path, mode_t expected) {
     struct stat st;
     if (stat(path, &st) != 0) return -1;
@@ -12,6 +10,7 @@ int check_file_permissions(const char *path, mode_t expected) {
 }
 
 int check_user_in_group(const char *username, const char *groupname) {
+    if (!validate_username(username)) return -1;
     char cmd[256];
     char result[128] = {0};
     snprintf(cmd, sizeof(cmd), "groups %s", username);

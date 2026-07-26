@@ -1,4 +1,4 @@
--- Initial schema for TRAKSHYA WAF dashboard (PostgreSQL)
+-- Initial schema for TRAKSHYA WAF (legacy reference; runtime uses DuckDB via Go API)
 
 -- Incidents table - stores all security events
 CREATE TABLE IF NOT EXISTS incidents (

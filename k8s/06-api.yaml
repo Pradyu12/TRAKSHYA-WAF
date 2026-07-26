@@ -8,6 +8,8 @@ metadata:
     app.kubernetes.io/component: api
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: trakshya-waf
@@ -29,29 +31,41 @@ spec:
               name: metrics
           envFrom:
             - configMapRef:
-                name: trakshya-config
+                name: trakshya-env
             - secretRef:
                 name: trakshya-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /etc/trakshya
+              readOnly: true
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
               memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
           livenessProbe:
             httpGet:
               path: /healthz
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 30
           readinessProbe:
             httpGet:
               path: /ready
               port: http
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             periodSeconds: 10
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: trakshya-data
+        - name: config
+          configMap:
+            name: trakshya-config
+            items:
+              - key: trakshya.yaml
+                path: config.yaml

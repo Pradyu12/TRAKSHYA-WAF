@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/trakshya/trakshya-api/internal/api"
 	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
@@ -143,17 +142,23 @@ type shellActivityRule struct{}
 
 func (r *shellActivityRule) Name() string { return "suspicious_shell_activity" }
 func (r *shellActivityRule) Evaluate(events []models.Incident) *models.Incident {
+	count := 0
+	var lastIP string
 	for _, ev := range events {
 		if ev.AttackType == "command_injection" {
-			return &models.Incident{
-				Type:      "siem_alert",
-				AttackType: "shell_activity",
-				ClientIP:   ev.ClientIP,
-				Severity:  "critical",
-				Message:   "Suspicious shell command execution detected",
-				Source:    "siem",
-				Timestamp: time.Now(),
-			}
+			count++
+			lastIP = ev.ClientIP
+		}
+	}
+	if count >= 3 {
+		return &models.Incident{
+			Type:       "siem_alert",
+			AttackType: "shell_activity",
+			ClientIP:   lastIP,
+			Severity:   "critical",
+			Message:    "Multiple suspicious shell command executions detected",
+			Source:     "siem",
+			Timestamp:  time.Now(),
 		}
 	}
 	return nil
@@ -186,11 +191,12 @@ func (r *dataExfilRule) Evaluate(events []models.Incident) *models.Incident {
 }
 
 type CorrelationEngine struct {
-	mu       sync.RWMutex
-	rules    []CorrelationRule
-	events   []models.Incident
-	window   time.Duration
+	mu        sync.RWMutex
+	rules     []CorrelationRule
+	events    []models.Incident
+	window    time.Duration
 	maxEvents int
+	done      chan struct{}
 }
 
 func NewCorrelationEngine(window time.Duration, maxEvents int) *CorrelationEngine {
@@ -206,6 +212,7 @@ func NewCorrelationEngine(window time.Duration, maxEvents int) *CorrelationEngin
 		},
 		window:    window,
 		maxEvents: maxEvents,
+		done:      make(chan struct{}),
 	}
 }
 
@@ -237,20 +244,30 @@ func (e *CorrelationEngine) Ingest(event models.Incident) *models.Incident {
 	return nil
 }
 
-func (e *CorrelationEngine) Start(a *api.Server) {
+func (e *CorrelationEngine) Start() {
 	ticker := time.NewTicker(30 * time.Second)
 	go func() {
-		for range ticker.C {
-			e.mu.Lock()
-			cutoff := time.Now().Add(-e.window)
-			var filtered []models.Incident
-			for _, ev := range e.events {
-				if ev.Timestamp.After(cutoff) {
-					filtered = append(filtered, ev)
+		for {
+			select {
+			case <-e.done:
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				e.mu.Lock()
+				cutoff := time.Now().Add(-e.window)
+				var filtered []models.Incident
+				for _, ev := range e.events {
+					if ev.Timestamp.After(cutoff) {
+						filtered = append(filtered, ev)
+					}
 				}
+				e.events = filtered
+				e.mu.Unlock()
 			}
-			e.events = filtered
-			e.mu.Unlock()
 		}
 	}()
+}
+
+func (e *CorrelationEngine) Stop() {
+	close(e.done)
 }

@@ -44,6 +44,8 @@ type Store struct {
 	flushTimer *time.Ticker
 	flushSize  int
 	onIncident func(*models.Incident)
+	closed     bool
+	closeMu    sync.Mutex
 }
 
 func NewStore(dbPath string, onIncident func(*models.Incident)) (*Store, error) {
@@ -77,6 +79,14 @@ func NewStore(dbPath string, onIncident func(*models.Incident)) (*Store, error) 
 }
 
 func (s *Store) Close() {
+	s.closeMu.Lock()
+	if s.closed {
+		s.closeMu.Unlock()
+		return
+	}
+	s.closed = true
+	s.closeMu.Unlock()
+
 	s.flushTimer.Stop()
 	s.drainBuffer()
 	s.db.Close()
@@ -230,6 +240,40 @@ func (s *Store) runMigrations() error {
 	for _, m := range stmts {
 		if _, err := s.db.Exec(m); err != nil {
 			return fmt.Errorf("migration failed: %w", err)
+		}
+	}
+	if err := s.seedDefaults(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) seedDefaults() error {
+	seeds := []string{
+		`INSERT INTO rules (id, pattern, severity, category, description, enabled) VALUES
+			('SQLI-001', '(\bunion\b.*\bselect\b|\bdrop\b.*\btable\b)', 'critical', 'sqli', 'SQL Injection', 1),
+			('XSS-001', '(<script|javascript:|onerror=|onload=)', 'high', 'xss', 'Cross-Site Scripting', 1),
+			('TRAV-001', '(\.\./|\.\.\\|%2e%2e)', 'high', 'path_traversal', 'Path Traversal', 1),
+			('CMDI-001', '(;\s*(cat|ls|rm|sh|bash)|\$\()', 'critical', 'cmd_injection', 'Command Injection', 1),
+			('RFI-001', '(include=|require=|file=.*http)', 'medium', 'rfi', 'Remote File Inclusion', 1),
+			('LFI-001', '(\.\./etc/passwd|/proc/self)', 'high', 'lfi', 'Local File Inclusion', 1),
+			('SCANNER-001', '(wp-admin|phpmyadmin|/manager)', 'low', 'scanner', 'Scanner Detection', 1),
+			('BRUTE-001', '(/api/auth/login.*POST)', 'medium', 'brute_force', 'Brute Force', 1)
+		ON CONFLICT (id) DO NOTHING`,
+		`INSERT INTO system_config (key, value) VALUES
+			('posture', 'monitor'),
+			('rate_limit_enabled', '1'),
+			('circuit_breaker_enabled', '1'),
+			('geoip_enabled', '0'),
+			('jwt_enabled', '0'),
+			('proxy_port', '8080'),
+			('upstream_url', 'http://localhost:3000'),
+			('management_api_url', 'http://localhost:8000')
+		ON CONFLICT (key) DO NOTHING`,
+	}
+	for _, m := range seeds {
+		if _, err := s.db.Exec(m); err != nil {
+			return fmt.Errorf("seed failed: %w", err)
 		}
 	}
 	return nil
@@ -470,12 +514,29 @@ func (s *Store) AckSIEMAlert(id string) error {
 
 func (s *Store) GetDashboardStats() (*models.DashboardStats, error) {
 	stats := &models.DashboardStats{}
-	s.db.QueryRow("SELECT COALESCE(SUM(request_count), 0) FROM request_stats").Scan(&stats.TotalRequests)
-	s.db.QueryRow("SELECT COALESCE(SUM(blocked_count), 0) FROM request_stats").Scan(&stats.BlockedRequests)
-	s.db.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM request_stats WHERE last_seen > NOW() - INTERVAL '1' HOUR").Scan(&stats.ActiveIPs)
-	s.db.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > now()::TIMESTAMP - INTERVAL '1' DAY").Scan(&stats.IncidentsToday)
-	s.db.QueryRow("SELECT COUNT(*) FROM system_config").Scan(&stats.AgentsOnline)
-	s.db.QueryRow("SELECT COUNT(*) FROM rules WHERE enabled = 1").Scan(&stats.RuleCount)
+	if err := s.db.QueryRow("SELECT COALESCE(SUM(request_count), 0) FROM request_stats").Scan(&stats.TotalRequests); err != nil {
+		log.Printf("dashboard stats request_count: %v", err)
+	}
+	if err := s.db.QueryRow("SELECT COALESCE(SUM(blocked_count), 0) FROM request_stats").Scan(&stats.BlockedRequests); err != nil {
+		log.Printf("dashboard stats blocked_count: %v", err)
+	}
+	if err := s.db.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM request_stats WHERE last_seen > NOW() - INTERVAL '1' HOUR").Scan(&stats.ActiveIPs); err != nil {
+		log.Printf("dashboard stats active_ips: %v", err)
+	}
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > now()::TIMESTAMP - INTERVAL '1' DAY").Scan(&stats.IncidentsToday); err != nil {
+		log.Printf("dashboard stats incidents_today: %v", err)
+	}
+	agents, _ := s.ListAgents()
+	stats.AgentsOnline = len(agents)
+	var posture string
+	if err := s.db.QueryRow("SELECT value FROM system_config WHERE key = 'posture'").Scan(&posture); err == nil && posture != "" {
+		stats.Posture = models.Posture(posture)
+	} else {
+		stats.Posture = models.PostureMonitor
+	}
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM rules WHERE enabled = 1").Scan(&stats.RuleCount); err != nil {
+		log.Printf("dashboard stats rule_count: %v", err)
+	}
 
 	rows, err := s.db.Query(`SELECT attack_type, COUNT(*) as cnt FROM incidents WHERE attack_type != '' GROUP BY attack_type ORDER BY cnt DESC LIMIT 10`)
 	if err == nil {

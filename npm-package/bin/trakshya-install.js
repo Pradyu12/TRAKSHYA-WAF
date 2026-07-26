@@ -162,10 +162,10 @@ function writeEnv() {
   const env = `TRAKSHYA_MGMT_PORT=8000
 TRAKSHYA_PROXY_PORT=8080
 TRAKSHYA_FRONTEND_DIR=${INSTALL_DIR}/frontend
-TRAKSHYA_DB_PATH=${INSTALL_DIR}/data/trakshya.db
+TRAKSHYA_DUCKDB_PATH=${INSTALL_DIR}/data/trakshya_events.duckdb
 TRAKSHYA_API_KEY=${apiKey}
 RUST_LOG=info
-NODE_ENV=production
+DEPLOYMENT_MODE=baremetal
 `;
   fs.writeFileSync(path.join(INSTALL_DIR, '.env'), env, { mode: 0o600 });
   console.log(green(`Generated .env with API key: ${apiKey}`));
@@ -187,7 +187,7 @@ User=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
 EnvironmentFile=${INSTALL_DIR}/.env
 ExecStartPre=${INSTALL_DIR}/scripts/generate-dev-certs.sh
-ExecStart=/usr/bin/node server.js
+ExecStart=/opt/trakshya-waf/build/trakshya-api
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=65536
@@ -240,7 +240,7 @@ WantedBy=multi-user.target
 function deployFiles(repoRoot) {
   console.log(cyan('Deploying files...'));
   run(`mkdir -p ${INSTALL_DIR}/logs ${INSTALL_DIR}/data ${INSTALL_DIR}/scripts`);
-  run(`cp -a ${repoRoot}/server.js ${repoRoot}/package.json ${INSTALL_DIR}/`);
+  run(`mkdir -p ${INSTALL_DIR}/build ${INSTALL_DIR}/data`);
   run(`cp -a ${repoRoot}/frontend ${INSTALL_DIR}/`);
   run(`cp -a ${repoRoot}/landing ${INSTALL_DIR}/`);
   run(`cp -a ${repoRoot}/config ${INSTALL_DIR}/`);
@@ -307,31 +307,36 @@ set -euo pipefail
 REPO_ROOT="${repoRoot}"
 DASHBOARD_PORT=${DASHBOARD_PORT}
 PROXY_PORT=${PROXY_PORT}
+API_BIN="\\$REPO_ROOT/bin/trakshya-api"
 RUST_BIN="\\$REPO_ROOT/rust/target/release/trakshya-proxy"
 
-echo "Starting TRAKSHYA WAF..."
+echo "Starting TRAKSHYA WAF (live DuckDB)..."
 cd "\$REPO_ROOT"
 [ -f "\$REPO_ROOT/scripts/trakshya-ascii.sh" ] && bash "\$REPO_ROOT/scripts/trakshya-ascii.sh" || true
 
 cleanup() {
-  [ -n "\${DASHBOARD_PID:-}" ] && kill "\$DASHBOARD_PID" 2>/dev/null || true
+  [ -n "\${API_PID:-}" ] && kill "\$API_PID" 2>/dev/null || true
   [ -n "\${PROXY_PID:-}" ] && kill "\$PROXY_PID" 2>/dev/null || true
 }
 trap cleanup EXIT
+
+export TRAKSHYA_MGMT_PORT="\$DASHBOARD_PORT"
+export TRAKSHYA_DUCKDB_PATH="\${TRAKSHYA_DUCKDB_PATH:-${INSTALL_DIR}/data/trakshya_events.duckdb}"
+export TRAKSHYA_FRONTEND_DIR="${INSTALL_DIR}/frontend"
+
+if [ ! -x "\$API_BIN" ]; then
+  echo "API binary missing: \$API_BIN (re-run install.sh)"
+  exit 1
+fi
+
+echo "  [api/dashboard] http://localhost:\$DASHBOARD_PORT"
+"\$API_BIN" &
+API_PID=\$!
 
 if [ -x "\$RUST_BIN" ]; then
   echo "  [proxy] http://localhost:\$PROXY_PORT"
   "\$RUST_BIN" --port "\$PROXY_PORT" &
   PROXY_PID=\$!
-fi
-
-if command -v node >/dev/null 2>&1; then
-  echo "  [dashboard] http://localhost:\$DASHBOARD_PORT"
-  node server.js &
-  DASHBOARD_PID=\$!
-else
-  echo "Node.js not found; cannot start dashboard."
-  exit 1
 fi
 
 echo "Press Ctrl+C to stop."

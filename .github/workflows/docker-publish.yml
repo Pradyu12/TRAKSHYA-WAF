@@ -55,7 +55,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ matrix.component == 'proxy' && 'rust/Dockerfile' || matrix.component == 'api' && format('{0}/Dockerfile', matrix.component) || 'dashboard/Dockerfile' }}
+          file: ${{ matrix.component == 'proxy' && 'rust/Dockerfile' || matrix.component == 'api' && 'go/Dockerfile' || 'dashboard/Dockerfile' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -64,7 +64,7 @@ jobs:
 
       - name: Generate digest
         id: digest
-        run: echo "digest=$(docker build --platform linux/amd64 -f ${{ matrix.component == 'proxy' && 'rust/Dockerfile' || matrix.component == 'api' && format('{0}/Dockerfile', matrix.component) || 'dashboard/Dockerfile' }} . | grep -o 'sha256:[a-f0-9]\{64\}' || true)" >> "$GITHUB_OUTPUT"
+        run: echo "digest=$(docker build --platform linux/amd64 -f ${{ matrix.component == 'proxy' && 'rust/Dockerfile' || matrix.component == 'api' && 'go/Dockerfile' || 'dashboard/Dockerfile' }} . | grep -o 'sha256:[a-f0-9]\{64\}' || true)" >> "$GITHUB_OUTPUT"
 
   update-helm-values:
     needs: build-and-push

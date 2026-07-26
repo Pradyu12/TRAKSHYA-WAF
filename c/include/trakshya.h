@@ -119,6 +119,7 @@ int unblock_ip(const char *ip);
 int lockdown_posture(void);
 int restore_posture(void);
 int kill_process_by_port(int port);
+int kill_process_by_name(const char *name);
 
 /* ------ Utility ------ */
 char *read_file(const char *path);
@@ -127,6 +128,7 @@ int run_command(const char *cmd, char *output, size_t output_size);
 char *trim_whitespace(char *str);
 char *sha256_file(const char *path, char *output);
 int validate_ip(const char *ip);
+int validate_username(const char *username);
 
 /* ------ API ------ */
 int start_api_server(void);

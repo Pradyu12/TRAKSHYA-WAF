@@ -26,7 +26,7 @@ echo "======================="
 
 # Start Go management API
 export TRAKSHYA_MGMT_PORT=8000
-export TRAKSHYA_DB_PATH=/var/lib/trakshya/trakshya.db
+export TRAKSHYA_DUCKDB_PATH=/var/lib/trakshya/trakshya_events.duckdb
 export TRAKSHYA_FRONTEND_DIR=/opt/trakshya/frontend
 echo "  Starting Go management API on :8000..."
 "${BUILD_DIR}/trakshya-api" &
@@ -43,7 +43,7 @@ sleep 1
 # Start Rust proxy
 export TRAKSHYA_CONFIG="${CONFIG}"
 export TRAKSHYA_PROXY_PORT=8080
-export TRAKSHYA_UPSTREAM_URL=http://localhost:3000
+export TRAKSHYA_UPSTREAM_URL=http://localhost:8000
 export TRAKSHYA_MGMT_API_URL=http://localhost:8000
 export RUST_LOG=info
 echo "  Starting Rust proxy on :8080..."

@@ -39,7 +39,7 @@ trakshya-waf
 git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git
 cd TRAKSHYA-WAF
 docker compose up --build
-# Dashboard at http://localhost:8000
+# Dashboard / API at http://localhost:8000
 ```
 
 ## Architecture
@@ -49,12 +49,14 @@ Internet → [Rust Proxy :8080] → Upstream Web App
                │
         (reports incidents via REST/JSON)
                ↓
-         [Go API :8000] ←→ PostgreSQL
+         [Go API :8000] ←→ DuckDB (live events/SIEM/rules)
                ↑
         (C daemon reports via HTTP)
                │
          [C Daemon :9001]
 ```
+
+Deployed on **Kubernetes** (Helm chart + raw manifests). The dashboard proxies `/api` to the Go management API so all UI data is live from DuckDB — no Datadog, n8n, Firebase, or mock backends.
 
 ## Project Structure
 
@@ -76,7 +78,7 @@ TRAKSHYA-WAF/
 │       ├── webhooks/        # Slack/Discord notification dispatcher
 │       ├── telemetry/       # Prometheus metrics + OTLP tracing
 │       ├── ws/              # WebSocket & SSE real-time events
-│       └── db/              # PostgreSQL database layer
+│       └── db/              # DuckDB database layer (events, incidents, SIEM)
 ├── c/                       # C project (system-level monitoring)
 │   ├── include/trakshya.h   # Shared header
 │   ├── src/
@@ -94,7 +96,6 @@ TRAKSHYA-WAF/
 ├── openapi.yml              # Management API spec
 ├── Makefile                 # Local task entrypoints
 ├── dev-certs/               # Localhost TLS material
-├── datadog/                 # Observability configs
 └── .env.example             # Environment template
 ```
 
@@ -126,11 +127,12 @@ The project includes a local dev certificate generator so you can test TLS scann
 # generate local certs
 make certs
 
-# start mock server with HTTPS enabled
-node server.js
+# start live Go API (serves dashboard + DuckDB)
+cd go && go run ./cmd/trakshya-api/
 
-# request local HTTPS endpoint
-curl -k https://127.0.0.1:8443/health
+# request local health endpoint
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/ready
 ```
 
 ### Trust the local CA
@@ -262,10 +264,11 @@ python3 scripts/regression.py
 
 Use the GitHub Actions workflows in `.github/workflows/`:
 
-- `validate.yml` — mock server route smoke checks
-- `regression.yml` — VAPT + WAF rule regression suite
+- `validate.yml` — live DuckDB API smoke checks
+- `regression.yml` — VAPT + WAF rule regression against live API
 - `dependency-scan.yml` — `npm audit`, `cargo audit`, `govulncheck`
 - `openapi-validation.yml` — `openapi.yml` schema validation
+- `docker-publish.yml` — build/push Kubernetes images (api, proxy, dashboard)
 - `compose-healthgate.yml` — compose file/service ordering validation
 - `release.yml` — release workflow
 

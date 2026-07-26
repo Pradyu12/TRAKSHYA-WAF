@@ -47,10 +47,8 @@ func (s *Server) startVulnScan(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	scanMu.Unlock()
 
 	scanID := uuid.New().String()
-	scanMu.Lock()
 	activeScan = scanID
 	scanMu.Unlock()
 

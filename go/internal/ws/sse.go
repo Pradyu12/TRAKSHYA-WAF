@@ -48,6 +48,8 @@ func (h *SSEHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.mu.Lock()
 		delete(h.clients, id)
 		h.mu.Unlock()
+		close(client.done)
+		close(client.ch)
 	}()
 
 	notify := r.Context().Done()
@@ -56,7 +58,10 @@ func (h *SSEHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-notify:
 			return
-		case data := <-client.ch:
+		case data, ok := <-client.ch:
+			if !ok {
+				return
+			}
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
 		}

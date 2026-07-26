@@ -106,11 +106,7 @@ impl RequestInspector {
         });
 
         if cfg.proxy.posture != Posture::Monitor && cfg.rate_limiter.enabled {
-            let limiter = trakshya_rate_limiter::RateLimiter::new(
-                cfg.rate_limiter.requests_per_minute,
-                cfg.rate_limiter.burst_size,
-            );
-            if !limiter.allow(&client_ip_for_rate_limit) {
+            if !self.state.rate_limiter.allow(&client_ip_for_rate_limit) {
                 tracing::warn!("Rate limit exceeded for {}", client_ip);
 
                 let incident = Incident {

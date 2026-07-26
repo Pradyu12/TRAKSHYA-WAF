@@ -198,12 +198,13 @@ pub struct AppState {
     pub gateway: crate::gateway::Gateway,
     pub start_time: Instant,
     pub broadcast_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
+    pub rate_limiter: trakshya_rate_limiter::RateLimiter,
 }
 
 impl AppState {
     pub fn new(cfg: &Config) -> anyhow::Result<Self> {
         let db_config = duckdb::Config::default()
-            .access_mode(duckdb::AccessMode::ReadOnly)?;
+            .access_mode(duckdb::AccessMode::ReadWrite)?;
         let conn = duckdb::Connection::open_with_flags(&cfg.database_path, db_config)?;
 
         let (tx, _rx) = tokio::sync::broadcast::channel(100);
@@ -211,6 +212,11 @@ impl AppState {
         let gateway = crate::gateway::Gateway::new(
             &cfg.proxy.management_api_url,
             &cfg.api_key,
+        );
+
+        let rate_limiter = trakshya_rate_limiter::RateLimiter::new(
+            cfg.rate_limiter.requests_per_minute,
+            cfg.rate_limiter.burst_size,
         );
 
         Ok(Self {
@@ -222,6 +228,7 @@ impl AppState {
             gateway,
             start_time: Instant::now(),
             broadcast_tx: tx,
+            rate_limiter,
         })
     }
 

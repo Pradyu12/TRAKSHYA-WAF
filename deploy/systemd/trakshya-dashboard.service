@@ -1,18 +1,15 @@
 [Unit]
-Description=TRAKSHYA WAF Dashboard
-Documentation=https://github.com/Pradyu12/KALKI-WAF
-After=network.target
+Description=TRAKSHYA WAF Dashboard (served by management API)
+Documentation=https://github.com/Pradyu12/TRAKSHYA-WAF
+After=network.target trakshya-api.service
+Requires=trakshya-api.service
 
 [Service]
-Type=simple
-User=%i
-WorkingDirectory=/opt/trakshya-waf
-Environment=NODE_ENV=production
-EnvironmentFile=/opt/trakshya-waf/.env
-ExecStart=node server.js
-Restart=on-failure
-RestartSec=5
-LimitNOFILE=65536
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+# Dashboard HTML/API are served by trakshya-api on :8000 (DuckDB-backed live data).
+# Keep this unit as a convenience alias for operators expecting a dashboard service.
 
 [Install]
 WantedBy=multi-user.target

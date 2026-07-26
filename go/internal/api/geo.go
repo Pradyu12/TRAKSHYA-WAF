@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"math"
 	"net/http"
+	"sort"
 
 	"github.com/trakshya/trakshya-api/pkg/models"
 )
@@ -27,28 +28,35 @@ var countryNames = map[string]string{
 	"VE": "Venezuela", "SA": "Saudi Arabia",
 }
 
+var sortedCountryCodes []string
+
+func init() {
+	sortedCountryCodes = make([]string, 0, len(countryNames))
+	for code := range countryNames {
+		sortedCountryCodes = append(sortedCountryCodes, code)
+	}
+	sort.Strings(sortedCountryCodes)
+}
+
 func ipToCoords(ip string) (lat, lon float64) {
 	h := sha256.Sum256([]byte(ip))
 	latSeed := float64(binary.BigEndian.Uint32(h[0:4]))
 	lonSeed := float64(binary.BigEndian.Uint32(h[4:8]))
-	lat = (latSeed/float64(math.MaxUint32))*180.0 - 90.0
-	lon = (lonSeed/float64(math.MaxUint32))*360.0 - 180.0
-	if lat < -85 { lat = -85 }
-	if lat > 85 { lat = 85 }
+	lat = (latSeed / float64(math.MaxUint32)) * 180.0 - 90.0
+	lon = (lonSeed / float64(math.MaxUint32)) * 360.0 - 180.0
+	if lat < -85 {
+		lat = -85
+	}
+	if lat > 85 {
+		lat = 85
+	}
 	return
 }
 
 func ipToCountryCode(ip string) string {
 	h := sha256.Sum256([]byte(ip + "_country"))
-	idx := binary.BigEndian.Uint32(h[0:4]) % uint32(len(countryNames))
-	i := 0
-	for code := range countryNames {
-		if uint32(i) == idx {
-			return code
-		}
-		i++
-	}
-	return "US"
+	idx := int(binary.BigEndian.Uint32(h[0:4])) % len(sortedCountryCodes)
+	return sortedCountryCodes[idx]
 }
 
 func (s *Server) getGeoData(w http.ResponseWriter, r *http.Request) {

@@ -43,6 +43,8 @@ pub async fn handle_proxy_request(state: Arc<AppState>, req: Request) -> Respons
         &query,
         parts.headers,
         body_bytes,
+        &client_ip,
+        &state,
     )
     .await
 }
@@ -54,6 +56,8 @@ async fn forward_to_upstream(
     query: &str,
     headers: axum::http::HeaderMap,
     body: Bytes,
+    client_ip: &str,
+    state: &Arc<AppState>,
 ) -> Response {
     let upstream = format!(
         "{}{}{}",
@@ -88,6 +92,26 @@ async fn forward_to_upstream(
             let status = resp.status();
             let resp_headers = resp.headers().clone();
             let resp_body = resp.bytes().await.unwrap_or_default();
+
+            let _ = state.gateway.record_event(
+                client_ip,
+                "",
+                method,
+                "",
+                path,
+                query,
+                status.as_u16() as i32,
+                "",
+                "",
+                "",
+                "",
+                false,
+                resp_body.len() as i64,
+                body.len() as i64,
+                0,
+                "",
+            )
+            .await;
 
             let mut response = Response::builder().status(status);
             for (key, value) in resp_headers.iter() {

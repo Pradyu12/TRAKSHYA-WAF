@@ -57,3 +57,6 @@ jobs:
       - name: Build Go API
         run: go build ./...
         working-directory: go
+      - name: Run Go regression tests
+        run: go test ./...
+        working-directory: go

@@ -8,16 +8,17 @@ metadata:
     app.kubernetes.io/component: config
 data:
   trakshya.yaml: |
-    # TRAKSHYA-WAF Configuration
-    # Shared configuration for Rust proxy and Go API
+    # TRAKSHYA-WAF Configuration (Kubernetes)
+    database_path: /data/trakshya_events.duckdb
+
     global:
       log_level: info
-      data_dir: /var/lib/trakshya
+      data_dir: /data
 
     proxy:
       port: 8080
-      upstream_url: ${UPSTREAM_URL}
-      posture: standard
+      upstream_url: http://trakshya-api.trakshya-waf.svc.cluster.local:8000
+      posture: monitor
       management_api_url: http://trakshya-api.trakshya-waf.svc.cluster.local:8000
 
     rate_limiter:
@@ -33,21 +34,21 @@ data:
 
     api:
       port: 8000
-      db_path: /var/lib/trakshya/trakshya.db
-      api_key: ${API_KEY}
+      db_path: /data/trakshya_events.duckdb
+      api_key: ""
 
     c_system_monitor:
       port: 9001
       enabled: "false"
 
     geoip:
-      enabled: ${GEOIP_ENABLED}
-      db_path: /var/lib/trakshya/GeoLite2-City.mmdb
-      blocked_countries: ${BLOCKED_COUNTRIES}
+      enabled: false
+      db_path: /data/GeoLite2-City.mmdb
+      blocked_countries: []
 
     jwt:
-      enabled: ${JWT_ENABLED}
-      secret: ${JWT_SECRET}
+      enabled: false
+      secret: ""
       required_role: "admin"
 
     trusted_ips:
@@ -58,22 +59,29 @@ data:
       - 192.168.0.0/16
 
     webhooks:
-      slack_webhook_url: ${SLACK_WEBHOOK_URL}
-      discord_webhook_url: ${DISCORD_WEBHOOK_URL}
+      slack_webhook_url: ""
+      discord_webhook_url: ""
 
     telemetry:
       prometheus_enabled: "true"
-      otlp_endpoint: http://datadog-agent.datadog.svc.cluster.local:4317
+      otlp_endpoint: ""
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: trakshya-frontend
+  name: trakshya-env
   namespace: trakshya-waf
   labels:
     app.kubernetes.io/name: trakshya-waf
-    app.kubernetes.io/component: frontend
+    app.kubernetes.io/component: env
 data:
-  dashboard.html: |
-    <!-- Dashboard HTML will be injected from frontend/dashboard.html -->
-    PLACEHOLDER_DASHBOARD_HTML
+  TRAKSHYA_MGMT_PORT: "8000"
+  TRAKSHYA_DUCKDB_PATH: "/data/trakshya_events.duckdb"
+  TRAKSHYA_FRONTEND_DIR: "/opt/trakshya/frontend"
+  TRAKSHYA_PROXY_PORT: "8080"
+  TRAKSHYA_MGMT_API_URL: "http://trakshya-api.trakshya-waf.svc.cluster.local:8000"
+  TRAKSHYA_UPSTREAM_URL: "http://trakshya-api.trakshya-waf.svc.cluster.local:8000"
+  TRAKSHYA_CORS_ORIGINS: "http://localhost:8000,http://127.0.0.1:8000"
+  GEOIP_ENABLED: "false"
+  JWT_ENABLED: "false"
+  DEPLOYMENT_MODE: "kubernetes"

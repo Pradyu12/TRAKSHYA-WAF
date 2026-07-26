@@ -59,6 +59,59 @@ impl Gateway {
         }
     }
 
+    pub async fn record_event(
+        &self,
+        source_ip: &str,
+        destination_ip: &str,
+        method: &str,
+        host: &str,
+        path: &str,
+        query: &str,
+        status_code: i32,
+        country: &str,
+        attack_type: &str,
+        rule_name: &str,
+        action: &str,
+        blocked: bool,
+        bytes_sent: i64,
+        bytes_received: i64,
+        latency_ms: i32,
+        user_agent: &str,
+    ) {
+        let url = format!("{}/api/analytics/ingest", self.base_url);
+        let body = serde_json::json!({
+            "source_ip": source_ip,
+            "destination_ip": destination_ip,
+            "method": method,
+            "host": host,
+            "path": path,
+            "query": query,
+            "status_code": status_code,
+            "country": country,
+            "attack_type": attack_type,
+            "rule_name": rule_name,
+            "action": action,
+            "blocked": blocked,
+            "bytes_sent": bytes_sent,
+            "bytes_received": bytes_received,
+            "latency_ms": latency_ms,
+            "user_agent": user_agent,
+        });
+
+        let resp = self
+            .client
+            .post(&url)
+            .header("content-type", "application/json")
+            .header("x-api-key", &self.api_key)
+            .json(&body)
+            .send()
+            .await;
+
+        if let Err(e) = resp {
+            tracing::error!("Failed to record event via Go API: {}", e);
+        }
+    }
+
     pub async fn record_request(&self, client_ip: &str, blocked: bool) {
         let url = format!("{}/api/analytics/request-stats", self.base_url);
         let body = serde_json::json!({

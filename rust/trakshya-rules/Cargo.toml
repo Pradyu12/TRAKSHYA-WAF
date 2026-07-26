@@ -13,5 +13,6 @@ license = "MIT"
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+tracing.workspace = true
 regex = "1"
-once_cell = "1.19"
+percent-encoding = "2"

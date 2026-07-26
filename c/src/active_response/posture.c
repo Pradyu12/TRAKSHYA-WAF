@@ -55,6 +55,10 @@ int restore_posture(void) {
     ret += run_command(cmd, output, sizeof(output));
 
     snprintf(cmd, sizeof(cmd), "iptables -P INPUT ACCEPT 2>/dev/null");
+    ret += run_command(cmd, output, sizeof(output));
+
+    snprintf(cmd, sizeof(cmd), "iptables -F INPUT 2>/dev/null");
+    ret += run_command(cmd, output, sizeof(output));
 
     return ret;
 }

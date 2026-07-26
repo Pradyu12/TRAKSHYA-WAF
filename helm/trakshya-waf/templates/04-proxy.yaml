@@ -30,26 +30,26 @@ spec:
               name: http
             - containerPort: 8443
               name: https
-          envFrom:
-            - configMapRef:
-                name: {{ $name }}-config
-            - secretRef:
-                name: {{ $name }}-secrets
+          env:
+            - name: TRAKSHYA_PROXY_PORT
+              value: "8080"
+            - name: TRAKSHYA_UPSTREAM_URL
+              value: http://{{ $name }}-api.{{ .Values.global.namespace }}.svc.cluster.local:8000
+            - name: TRAKSHYA_MGMT_API_URL
+              value: http://{{ $name }}-api.{{ .Values.global.namespace }}.svc.cluster.local:8000
+            - name: RUST_LOG
+              value: info
           resources:
             {{- toYaml .Values.proxy.resources | nindent 12 }}
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /health
               port: http
             initialDelaySeconds: 10
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /ready
+              path: /health
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
-      volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: {{ $name }}-data

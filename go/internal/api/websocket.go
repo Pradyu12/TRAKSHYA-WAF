@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -21,6 +23,9 @@ var upgrader = websocket.Upgrader{
 			"http://localhost:8080",
 			"http://127.0.0.1:8080",
 		}
+		if envOrigins := os.Getenv("TRAKSHYA_CORS_ORIGINS"); envOrigins != "" {
+			allowedOrigins = strings.Split(envOrigins, ",")
+		}
 		for _, allowed := range allowedOrigins {
 			if origin == allowed {
 				return true
@@ -32,7 +37,7 @@ var upgrader = websocket.Upgrader{
 
 type WebSocketHub struct {
 	clients map[*websocket.Conn]bool
-	mu      sync.RWMutex
+	mu      sync.Mutex
 }
 
 var hub = &WebSocketHub{
@@ -74,13 +79,25 @@ func BroadcastIncident(incident interface{}) {
 		return
 	}
 
-	hub.mu.RLock()
-	defer hub.mu.RUnlock()
-
+	hub.mu.Lock()
+	clients := make([]*websocket.Conn, 0, len(hub.clients))
 	for conn := range hub.clients {
+		clients = append(clients, conn)
+	}
+	hub.mu.Unlock()
+
+	var broken []*websocket.Conn
+	for _, conn := range clients {
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			log.Printf("WebSocket write error: %v", err)
 			conn.Close()
+			broken = append(broken, conn)
+		}
+	}
+	if len(broken) > 0 {
+		hub.mu.Lock()
+		defer hub.mu.Unlock()
+		for _, conn := range broken {
 			delete(hub.clients, conn)
 		}
 	}

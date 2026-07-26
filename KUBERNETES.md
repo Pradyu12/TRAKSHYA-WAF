@@ -101,6 +101,15 @@ jobs:
       - run: helm upgrade --install trakshya-waf ./helm/trakshya-waf --namespace trakshya-waf --set image.tag=${{ github.ref_name }}
 ```
 
+## How Live Data Works
+
+1. **Rust proxy** inspects traffic and posts incidents/events to the Go management API.
+2. **Go API** persists everything in **DuckDB** (`TRAKSHYA_DUCKDB_PATH`, PVC-mounted at `/data`).
+3. **Dashboard** (nginx) proxies `/api/*` to the API service — the UI never uses mock data.
+4. Only **one API replica** should own the DuckDB writer (manifests use `strategy: Recreate` + single replica).
+
+There are no Datadog, n8n, or Firebase dependencies.
+
 ## Monitoring Updates
 
 ```bash

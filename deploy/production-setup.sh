@@ -16,7 +16,7 @@ fi
 
 echo "Deploying TRAKSHYA WAF to $INSTALL_DIR ..."
 
-cp -a server.js package.json "$INSTALL_DIR/"
+mkdir -p "$INSTALL_DIR/build" "$INSTALL_DIR/data"
 cp -a frontend "$INSTALL_DIR/"
 cp -a landing "$INSTALL_DIR/"
 cp -a config "$INSTALL_DIR/"
@@ -41,10 +41,10 @@ cat >"$INSTALL_DIR/.env" <<'ENVEOF'
 TRAKSHYA_MGMT_PORT=8000
 TRAKSHYA_PROXY_PORT=8080
 TRAKSHYA_FRONTEND_DIR=/opt/trakshya-waf/frontend
-TRAKSHYA_DB_PATH=/opt/trakshya-waf/data/trakshya.db
+TRAKSHYA_DUCKDB_PATH=/opt/trakshya-waf/data/trakshya_events.duckdb
 TRAKSHYA_API_KEY=${TRAKSHYA_API_KEY:-changeme-prod}
 RUST_LOG=info
-NODE_ENV=production
+DEPLOYMENT_MODE=baremetal
 ENVEOF
 
 if [ -f "$REPO_ROOT/dev-certs/trakshya-ca.crt" ]; then
@@ -74,5 +74,5 @@ echo "  Service user  : $SERVICE_USER"
 echo "  Env file      : $INSTALL_DIR/.env"
 echo "  Dashboard     : http://localhost:8000"
 echo "  Proxy         : http://localhost:8080"
-echo "  API           : http://localhost:8001"
-echo "  Logs          : journalctl -u trakshya-dashboard -f"
+echo "  API           : http://localhost:8000 (DuckDB)"
+echo "  Logs          : journalctl -u trakshya-api -f"

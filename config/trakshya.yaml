@@ -9,7 +9,7 @@ global:
 
 proxy:
   port: 8080
-  upstream_url: http://localhost:3000
+  upstream_url: http://trakshya-api:8000
   posture: monitor  # monitor | standard | under_attack
   management_api_url: http://trakshya-api:8000
 

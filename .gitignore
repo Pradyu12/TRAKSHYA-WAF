@@ -16,11 +16,14 @@ c/cmake-build-*/
 
 # Build output
 build/
+bin/
 
 # TRAKSHYA data
 *.db
 *.db-shm
 *.db-wal
+*.duckdb
+*.duckdb.wal
 
 # Environment
 .env
@@ -45,13 +48,15 @@ app/bin/
 # Opencode
 .agent-id
 .agents/
+.hermes/
 
 # Duplicates
 globe.glb
-*.datadog.yml
+
 
 # Node
 node_modules/
 
 # Python
 .venv/
+__pycache__/

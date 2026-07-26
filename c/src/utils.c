@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -12,8 +13,15 @@ char *read_file(const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
 
-    fseek(f, 0, SEEK_END);
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
     long size = ftell(f);
+    if (size < 0) {
+        fclose(f);
+        return NULL;
+    }
     rewind(f);
 
     char *content = malloc(size + 1);
@@ -69,18 +77,24 @@ char *sha256_file(const char *path, char *output) {
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
 
-    SHA256_CTX ctx;
-    SHA256_Init(&ctx);
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    if (!ctx) {
+        fclose(f);
+        return NULL;
+    }
+    EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
 
     unsigned char buf[8192];
     size_t n;
     while ((n = fread(buf, 1, sizeof(buf), f)) > 0) {
-        SHA256_Update(&ctx, buf, n);
+        EVP_DigestUpdate(ctx, buf, n);
     }
     fclose(f);
 
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_Final(hash, &ctx);
+    unsigned int hash_len = 0;
+    EVP_DigestFinal_ex(ctx, hash, &hash_len);
+    EVP_MD_CTX_free(ctx);
 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         sprintf(output + (i * 2), "%02x", hash[i]);
@@ -89,7 +103,23 @@ char *sha256_file(const char *path, char *output) {
     return output;
 }
 
+static int is_safe_curl_arg(const char *s) {
+    if (!s || !*s) return 0;
+    for (const char *p = s; *p; p++) {
+        char c = *p;
+        if (c == '\'' || c == '"' || c == '`' || c == '$' || c == '\\' ||
+            c == '\n' || c == '\r') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 int http_post_json(const char *url, const char *json_data, char *response, size_t response_size) {
+    if (!is_safe_curl_arg(url) || !is_safe_curl_arg(json_data)) {
+        response[0] = '\0';
+        return -1;
+    }
     char cmd[4096];
     snprintf(cmd, sizeof(cmd),
         "curl -s -X POST '%s' -H 'Content-Type: application/json' -d '%s'",
@@ -114,5 +144,19 @@ int validate_ip(const char *ip) {
     if (colons > 0 && dots > 0) return 0;
     if (dots > 3 || colons > 7) return 0;
 
+    return 1;
+}
+
+int validate_username(const char *username) {
+    if (!username || !*username) return 0;
+    size_t len = strlen(username);
+    if (len > 32 || len == 0) return 0;
+    for (size_t i = 0; i < len; i++) {
+        char c = username[i];
+        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+              (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.')) {
+            return 0;
+        }
+    }
     return 1;
 }

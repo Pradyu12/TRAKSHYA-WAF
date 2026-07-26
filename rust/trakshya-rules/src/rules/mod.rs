@@ -1,7 +1,10 @@
 pub mod cmdi;
+pub mod crlf;
+pub mod jndi;
 pub mod lfi;
 pub mod path_traversal;
 pub mod rfi;
+pub mod ssrf;
 pub mod sqli;
 pub mod ssti;
 pub mod xss;

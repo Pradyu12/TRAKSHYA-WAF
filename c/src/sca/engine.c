@@ -6,41 +6,49 @@
 #include <pwd.h>
 #include <grp.h>
 
+#define MAX_SCA_CHECKS 64
+
 static ScaCheck *build_checks(int *count) {
-    static ScaCheck checks[64];
+    static ScaCheck checks[MAX_SCA_CHECKS];
     int idx = 0;
 
     struct stat st;
 
-    snprintf(checks[idx].check_id, 64, "CIS-1.1.1");
-    snprintf(checks[idx].name, 256, "File permissions on /etc/passwd");
-    snprintf(checks[idx].description, 512, "Ensure /etc/passwd has 644 permissions");
-    if (stat("/etc/passwd", &st) == 0) {
-        checks[idx].passed = ((st.st_mode & 0777) == 0644);
+    if (idx < MAX_SCA_CHECKS) {
+        snprintf(checks[idx].check_id, 64, "CIS-1.1.1");
+        snprintf(checks[idx].name, 256, "File permissions on /etc/passwd");
+        snprintf(checks[idx].description, 512, "Ensure /etc/passwd has 644 permissions");
+        if (stat("/etc/passwd", &st) == 0) {
+            checks[idx].passed = ((st.st_mode & 0777) == 0644);
+        }
+        snprintf(checks[idx].detail, 512, "Expected: 644, Actual: %o", (unsigned)(st.st_mode & 0777));
+        idx++;
     }
-    snprintf(checks[idx].detail, 512, "Expected: 644, Actual: %o", (unsigned)(st.st_mode & 0777));
-    idx++;
 
-    snprintf(checks[idx].check_id, 64, "CIS-1.1.2");
-    snprintf(checks[idx].name, 256, "File permissions on /etc/shadow");
-    snprintf(checks[idx].description, 512, "Ensure /etc/shadow has 000 permissions");
-    if (stat("/etc/shadow", &st) == 0) {
-        checks[idx].passed = ((st.st_mode & 0777) == 0000);
+    if (idx < MAX_SCA_CHECKS) {
+        snprintf(checks[idx].check_id, 64, "CIS-1.1.2");
+        snprintf(checks[idx].name, 256, "File permissions on /etc/shadow");
+        snprintf(checks[idx].description, 512, "Ensure /etc/shadow has 000 permissions");
+        if (stat("/etc/shadow", &st) == 0) {
+            checks[idx].passed = ((st.st_mode & 0777) == 0000);
+        }
+        snprintf(checks[idx].detail, 512, "Expected: 000, Actual: %o", (unsigned)(st.st_mode & 0777));
+        idx++;
     }
-    snprintf(checks[idx].detail, 512, "Expected: 000, Actual: %o", (unsigned)(st.st_mode & 0777));
-    idx++;
 
-    snprintf(checks[idx].check_id, 64, "CIS-1.1.3");
-    snprintf(checks[idx].name, 256, "File permissions on /etc/ssh/sshd_config");
-    snprintf(checks[idx].description, 512, "Ensure sshd_config has 600 permissions");
-    if (stat("/etc/ssh/sshd_config", &st) == 0) {
-        checks[idx].passed = ((st.st_mode & 0777) == 0600);
+    if (idx < MAX_SCA_CHECKS) {
+        snprintf(checks[idx].check_id, 64, "CIS-1.1.3");
+        snprintf(checks[idx].name, 256, "File permissions on /etc/ssh/sshd_config");
+        snprintf(checks[idx].description, 512, "Ensure sshd_config has 600 permissions");
+        if (stat("/etc/ssh/sshd_config", &st) == 0) {
+            checks[idx].passed = ((st.st_mode & 0777) == 0600);
+        }
+        snprintf(checks[idx].detail, 512, "Expected: 600, Actual: %o", (unsigned)(st.st_mode & 0777));
+        idx++;
     }
-    snprintf(checks[idx].detail, 512, "Expected: 600, Actual: %o", (unsigned)(st.st_mode & 0777));
-    idx++;
 
     char *sshd_config = read_file("/etc/ssh/sshd_config");
-    if (sshd_config) {
+    if (sshd_config && idx < MAX_SCA_CHECKS) {
         snprintf(checks[idx].check_id, 64, "CIS-2.1.1");
         snprintf(checks[idx].name, 256, "SSH root login");
         snprintf(checks[idx].description, 512, "Ensure PermitRootLogin is set to no");
@@ -48,12 +56,12 @@ static ScaCheck *build_checks(int *count) {
         checks[idx].passed = (root_login && strstr(root_login, "no"));
         snprintf(checks[idx].detail, 512, "Check PermitRootLogin setting in sshd_config");
         idx++;
-        free(sshd_config);
     }
+    free(sshd_config);
 
     char *pam_config = read_file("/etc/pam.d/common-password");
     if (!pam_config) pam_config = read_file("/etc/pam.d/system-auth");
-    if (pam_config) {
+    if (pam_config && idx < MAX_SCA_CHECKS) {
         snprintf(checks[idx].check_id, 64, "CIS-5.1.1");
         snprintf(checks[idx].name, 256, "Password complexity");
         snprintf(checks[idx].description, 512, "Ensure password complexity is enabled");
@@ -61,20 +69,20 @@ static ScaCheck *build_checks(int *count) {
                              strstr(pam_config, "pam_pwquality") != NULL);
         snprintf(checks[idx].detail, 512, "Check for pam_cracklib or pam_pwquality modules");
         idx++;
-        free(pam_config);
     }
+    free(pam_config);
 
     char *login_defs = read_file("/etc/login.defs");
     if (login_defs) {
-        char *line = login_defs;
-        char *next;
-        while (line && *line) {
-            next = strchr(line, '\n');
-            if (next) *next++ = '\0';
+        char *ld_line = login_defs;
+        char *ld_next;
+        while (ld_line && *ld_line && idx < MAX_SCA_CHECKS) {
+            ld_next = strchr(ld_line, '\n');
+            if (ld_next) *ld_next++ = '\0';
 
-            if (strstr(line, "PASS_MAX_DAYS")) {
-                int days;
-                sscanf(line, "PASS_MAX_DAYS %d", &days);
+            if (strstr(ld_line, "PASS_MAX_DAYS")) {
+                int days = 0;
+                sscanf(ld_line, "PASS_MAX_DAYS %d", &days);
                 snprintf(checks[idx].check_id, 64, "CIS-5.2.1");
                 snprintf(checks[idx].name, 256, "Password max age");
                 snprintf(checks[idx].description, 512, "Ensure PASS_MAX_DAYS is 90 or less");
@@ -82,9 +90,9 @@ static ScaCheck *build_checks(int *count) {
                 snprintf(checks[idx].detail, 512, "Current: %d days", days);
                 idx++;
             }
-            if (strstr(line, "PASS_MIN_DAYS")) {
-                int days;
-                sscanf(line, "PASS_MIN_DAYS %d", &days);
+            if (idx < MAX_SCA_CHECKS && strstr(ld_line, "PASS_MIN_DAYS")) {
+                int days = 0;
+                sscanf(ld_line, "PASS_MIN_DAYS %d", &days);
                 snprintf(checks[idx].check_id, 64, "CIS-5.2.2");
                 snprintf(checks[idx].name, 256, "Password min days");
                 snprintf(checks[idx].description, 512, "Ensure PASS_MIN_DAYS is 7 or more");
@@ -92,18 +100,18 @@ static ScaCheck *build_checks(int *count) {
                 snprintf(checks[idx].detail, 512, "Current: %d days", days);
                 idx++;
             }
-            line = next;
+            ld_line = ld_next;
         }
         free(login_defs);
     }
 
     char sysctl_output[4096] = {0};
-    if (run_command("sysctl net.ipv4.ip_forward", sysctl_output, sizeof(sysctl_output)) == 0) {
+    if (idx < MAX_SCA_CHECKS && run_command("sysctl net.ipv4.ip_forward", sysctl_output, sizeof(sysctl_output)) == 0) {
         snprintf(checks[idx].check_id, 64, "CIS-3.1.1");
         snprintf(checks[idx].name, 256, "IP forwarding");
         snprintf(checks[idx].description, 512, "Ensure IP forwarding is disabled");
         checks[idx].passed = (strstr(sysctl_output, "= 0") != NULL);
-        snprintf(checks[idx].detail, 512, "%s", sysctl_output);
+        snprintf(checks[idx].detail, 512, "%.500s", sysctl_output);
         idx++;
     }
 

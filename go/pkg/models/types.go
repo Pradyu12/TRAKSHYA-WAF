@@ -49,7 +49,7 @@ type Rule struct {
 }
 
 type BlacklistEntry struct {
-	ID        int    `json:"id"`
+	ID        string `json:"id"`
 	IPAddress string `json:"ip_address"`
 	Reason    string `json:"reason"`
 	CreatedAt string `json:"created_at"`
@@ -63,7 +63,7 @@ type SIEMStats struct {
 }
 
 type SIEMAlert struct {
-	ID          int    `json:"id"`
+	ID          string `json:"id"`
 	RuleName    string `json:"rule_name"`
 	Severity    string `json:"severity"`
 	Description string `json:"description"`
@@ -80,7 +80,7 @@ type Config struct {
 	Posture          Posture  `yaml:"posture" json:"posture"`
 	BlockedCountries []string `yaml:"blocked_countries" json:"blocked_countries"`
 	TrustedIPs       []string `yaml:"trusted_ips" json:"trusted_ips"`
-	DatabaseURL      string   `yaml:"database_url" json:"database_url"`
+	DatabaseURL      string   `yaml:"database_path" json:"database_path"`
 	LogLevel         string   `yaml:"log_level" json:"log_level"`
 }
 
@@ -100,6 +100,11 @@ type DashboardStats struct {
 type AttackCount struct {
 	AttackType string `json:"attack_type"`
 	Count      int    `json:"count"`
+}
+
+type TimeBucket struct {
+	Time  string `json:"time"`
+	Count int64  `json:"count"`
 }
 
 type GeoPoint struct {

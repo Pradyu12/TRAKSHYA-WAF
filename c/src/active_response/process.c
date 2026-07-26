@@ -45,6 +45,6 @@ int kill_process_by_name(const char *name) {
     if (!is_safe_process_name(name)) return -1;
     char cmd[256];
     char output[512] = {0};
-    snprintf(cmd, sizeof(cmd), "pkill -f '%s' 2>/dev/null", name);
+    snprintf(cmd, sizeof(cmd), "pkill -x '%s' 2>/dev/null", name);
     return run_command(cmd, output, sizeof(output));
 }
