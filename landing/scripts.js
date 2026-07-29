@@ -4,8 +4,10 @@ function initParticles(){
   let w,h,p=[];
   function rs(){w=c.width=window.innerWidth;h=c.height=window.innerHeight}
   rs();window.addEventListener('resize',rs);
-  for(let i=60;i--;)p.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,s:Math.random()*1.5+.5,c:Math.random()>.5?'rgba(255,41,117,':'rgba(0,240,255,'});
-  function dr(){x.clearRect(0,0,w,h);p.forEach(function(q){q.x+=q.vx;q.y+=q.vy;if(q.x<0)q.x=w;if(q.x>w)q.x=0;if(q.y<0)q.y=h;if(q.y>h)q.y=0;x.beginPath();x.arc(q.x,q.y,q.s,0,Math.PI*2);x.fillStyle=q.c+'.35)';x.fill()});requestAnimationFrame(dr)}
+  const colors=['rgba(5,150,105,','rgba(6,182,212,','rgba(16,185,129,','rgba(5,150,105,'];
+  for(let i=80;i--;)p.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,s:Math.random()*2+.5,c:colors[Math.floor(Math.random()*colors.length)],l:Math.random()*80+30});
+  function dr(){x.clearRect(0,0,w,h);p.forEach(function(q){q.x+=q.vx;q.y+=q.vy;if(q.x<0)q.x=w;if(q.x>w)q.x=0;if(q.y<0)q.y=h;if(q.y>h)q.y=0;x.beginPath();x.arc(q.x,q.y,q.s,0,Math.PI*2);x.fillStyle=q.c+q.l+')';x.fill();
+    if(q.l>45){p.forEach(function(o){var dx=q.x-o.x,dy=q.y-o.y,d=Math.sqrt(dx*dx+dy*dy);if(d<80&&d>0){x.beginPath();x.moveTo(q.x,q.y);x.lineTo(o.x,o.y);x.strokeStyle='rgba(5,150,105,'+(0.06*(1-d/80))+')';x.lineWidth=.5;x.stroke()}})}});requestAnimationFrame(dr)}
   dr()
 }
 
@@ -107,6 +109,15 @@ function copyTerm(btn){
 
 // Mobile nav
 function toggleNav(){document.querySelector('.nav-links').classList.toggle('open')}
+
+// Copy one-liner
+function copyOneLiner(el){
+  const text=el.querySelector('.ol-text')?el.querySelector('.ol-text').textContent.trim():el.querySelector('.ol-cmd')?el.querySelector('.ol-cmd').textContent.trim():'';
+  navigator.clipboard.writeText(text).then(function(){
+    const btn=el.querySelector('.ol-copy')||el.querySelector('.ol-badge');
+    if(btn){const orig=btn.textContent;btn.textContent='Copied!';btn.classList.add('copied');setTimeout(function(){btn.textContent=orig;btn.classList.remove('copied')},2000)}
+  }).catch(function(e){console.warn('Copy failed:',e);var ta=document.createElement('textarea');ta.value=text;ta.position='fixed';ta.opacity=0;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta)})
+}
 
 // Init
 document.addEventListener('DOMContentLoaded',function(){

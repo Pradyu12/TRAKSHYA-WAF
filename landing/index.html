@@ -5,11 +5,242 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>TRAKSHYA WAF — Web Application Firewall</title>
 <meta name="description" content="TRAKSHYA WAF: real-time threat detection running entirely on your machine. 11 attack vectors, SIEM correlation, zero cloud dependency. Rust + Go + C with DuckDB.">
-<meta name="theme-color" content="#080812">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><polygon points=%2250,5 95,50 50,95 5,50%22 fill=%22none%22 stroke=%22%23ff2975%22 stroke-width=%224%22/><polygon points=%2250,18 82,50 50,82 18,50%22 fill=%22none%22 stroke=%22%2300f0ff%22 stroke-width=%223%22/><polygon points=%2250,40 60,50 50,60 40,50%22 fill=%22%2300ff88%22/></svg>">
+<meta name="theme-color" content="#0F111A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='f' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23059669'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M50 12L78 38 68 70 50 76 32 70 22 38Z' fill='none' stroke='url(%23f)' stroke-width='3' stroke-linejoin='round'/%3E%3Cpath d='M50 24L70 44 62 64 50 68 38 64 30 44Z' fill='none' stroke='url(%23f)' stroke-width='2' stroke-linejoin='round' opacity='.7'/%3E%3Ccircle cx='50' cy='44' r='6' fill='none' stroke='%23059669' stroke-width='2'/%3E%3Ccircle cx='50' cy='44' r='2.5' fill='%2306b6d4'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --emerald:#059669;--cyan:#06b6d4;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--pink:#ec4899;
+  --emerald-dim:rgba(5,150,105,0.12);--cyan-dim:rgba(6,182,212,0.12);--green-dim:rgba(16,185,129,0.12);--amber-dim:rgba(245,158,11,0.12);--red-dim:rgba(239,68,68,0.12);
+  --bg:#0F111A;--bg-card:rgba(22,25,40,0.5);--bg-elevated:rgba(255,255,255,0.04);
+  --border:rgba(30,34,53,0.6);--border-hover:rgba(5,150,105,0.3);
+  --text:#e2e8f0;--text-sec:#94a3b8;--text-dim:#64748b;
+  --radius:14px;--radius-sm:10px;--font-mono:'JetBrains Mono',monospace
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden;min-height:100vh}
+::selection{background:var(--emerald);color:#fff}
+
+/* Particles */
+#particle-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.35}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 40px;background:rgba(15,17,26,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:64px}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--font-mono);font-size:16px;font-weight:600;color:var(--text);letter-spacing:1px;transition:opacity .2s}
+.nav-logo:hover{opacity:.8}
+.nav-logo svg{flex-shrink:0;filter:drop-shadow(0 0 8px rgba(5,150,105,0.2))}
+.nav-links{display:flex;align-items:center;gap:24px;list-style:none}
+.nav-links a{color:var(--text-sec);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s;position:relative}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:2px;background:var(--emerald);transition:width .2s;border-radius:1px}
+.nav-links a:hover::after{width:100%}
+.nav-links a:hover{color:var(--emerald)}
+.nav-links .nav-cta{padding:8px 20px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--emerald),var(--cyan));color:#fff!important;font-weight:600;font-size:12px;letter-spacing:.5px;box-shadow:0 0 20px rgba(5,150,105,0.2)}
+.nav-links .nav-cta::after{display:none}
+.nav-links .nav-cta:hover{box-shadow:0 0 30px rgba(5,150,105,0.35);transform:translateY(-1px)}
+.btn-menu{display:none;background:none;border:1px solid var(--border);color:var(--text-sec);font-size:20px;cursor:pointer;padding:6px 10px;border-radius:8px;transition:all .2s}
+.btn-menu:hover{border-color:var(--emerald);color:var(--emerald)}
+
+/* Hero */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:100px 20px 60px;position:relative;z-index:1;overflow:hidden}
+.hero-content{text-align:center;max-width:740px;position:relative;z-index:2}
+
+/* Radar BG */
+.radar-bg{position:absolute;top:50%;left:50%;width:900px;height:900px;transform:translate(-50%,-50%);border-radius:50%;border:1px solid rgba(5,150,105,0.04);pointer-events:none;z-index:0}
+.radar-bg::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;box-shadow:0 0 0 60px rgba(5,150,105,0.03),0 0 0 120px rgba(6,182,212,0.02),0 0 0 180px rgba(5,150,105,0.015),0 0 0 240px rgba(6,182,212,0.01)}
+.radar-bg::after{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(5,150,105,0.05)}
+.sweep{position:absolute;top:0;left:50%;width:50%;height:50%;transform-origin:bottom left;background:linear-gradient(135deg,rgba(5,150,105,0.08),transparent 60%);animation:sweep 4s linear infinite;border-radius:50% 0 0 0}
+@keyframes sweep{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+.hero-logo{margin-bottom:24px;filter:drop-shadow(0 0 40px rgba(5,150,105,0.2))}
+.hero-logo svg{width:80px;height:80px;animation:logoFloat 3s ease-in-out infinite}
+@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.hero-badge{display:inline-block;padding:5px 14px;border-radius:20px;background:var(--cyan-dim);border:1px solid rgba(6,182,212,0.25);color:var(--cyan);font-size:11px;font-weight:600;margin-bottom:20px;font-family:var(--font-mono);letter-spacing:1px}
+.hero h1{font-family:var(--font-mono);font-size:clamp(2.2rem,5vw,4rem);font-weight:800;color:var(--text);margin-bottom:16px;line-height:1.1;letter-spacing:2px;background:linear-gradient(135deg,var(--emerald),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-p{font-size:clamp(1rem,1.8vw,1.15rem);color:var(--text-sec);max-width:620px;margin:0 auto 32px;line-height:1.8}
+
+/* Hero terminal */
+.hero-terminal{background:#0a0e14;border:1px solid rgba(5,150,105,0.15);border-radius:var(--radius-sm);padding:14px 18px;margin:0 auto 28px;max-width:580px;text-align:left;overflow:hidden;min-height:44px;font-family:var(--font-mono);font-size:12px;line-height:1.7;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+.hero-terminal code{color:var(--text-sec);font-family:inherit;font-size:inherit}
+.term-prompt{color:var(--green)}
+.term-cmd{color:var(--text)}
+.term-cursor{display:inline-block;width:8px;height:16px;background:var(--green);margin-left:4px;animation:curBlink .8s step-end infinite;vertical-align:text-bottom}
+@keyframes curBlink{0%,100%{opacity:1}50%{opacity:0}}
+.hero-terminal .term-line{display:block;opacity:0;animation:fadeInLine .3s forwards}
+.hero-terminal .line-blocked{color:var(--red)}
+.hero-terminal .line-allow{color:var(--green)}
+.hero-terminal .line-alert{color:var(--amber)}
+.hero-terminal .line-info{color:var(--cyan)}
+@keyframes fadeInLine{to{opacity:1}}
+
+/* One-liner install banner */
+.one-liner{margin:0 auto 28px;max-width:600px;background:linear-gradient(135deg,rgba(5,150,105,0.08),rgba(6,182,212,0.05));border:1px solid rgba(5,150,105,0.2);border-radius:var(--radius);padding:16px 20px;text-align:center;backdrop-filter:blur(8px)}
+.one-liner-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--emerald);margin-bottom:8px}
+.one-liner-code{font-family:var(--font-mono);font-size:13px;color:var(--cyan);background:rgba(0,0,0,0.3);padding:10px 16px;border-radius:var(--radius-sm);border:1px solid rgba(6,182,212,0.15);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;transition:all .2s;word-break:break-all}
+.one-liner-code:hover{border-color:var(--emerald);background:rgba(0,0,0,0.4)}
+.one-liner-code .ol-text{user-select:all;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.one-liner-code .ol-copy{flex-shrink:0;font-size:10px;padding:4px 12px;border-radius:6px;background:rgba(6,182,212,0.15);color:var(--cyan);border:1px solid rgba(6,182,212,0.2);cursor:pointer;transition:all .2s;font-family:inherit;font-weight:600}
+.one-liner-code .ol-copy:hover{background:rgba(5,150,105,0.2);border-color:var(--emerald);color:var(--emerald)}
+.one-liner-code .ol-copy.copied{background:rgba(16,185,129,0.2);border-color:var(--green);color:var(--green)}
+
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;transition:all .25s;border:none;font-family:inherit}
+.btn-allow{background:var(--emerald-dim);border:1px solid rgba(5,150,105,0.3);color:var(--emerald)}
+.btn-allow:hover{background:rgba(5,150,105,0.2);box-shadow:0 0 24px rgba(5,150,105,0.2);transform:translateY(-2px)}
+.btn-block{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text)}
+.btn-block:hover{background:rgba(255,255,255,0.08);border-color:var(--emerald);color:var(--emerald);transform:translateY(-2px)}
+
+/* Stats bar */
+.stats-bar{display:flex;justify-content:center;gap:48px;padding:28px 20px;background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);position:relative;z-index:1;flex-wrap:wrap;backdrop-filter:blur(8px)}
+.stat{text-align:center}
+.stat-num{font-family:var(--font-mono);font-size:28px;font-weight:700;color:var(--emerald);display:inline}
+.stat-suffix{font-family:var(--font-mono);font-size:28px;font-weight:700;color:var(--emerald)}
+.stat-label{display:block;font-size:12px;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+
+/* Section common */
+section{padding:80px 40px;position:relative;z-index:1}
+section::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:60%;height:1px;background:linear-gradient(90deg,transparent,rgba(5,150,105,0.15),transparent)}
+.section-head{text-align:center;margin-bottom:48px}
+.section-label{font-family:var(--font-mono);font-size:10px;letter-spacing:3px;color:var(--cyan);margin-bottom:10px;text-transform:uppercase}
+.section-title{font-family:var(--font-mono);font-size:clamp(1.3rem,2.5vw,2rem);font-weight:700;margin-bottom:12px;color:var(--text);background:linear-gradient(135deg,var(--emerald),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-sub{color:var(--text-dim);font-size:14px;max-width:540px;margin:0 auto;line-height:1.7}
+
+/* Timeline */
+.timeline{max-width:680px;margin:0 auto;position:relative;padding-left:40px}
+.timeline::before{content:'';position:absolute;left:16px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--emerald),var(--cyan),var(--green))}
+.tl-entry{position:relative;margin-bottom:36px;opacity:0;transform:translateY(20px);transition:opacity .6s,transform .6s}
+.tl-entry.visible{opacity:1;transform:translateY(0)}
+.tl-entry:last-child{margin-bottom:0}
+.tl-marker{position:absolute;left:-40px;top:0;width:32px;height:24px;border-radius:4px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;font-weight:600;color:var(--emerald);letter-spacing:.5px}
+.tl-body{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;backdrop-filter:blur(4px)}
+.tl-body h4{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px}
+.tl-body p{font-size:12px;color:var(--text-sec);line-height:1.8}
+
+/* Features */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1000px;margin:0 auto}
+.feat-card{padding:24px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border);transition:all .3s;opacity:0;transform:translateY(24px);will-change:transform;backdrop-filter:blur(4px)}
+.feat-card.visible{opacity:1;transform:translateY(0)}
+.feat-card:hover{border-color:var(--border-hover);box-shadow:0 8px 40px rgba(5,150,105,0.06);transform:translateY(-4px)}
+.feat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.feat-icon.outer-threat{background:var(--emerald-dim)}
+.feat-icon.siem{background:var(--cyan-dim)}
+.feat-icon.host{background:var(--amber-dim)}
+.feat-icon.response{background:var(--red-dim)}
+.feat-icon.analytics{background:var(--green-dim)}
+.feat-icon.rules{background:rgba(5,150,105,0.1)}
+.feat-card h3{font-size:14px;font-weight:600;margin-bottom:6px;color:var(--text)}
+.feat-card p{font-size:12px;color:var(--text-sec);line-height:1.7}
+.feat-card strong{color:var(--emerald)}
+
+/* Architecture */
+.arch-flow{display:flex;flex-direction:column;align-items:center;gap:24px;max-width:800px;margin:0 auto}
+.arch-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.arch-node{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 24px;text-align:center;transition:all .3s;backdrop-filter:blur(4px)}
+.arch-node:hover{border-color:var(--emerald);transform:translateY(-2px);box-shadow:0 4px 20px rgba(5,150,105,0.08)}
+.arch-node span{display:block;font-size:13px;font-weight:600;color:var(--text)}
+.arch-node small{display:block;font-size:10px;color:var(--text-dim);margin-top:2px;font-family:var(--font-mono)}
+.arch-node.rust{border-color:rgba(5,150,105,0.3)}.arch-node.go{border-color:rgba(6,182,212,0.3)}.arch-node.db{border-color:rgba(16,185,129,0.3)}.arch-node.client{border-color:rgba(255,255,255,0.1)}.arch-node.c{border-color:rgba(245,158,11,0.3)}
+.arch-connector{display:flex;align-items:center}
+.arch-connector svg{display:block}
+.tech-badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+.badge{padding:4px 14px;border-radius:6px;background:var(--bg-card);border:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--text-sec)}
+
+/* Carousel */
+.carousel{max-width:640px;margin:0 auto;position:relative;overflow:hidden;border-radius:var(--radius)}
+.carousel-track{display:flex;transition:transform .5s ease}
+.carousel-slide{min-width:100%}
+.cam-frame{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.cam-header{display:flex;align-items:center;gap:12px;padding:8px 14px;background:rgba(10,14,20,0.6);border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:10px}
+.cam-rec{color:var(--red);font-size:9px;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.cam-label{color:var(--text-sec);flex:1}
+.cam-ts{color:var(--text-dim)}
+.cam-preview{aspect-ratio:16/9;overflow:hidden;line-height:0}
+.cam-preview svg{width:100%;height:100%}
+.cam-footer{display:flex;align-items:center;gap:16px;padding:6px 14px;background:rgba(10,14,20,0.4);border-top:1px solid var(--border);font-family:var(--font-mono);font-size:9px}
+.signal{color:var(--green)}.fps{color:var(--text-dim)}
+.carousel-dots{display:flex;justify-content:center;gap:8px;margin-top:16px}
+.carousel-dot{width:8px;height:8px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;transition:all .3s}
+.carousel-dot.active{background:var(--emerald);border-color:var(--emerald);box-shadow:0 0 8px rgba(5,150,105,0.4)}
+.carousel-dot:hover{border-color:var(--emerald)}
+
+/* Compare */
+.table-wrap{overflow-x:auto;max-width:1000px;margin:0 auto;border-radius:var(--radius);border:1px solid var(--border)}
+.compare-table{width:100%;min-width:700px;border-collapse:collapse;font-size:13px}
+.compare-table th,.compare-table td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.compare-table th{background:rgba(22,25,40,0.5);font-family:var(--font-mono);font-size:10px;color:var(--cyan);letter-spacing:1px;position:sticky;top:0}
+.compare-table td:first-child{color:var(--text-sec);font-weight:500;white-space:nowrap}
+.compare-table tbody tr:hover{background:rgba(5,150,105,0.03)}
+.compare-table .col-win{color:var(--emerald);font-weight:600}
+.tag-green{color:var(--green)}
+
+/* Install */
+#install .install-hero{text-align:center;margin-bottom:32px}
+#install .install-one-liner{display:inline-flex;align-items:center;gap:8px;background:rgba(10,14,20,0.6);border:1px solid rgba(5,150,105,0.2);border-radius:var(--radius);padding:12px 16px;font-family:var(--font-mono);font-size:13px;color:var(--cyan);cursor:pointer;transition:all .2s;max-width:100%}
+#install .install-one-liner:hover{border-color:var(--emerald);box-shadow:0 0 20px rgba(5,150,105,0.1)}
+#install .install-one-liner .ol-prom{color:var(--green)}
+#install .install-one-liner .ol-cmd{color:var(--text);margin:0 4px}
+#install .install-one-liner .ol-badge{padding:2px 10px;border-radius:6px;background:var(--emerald-dim);color:var(--emerald);font-size:10px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.os-selector{display:flex;gap:4px;justify-content:center;margin-bottom:20px}
+.os-btn{padding:8px 20px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;font-family:inherit}
+.os-btn.active{background:var(--emerald-dim);border-color:var(--emerald);color:var(--emerald)}
+.os-btn:hover:not(.active){color:var(--text);border-color:var(--border-hover)}
+.os-pane{display:none}
+.os-pane.active{display:block}
+
+.term-block{max-width:600px;margin:0 auto;background:#0a0e14;border:1px solid rgba(5,150,105,0.12);border-radius:var(--radius-sm);overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+.term-head{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(10,14,20,0.5);border-bottom:1px solid rgba(255,255,255,0.04)}
+.term-title{font-family:var(--font-mono);font-size:10px;color:var(--text-dim)}
+.term-dots{display:flex;gap:5px}
+.term-dots span{width:7px;height:7px;border-radius:50%;background:var(--text-dim)}
+.term-body{position:relative;padding:16px 18px}
+.term-line{display:block;font-family:var(--font-mono);font-size:12px;line-height:2;color:var(--text)}
+.tp{color:var(--green)}
+.tc{color:var(--text)}
+.to{color:var(--text-dim)}
+.term-out{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.04)}
+.copy-btn{position:absolute;top:12px;right:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-dim);font-size:10px;cursor:pointer;font-family:inherit;transition:all .2s}
+.copy-btn:hover{background:var(--emerald-dim);border-color:rgba(5,150,105,0.3);color:var(--emerald)}
+.copy-btn.copied{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+
+/* Footer */
+footer{padding:48px 40px 32px;border-top:1px solid var(--border);position:relative;z-index:1}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;max-width:900px;margin:0 auto 32px}
+.footer-col h5{font-family:var(--font-mono);font-size:12px;color:var(--text);margin-bottom:12px;letter-spacing:1px}
+.footer-col p{font-size:12px;color:var(--text-dim);line-height:1.7}
+.footer-col a{display:block;font-size:12px;color:var(--text-sec);text-decoration:none;padding:3px 0;transition:color .2s}
+.footer-col a:hover{color:var(--emerald)}
+.footer-tagline{text-align:center;font-size:12px;color:var(--text-dim);opacity:.6;font-style:italic}
+.footer-tagline strong{color:var(--cyan);opacity:.8;font-weight:600}
+
+/* Responsive */
+@media(max-width:768px){
+  .btn-menu{display:block!important}
+  .nav-links{display:none;background:none!important}
+  .nav-links.open{display:flex;flex-direction:column;position:absolute;top:64px;left:0;right:0;background:rgba(15,17,26,0.98)!important;padding:20px 24px;gap:14px;border-bottom:1px solid var(--border);backdrop-filter:blur(20px)}
+  section{padding:60px 20px}
+  .hero{padding:80px 20px 40px}
+  .radar-bg{width:400px;height:400px}
+  .stats-bar{gap:28px;padding:24px 16px}
+  .stat-num{font-size:22px}
+  .features-grid{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr;gap:24px}
+  .arch-group{flex-direction:column;gap:12px}
+  .arch-connector{transform:rotate(90deg)}
+  .compare-table{min-width:100%}
+  .compare-table td{padding:8px 10px;font-size:12px}
+  .one-liner-code{font-size:11px;padding:8px 12px;flex-wrap:wrap}
+  #install .install-one-liner{font-size:11px;padding:10px 14px;flex-wrap:wrap}
+}
+
+@media(max-width:480px){
+  nav{padding:12px 16px}
+  .hero h1{font-size:1.8rem}
+  .hero-terminal{font-size:11px;padding:12px}
+  .stats-bar{gap:18px}
+  .stat-num{font-size:18px}
+}
+</style>
 </head>
 <body>
 <canvas id="particle-canvas"></canvas>
@@ -18,13 +249,12 @@
 <nav>
   <a href="#" class="nav-logo">
     <svg viewBox="0 0 100 100" width="32" height="32">
-      <defs><linearGradient id="ng1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff2975"/><stop offset="100%" stop-color="#b026ff"/></linearGradient><linearGradient id="ng2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#00f0ff"/><stop offset="100%" stop-color="#ff2975"/></linearGradient></defs>
-      <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,41,117,0.08)" stroke-width="1"/>
-      <polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="url(#ng1)" stroke-width="2.5" opacity="0.8"/>
-      <polygon points="50,18 82,50 50,82 18,50" fill="none" stroke="url(#ng2)" stroke-width="2" opacity="0.9"/>
-      <polygon points="50,30 70,50 50,70 30,50" fill="none" stroke="#ff0055" stroke-width="1.5"/>
-      <polygon points="50,42 58,50 50,58 42,50" fill="#00ff88" opacity="0.9"/>
-      <circle cx="50" cy="50" r="3" fill="#00ff88" opacity="0.6"/>
+      <defs><linearGradient id="nlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#059669"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
+      <path d="M50 12L78 38 68 70 50 76 32 70 22 38Z" fill="none" stroke="url(#nlg)" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M50 24L70 44 62 64 50 68 38 64 30 44Z" fill="none" stroke="url(#nlg)" stroke-width="2" stroke-linejoin="round" opacity=".7"/>
+      <circle cx="50" cy="44" r="6" fill="none" stroke="#059669" stroke-width="2"/>
+      <circle cx="50" cy="44" r="2.5" fill="#06b6d4"/>
+      <path d="M50 44L50 30" stroke="#059669" stroke-width="1.8" stroke-linecap="round" opacity=".8"/>
     </svg>
     TRAKSHYA
   </a>
@@ -33,6 +263,7 @@
     <li><a href="#features">Features</a></li>
     <li><a href="#demo">Demo</a></li>
     <li><a href="#install">Install</a></li>
+    <li><a href="#architecture">Architecture</a></li>
     <li><a href="https://github.com/Pradyu12/TRAKSHYA-WAF" target="_blank">GitHub</a></li>
     <li><a href="#install" class="nav-cta">Get Started</a></li>
   </ul>
@@ -45,24 +276,33 @@
   <div class="hero-content">
     <div class="hero-logo">
       <svg viewBox="0 0 100 100" width="80" height="80">
-        <defs><linearGradient id="hg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff2975"/><stop offset="100%" stop-color="#b026ff"/></linearGradient><linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#00f0ff"/><stop offset="100%" stop-color="#ff2975"/></linearGradient><radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#00ff88" stop-opacity="0.3"/><stop offset="100%" stop-color="transparent"/></radialGradient></defs>
-        <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,41,117,0.06)" stroke-width="1"/>
-        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(0,240,255,0.04)" stroke-width="0.5" stroke-dasharray="4 4"/>
-        <polygon points="50,3 97,50 50,97 3,50" fill="none" stroke="url(#hg1)" stroke-width="2.5" opacity="0.7"/>
-        <polygon points="50,16 84,50 50,84 16,50" fill="none" stroke="url(#hg2)" stroke-width="2" opacity="0.85"/>
-        <polygon points="50,28 72,50 50,72 28,50" fill="none" stroke="#ff0055" stroke-width="1.5"/>
-        <polygon points="50,40 60,50 50,60 40,50" fill="url(#glow)"/>
-        <polygon points="50,42 58,50 50,58 42,50" fill="#00ff88"/>
-        <circle cx="50" cy="50" r="4" fill="#fff" opacity="0.5"/>
+        <defs><linearGradient id="hlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#059669"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient><radialGradient id="hglow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#059669" stop-opacity="0.25"/><stop offset="100%" stop-color="transparent"/></radialGradient></defs>
+        <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(5,150,105,0.06)" stroke-width="1.5"/>
+        <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(6,182,212,0.05)" stroke-width="0.8" stroke-dasharray="4 4"/>
+        <path d="M50 10L82 38 71 70 50 76 29 70 18 38Z" fill="none" stroke="url(#hlg)" stroke-width="2.8" stroke-linejoin="round" opacity=".85"/>
+        <path d="M50 22L72 44 63 65 50 69 37 65 28 44Z" fill="none" stroke="url(#hlg)" stroke-width="2" stroke-linejoin="round" opacity=".75"/>
+        <path d="M50 33L63 49 50 61 37 49Z" fill="none" stroke="#059669" stroke-width="1.2" opacity=".45"/>
+        <path d="M50 39L57 49 50 56 43 49Z" fill="none" stroke="#06b6d4" stroke-width="1" opacity=".6"/>
+        <circle cx="50" cy="49" r="7" fill="none" stroke="url(#hlg)" stroke-width="2"/>
+        <circle cx="50" cy="49" r="3" fill="#06b6d4"/>
+        <circle cx="50" cy="49" r="48" fill="url(#hglow)"/>
       </svg>
     </div>
     <div class="hero-badge">v2.1.0 &middot; WAF + SIEM/XDR &middot; DuckDB</div>
     <h1>TRAKSHYA WAF</h1>
     <p class="hero-p">A firewall that respects your privacy. Real-time threat detection — SQLi to Log4Shell — running entirely on your machine. No cloud, no data egress, no accounts.</p>
     <pre class="hero-terminal" id="hero-terminal"><code><span class="term-prompt">$</span> <span class="term-cmd">./trakshya --scan --upstream localhost:3000</span><span class="term-cursor"></span></code></pre>
+    <div class="one-liner">
+      <div class="one-liner-label">Single-line install</div>
+      <div class="one-liner-code" onclick="copyOneLiner(this)">
+        <span class="ol-text">curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/install.sh | bash</span>
+        <button class="ol-copy">Copy</button>
+      </div>
+    </div>
     <div class="hero-actions">
       <a href="#install" class="btn btn-allow">&#9654; Get Started</a>
       <a href="https://github.com/Pradyu12/TRAKSHYA-WAF" target="_blank" class="btn btn-block">&#128190; GitHub</a>
+      <a href="#demo" class="btn btn-block">&#9733; See Demo</a>
     </div>
   </div>
 </section>
@@ -116,32 +356,32 @@
   </div>
   <div class="features-grid">
     <div class="feat-card" data-tilt>
-      <div class="feat-icon outer-threat"><svg viewBox="0 0 24 24" width="24" height="24"><polygon points="12,2 22,12 12,22 2,12" fill="none" stroke="#ff2975" stroke-width="2"/><polygon points="12,7 17,12 12,17 7,12" fill="none" stroke="#ff2975" stroke-width="1.5"/><circle cx="12" cy="12" r="2" fill="#ff2975"/></svg></div>
+      <div class="feat-icon outer-threat"><svg viewBox="0 0 24 24" width="24" height="24"><polygon points="12,2 22,12 12,22 2,12" fill="none" stroke="#059669" stroke-width="2"/><polygon points="12,7 17,12 12,17 7,12" fill="none" stroke="#059669" stroke-width="1.5"/><circle cx="12" cy="12" r="2" fill="#059669"/></svg></div>
       <h3>Attack Detection</h3>
       <p>SQLi, XSS, RFI, CMDi, path traversal, LFI, XXE, SSTI, SSRF, CRLF injection, JNDI/Log4Shell — <strong>11 vectors</strong> with evasion countermeasures. Regex engine, OWASP CRS compatible.</p>
     </div>
     <div class="feat-card" data-tilt>
-      <div class="feat-icon siem"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="#00f0ff" stroke-width="2"/><line x1="8" y1="8" x2="8" y2="16" stroke="#00f0ff" stroke-width="2"/><line x1="12" y1="6" x2="12" y2="18" stroke="#00f0ff" stroke-width="2"/><line x1="16" y1="10" x2="16" y2="14" stroke="#00f0ff" stroke-width="2"/></svg></div>
+      <div class="feat-icon siem"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="#06b6d4" stroke-width="2"/><line x1="8" y1="8" x2="8" y2="16" stroke="#06b6d4" stroke-width="2"/><line x1="12" y1="6" x2="12" y2="18" stroke="#06b6d4" stroke-width="2"/><line x1="16" y1="10" x2="16" y2="14" stroke="#06b6d4" stroke-width="2"/></svg></div>
       <h3>SIEM Correlation</h3>
       <p>7 MITRE ATT&CK rules: brute force, port scanning, XSS/SQLi waves, geo anomaly, beaconing, data exfiltration, lateral movement. Slack/Discord webhooks.</p>
     </div>
     <div class="feat-card" data-tilt>
-      <div class="feat-icon host"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="#ffe74c" stroke-width="2"/><line x1="4" y1="10" x2="20" y2="10" stroke="#ffe74c" stroke-width="1.5"/><line x1="12" y1="10" x2="12" y2="20" stroke="#ffe74c" stroke-width="1.5"/><circle cx="9" cy="7" r="1" fill="#ffe74c"/><circle cx="13" cy="7" r="1" fill="#ffe74c"/></svg></div>
+      <div class="feat-icon host"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="#f59e0b" stroke-width="2"/><line x1="4" y1="10" x2="20" y2="10" stroke="#f59e0b" stroke-width="1.5"/><line x1="12" y1="10" x2="12" y2="20" stroke="#f59e0b" stroke-width="1.5"/><circle cx="9" cy="7" r="1" fill="#f59e0b"/><circle cx="13" cy="7" r="1" fill="#f59e0b"/></svg></div>
       <h3>HIDS + FIM + SCA</h3>
       <p>Auth log monitoring, SHA-256 file integrity, CIS benchmark compliance. C daemon reports every 30s via HTTP POST. Runs as systemd service.</p>
     </div>
     <div class="feat-card" data-tilt>
-      <div class="feat-icon response"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="none" stroke="#ff0055" stroke-width="2"/><path d="M2 17l10 5 10-5" fill="none" stroke="#ff0055" stroke-width="2"/><path d="M2 12l10 5 10-5" fill="none" stroke="#ff0055" stroke-width="1.5"/></svg></div>
+      <div class="feat-icon response"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="none" stroke="#ef4444" stroke-width="2"/><path d="M2 17l10 5 10-5" fill="none" stroke="#ef4444" stroke-width="2"/><path d="M2 12l10 5 10-5" fill="none" stroke="#ef4444" stroke-width="1.5"/></svg></div>
       <h3>Active Response</h3>
       <p>iptables/nftables IP blocking, UFW integration, 3 posture modes (Monitor / Standard / Under Attack). Systemd lockdown controls.</p>
     </div>
     <div class="feat-card" data-tilt>
-      <div class="feat-icon analytics"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="10" fill="none" stroke="#00ff88" stroke-width="2"/><path d="M12 2a10 10 0 0 1 10 10" fill="none" stroke="#00ff88" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="12" cy="12" r="3" fill="#00ff88"/></svg></div>
+      <div class="feat-icon analytics"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="10" fill="none" stroke="#10b981" stroke-width="2"/><path d="M12 2a10 10 0 0 1 10 10" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="12" cy="12" r="3" fill="#10b981"/></svg></div>
       <h3>Live Analytics</h3>
       <p>DuckDB-powered event pipeline: top attackers timeline, country heatmap, rule trigger stats, configurable retention. WebSocket real-time push to dashboard.</p>
     </div>
     <div class="feat-card" data-tilt>
-      <div class="feat-icon rules"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="none" stroke="#b026ff" stroke-width="2"/><path d="M14 2v6h6" fill="none" stroke="#b026ff" stroke-width="2"/><line x1="9" y1="15" x2="15" y2="15" stroke="#b026ff" stroke-width="1.5"/><line x1="9" y1="12" x2="13" y2="12" stroke="#b026ff" stroke-width="1.5"/></svg></div>
+      <div class="feat-icon rules"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="none" stroke="#059669" stroke-width="2"/><path d="M14 2v6h6" fill="none" stroke="#059669" stroke-width="2"/><line x1="9" y1="15" x2="15" y2="15" stroke="#059669" stroke-width="1.5"/><line x1="9" y1="12" x2="13" y2="12" stroke="#059669" stroke-width="1.5"/></svg></div>
       <h3>Rule Engine</h3>
       <p>Regex-based tester with JSON import/export. Create, test, and deploy custom WAF rules. Built-in OWASP CRS with OWASP categories. Live hit counting.</p>
     </div>
@@ -165,7 +405,7 @@
     </div>
     <div class="arch-group">
       <div class="arch-node go"><span>Go API</span><small>:8000</small></div>
-      <div class="arch-connector bi"><svg width="60" height="24"><line x1="0" y1="12" x2="60" y2="12" stroke="rgba(0,240,255,0.3)" stroke-width="1.5"/><polygon points="3,8 0,12 3,16" fill="rgba(0,240,255,0.3)"/><polygon points="60,8 66,12 60,16" fill="rgba(0,240,255,0.3)"/></svg></div>
+      <div class="arch-connector bi"><svg width="60" height="24"><line x1="0" y1="12" x2="60" y2="12" stroke="rgba(6,182,212,0.3)" stroke-width="1.5"/><polygon points="3,8 0,12 3,16" fill="rgba(6,182,212,0.3)"/><polygon points="60,8 66,12 60,16" fill="rgba(6,182,212,0.3)"/></svg></div>
       <div class="arch-node db"><span>DuckDB</span><small>events.db</small></div>
     </div>
     <div class="arch-node c"><span>C Monitor</span><small>:9001</small></div>
@@ -193,15 +433,15 @@
           <div class="cam-preview">
             <svg viewBox="0 0 400 225" width="100%" height="100%">
               <rect fill="#0a0015" width="400" height="225"/>
-              <line x1="200" y1="0" x2="200" y2="225" stroke="rgba(255,41,117,0.06)" stroke-width="1"/><line x1="0" y1="112" x2="400" y2="112" stroke="rgba(255,41,117,0.06)" stroke-width="1"/>
-              <rect x="20" y="20" width="170" height="100" fill="rgba(255,41,117,0.06)" stroke="rgba(255,41,117,0.2)" stroke-width="1.5" rx="6"/>
-              <text x="105" y="55" text-anchor="middle" fill="#ff2975" font-family="monospace" font-size="10">THREATS</text>
+              <line x1="200" y1="0" x2="200" y2="225" stroke="rgba(5,150,105,0.06)" stroke-width="1"/><line x1="0" y1="112" x2="400" y2="112" stroke="rgba(5,150,105,0.06)" stroke-width="1"/>
+              <rect x="20" y="20" width="170" height="100" fill="rgba(5,150,105,0.06)" stroke="rgba(5,150,105,0.2)" stroke-width="1.5" rx="6"/>
+              <text x="105" y="55" text-anchor="middle" fill="#059669" font-family="monospace" font-size="10">THREATS</text>
               <text x="105" y="85" text-anchor="middle" fill="#fff" font-family="monospace" font-size="28">247</text>
-              <rect x="210" y="20" width="170" height="100" fill="rgba(0,240,255,0.06)" stroke="rgba(0,240,255,0.2)" stroke-width="1.5" rx="6"/>
-              <text x="295" y="55" text-anchor="middle" fill="#00f0ff" font-family="monospace" font-size="10">REQ/SEC</text>
+              <rect x="210" y="20" width="170" height="100" fill="rgba(6,182,212,0.06)" stroke="rgba(6,182,212,0.2)" stroke-width="1.5" rx="6"/>
+              <text x="295" y="55" text-anchor="middle" fill="#06b6d4" font-family="monospace" font-size="10">REQ/SEC</text>
               <text x="295" y="85" text-anchor="middle" fill="#fff" font-family="monospace" font-size="28">1,423</text>
-              <rect x="20" y="135" width="360" height="75" fill="rgba(0,255,136,0.04)" stroke="rgba(0,255,136,0.15)" stroke-width="1" rx="6"/>
-              <text x="200" y="160" text-anchor="middle" fill="#00ff88" font-family="monospace" font-size="10">SIEM INCIDENT FEED</text>
+              <rect x="20" y="135" width="360" height="75" fill="rgba(16,185,129,0.04)" stroke="rgba(16,185,129,0.15)" stroke-width="1" rx="6"/>
+              <text x="200" y="160" text-anchor="middle" fill="#10b981" font-family="monospace" font-size="10">SIEM INCIDENT FEED</text>
               <text x="200" y="185" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="monospace" font-size="9">12:00:01 SQLi BLOCKED from 192.168.1.23</text>
               <text x="200" y="200" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="monospace" font-size="9">12:00:03 XSS DETECTED from 10.0.0.45</text>
             </svg>
@@ -215,13 +455,13 @@
           <div class="cam-preview">
             <svg viewBox="0 0 400 225" width="100%" height="100%">
               <rect fill="#050010" width="400" height="225"/>
-              <circle cx="200" cy="112" r="85" fill="none" stroke="rgba(255,41,117,0.2)" stroke-width="1.5"/>
-              <circle cx="200" cy="112" r="80" fill="none" stroke="rgba(0,240,255,0.12)" stroke-width="1"/>
-              <ellipse cx="200" cy="112" rx="85" ry="25" fill="none" stroke="rgba(255,41,117,0.15)" stroke-width="0.8"/>
-              <ellipse cx="200" cy="112" rx="25" ry="85" fill="none" stroke="rgba(0,240,255,0.1)" stroke-width="0.8"/>
-              <circle cx="140" cy="90" r="4" fill="#ff2975" opacity="0.9"/><circle cx="260" cy="130" r="3.5" fill="#00f0ff" opacity="0.9"/><circle cx="310" cy="75" r="3" fill="#ff0055" opacity="0.7"/><circle cx="100" cy="150" r="2.5" fill="#ffe74c" opacity="0.8"/>
-              <path d="M140 90 Q200 70 260 130" fill="none" stroke="#ff2975" stroke-width="0.8" opacity="0.4"/>
-              <text x="200" y="210" text-anchor="middle" fill="rgba(255,41,117,0.5)" font-family="monospace" font-size="11">GLOBAL THREAT MAP</text>
+              <circle cx="200" cy="112" r="85" fill="none" stroke="rgba(5,150,105,0.2)" stroke-width="1.5"/>
+              <circle cx="200" cy="112" r="80" fill="none" stroke="rgba(6,182,212,0.12)" stroke-width="1"/>
+              <ellipse cx="200" cy="112" rx="85" ry="25" fill="none" stroke="rgba(5,150,105,0.15)" stroke-width="0.8"/>
+              <ellipse cx="200" cy="112" rx="25" ry="85" fill="none" stroke="rgba(6,182,212,0.1)" stroke-width="0.8"/>
+              <circle cx="140" cy="90" r="4" fill="#059669" opacity="0.9"/><circle cx="260" cy="130" r="3.5" fill="#06b6d4" opacity="0.9"/><circle cx="310" cy="75" r="3" fill="#ef4444" opacity="0.8"/><circle cx="100" cy="150" r="2.5" fill="#f59e0b" opacity="0.8"/>
+              <path d="M140 90 Q200 70 260 130" fill="none" stroke="#059669" stroke-width="0.8" opacity="0.4"/>
+              <text x="200" y="210" text-anchor="middle" fill="rgba(5,150,105,0.5)" font-family="monospace" font-size="11">GLOBAL THREAT MAP</text>
             </svg>
           </div>
           <div class="cam-footer"><span class="signal">&#9679; SIGNAL OK</span><span class="fps">60 FPS</span></div>
@@ -233,18 +473,18 @@
           <div class="cam-preview">
             <svg viewBox="0 0 400 225" width="100%" height="100%">
               <rect fill="#0a0015" width="400" height="225"/>
-              <line x1="200" y1="0" x2="200" y2="225" stroke="rgba(0,240,255,0.06)" stroke-width="1"/><line x1="0" y1="112" x2="400" y2="112" stroke="rgba(0,240,255,0.06)" stroke-width="1"/>
-              <rect x="20" y="20" width="160" height="90" fill="rgba(255,41,117,0.06)" stroke="rgba(255,41,117,0.2)" stroke-width="1.5" rx="6"/>
-              <text x="100" y="50" text-anchor="middle" fill="#ff2975" font-family="monospace" font-size="10">BRUTE FORCE</text>
+              <line x1="200" y1="0" x2="200" y2="225" stroke="rgba(6,182,212,0.06)" stroke-width="1"/><line x1="0" y1="112" x2="400" y2="112" stroke="rgba(6,182,212,0.06)" stroke-width="1"/>
+              <rect x="20" y="20" width="160" height="90" fill="rgba(5,150,105,0.06)" stroke="rgba(5,150,105,0.2)" stroke-width="1.5" rx="6"/>
+              <text x="100" y="50" text-anchor="middle" fill="#059669" font-family="monospace" font-size="10">BRUTE FORCE</text>
               <text x="100" y="80" text-anchor="middle" fill="#fff" font-family="monospace" font-size="32">47</text>
-              <rect x="220" y="20" width="160" height="90" fill="rgba(0,240,255,0.06)" stroke="rgba(0,240,255,0.2)" stroke-width="1.5" rx="6"/>
-              <text x="300" y="50" text-anchor="middle" fill="#00f0ff" font-family="monospace" font-size="10">SQLi WAVE</text>
+              <rect x="220" y="20" width="160" height="90" fill="rgba(6,182,212,0.06)" stroke="rgba(6,182,212,0.2)" stroke-width="1.5" rx="6"/>
+              <text x="300" y="50" text-anchor="middle" fill="#06b6d4" font-family="monospace" font-size="10">SQLi WAVE</text>
               <text x="300" y="80" text-anchor="middle" fill="#fff" font-family="monospace" font-size="32">12</text>
-              <rect x="20" y="125" width="160" height="85" fill="rgba(0,255,136,0.04)" stroke="rgba(0,255,136,0.15)" stroke-width="1" rx="6"/>
-              <text x="100" y="152" text-anchor="middle" fill="#00ff88" font-family="monospace" font-size="10">PORT SCAN</text>
+              <rect x="20" y="125" width="160" height="85" fill="rgba(16,185,129,0.04)" stroke="rgba(16,185,129,0.15)" stroke-width="1" rx="6"/>
+              <text x="100" y="152" text-anchor="middle" fill="#10b981" font-family="monospace" font-size="10">PORT SCAN</text>
               <text x="100" y="180" text-anchor="middle" fill="#fff" font-family="monospace" font-size="32">8</text>
-              <rect x="220" y="125" width="160" height="85" fill="rgba(255,231,76,0.06)" stroke="rgba(255,231,76,0.2)" stroke-width="1.5" rx="6"/>
-              <text x="300" y="152" text-anchor="middle" fill="#ffe74c" font-family="monospace" font-size="10">GEO ANOMALY</text>
+              <rect x="220" y="125" width="160" height="85" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.2)" stroke-width="1.5" rx="6"/>
+              <text x="300" y="152" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="10">GEO ANOMALY</text>
               <text x="300" y="180" text-anchor="middle" fill="#fff" font-family="monospace" font-size="32">3</text>
             </svg>
           </div>
@@ -285,8 +525,15 @@
 <section id="install">
   <div class="section-head">
     <div class="section-label">Install</div>
-    <h2 class="section-title">Run in 3 Commands</h2>
-    <p class="section-sub">No cloud accounts. No API keys. Just Docker and a terminal.</p>
+    <h2 class="section-title">Run in One Command</h2>
+    <p class="section-sub">No cloud accounts. No API keys. Just one line — then open your browser.</p>
+  </div>
+  <div class="install-hero">
+    <div class="install-one-liner" onclick="copyOneLiner(this)">
+      <span class="ol-prom">$</span>
+      <span class="ol-cmd">curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/install.sh | bash</span>
+      <span class="ol-badge">copy</span>
+    </div>
   </div>
   <div class="os-selector">
     <button class="os-btn active" data-os="linux" onclick="switchOS(this)">Linux</button>
@@ -309,9 +556,9 @@
         <span class="term-line term-out"><span class="to">Dashboard → http://localhost:8000</span></span>
       </div>
       <div class="os-pane" data-pane="windows">
-        <span class="term-line"><span class="tp">></span> <span class="tc">git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git</span></span>
-        <span class="term-line"><span class="tp">></span> <span class="tc">cd TRAKSHYA-WAF</span></span>
-        <span class="term-line"><span class="tp">></span> <span class="tc">docker compose up --build</span></span>
+        <span class="term-line"><span class="tp">&gt;</span> <span class="tc">git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git</span></span>
+        <span class="term-line"><span class="tp">&gt;</span> <span class="tc">cd TRAKSHYA-WAF</span></span>
+        <span class="term-line"><span class="tp">&gt;</span> <span class="tc">docker compose up --build</span></span>
         <span class="term-line term-out"><span class="to">Dashboard → http://localhost:8000</span></span>
       </div>
       <button class="copy-btn" onclick="copyTerm(this)">Copy</button>
@@ -339,9 +586,142 @@
       <a href="https://github.com/Pradyu12/TRAKSHYA-WAF/blob/main/LICENSE" target="_blank">License (MIT)</a>
     </div>
   </div>
-  <p class="footer-tagline">Trakshya (त्राक्ष्य) — The divine eagle, guardian of the heavens.</p>
+  <p class="footer-tagline">Trakshya (त्राक्ष्य) — The divine eagle, guardian of the heavens. <strong>100% open source. 0% cloud.</strong></p>
 </footer>
 
-<script src="scripts.js"></script>
+<script>
+// Particles
+function initParticles(){
+  const c=document.getElementById('particle-canvas'),x=c.getContext('2d');
+  let w,h,p=[];
+  function rs(){w=c.width=window.innerWidth;h=c.height=window.innerHeight}
+  rs();window.addEventListener('resize',rs);
+  const colors=['rgba(5,150,105,','rgba(6,182,212,','rgba(16,185,129,','rgba(5,150,105,'];
+  for(let i=80;i--;)p.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,s:Math.random()*2+.5,c:colors[Math.floor(Math.random()*colors.length)],l:Math.random()*80+30});
+  function dr(){x.clearRect(0,0,w,h);p.forEach(function(q){q.x+=q.vx;q.y+=q.vy;if(q.x<0)q.x=w;if(q.x>w)q.x=0;if(q.y<0)q.y=h;if(q.y>h)q.y=0;x.beginPath();x.arc(q.x,q.y,q.s,0,Math.PI*2);x.fillStyle=q.c+q.l+')';x.fill();
+    if(q.l>45){p.forEach(function(o){var dx=q.x-o.x,dy=q.y-o.y,d=Math.sqrt(dx*dx+dy*dy);if(d<80&&d>0){x.beginPath();x.moveTo(q.x,q.y);x.lineTo(o.x,o.y);x.strokeStyle='rgba(5,150,105,'+(0.06*(1-d/80))+')';x.lineWidth=.5;x.stroke()}})}});requestAnimationFrame(dr)}
+  dr()
+}
+
+// Terminal typing
+function initTerminal(){
+  const el=document.getElementById('hero-terminal'),code=el.querySelector('code');
+  const lines=[
+    {t:'[12:00:01] DETECTED SQLi from 192.168.1.23 — BLOCKED',c:'line-blocked'},
+    {t:'[12:00:03] DETECTED XSS probe from 10.0.0.45 — BLOCKED',c:'line-blocked'},
+    {t:'[12:00:05] ALLOW GET /index.html — PASS',c:'line-allow'},
+    {t:'[12:00:08] ALERT Port scan from 10.0.0.1 — RATE LIMITED',c:'line-alert'},
+    {t:'[12:00:12] DETECTED JNDI lookup ldap://malicious — BLOCKED',c:'line-blocked'},
+    {t:'[12:00:15] DETECTED CRLF injection in /api/login — BLOCKED',c:'line-blocked'},
+    {t:'[12:00:18] ALLOW POST /api/auth — PASS',c:'line-allow'}
+  ];
+  let i=0,ch=0,run=true;
+  function ty(){
+    if(!run)return;
+      if(i>=lines.length){setTimeout(function(){i=0;ch=0;code.innerHTML='<span class="term-prompt">$</span> <span class="term-cmd">./trakshya --scan --upstream localhost:3000</span><span class="term-cursor"></span>';setTimeout(ty,1500)},4000);return}
+    if(ch===0){var l=lines[i];code.innerHTML+='<span class="term-line '+l.c+'"></span>';code.querySelector('span:last-child').textContent=''}
+    var sp=code.querySelectorAll('.term-line');
+    if(sp.length){var cur=sp[sp.length-1];if(ch<lines[i].t.length){cur.textContent+=lines[i].t[ch];ch++;setTimeout(ty,25)}else{i++;ch=0;setTimeout(ty,400)}}
+  }
+  ty()
+}
+
+// Counters
+function animateCounters(){
+  const els=document.querySelectorAll('.stat-num[data-target]');
+  if(!els.length)return;
+  let done=false;
+  function go(){
+    if(done)return;done=true;
+    els.forEach(function(el){
+      const t=parseInt(el.dataset.target);if(isNaN(t))return;
+      let c=0,st=Math.ceil(t/60);
+      function up(){c+=st;if(c>t)c=t;el.textContent=c;if(c<t)setTimeout(up,25)}
+      up()
+    })
+  }
+  const ob=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){go();ob.disconnect()}})},{threshold:.5});
+  ob.observe(document.querySelector('.stats-bar'))
+}
+
+// Tilt
+function initTilt(){
+  document.querySelectorAll('[data-tilt]').forEach(function(c){
+    c.addEventListener('mousemove',function(e){
+      const r=c.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+      const mx=(x/r.width-.5)*8,my=(y/r.height-.5)*8;
+      c.style.transform='perspective(600px) rotateX('+(-my)+'deg) rotateY('+mx+'deg)'
+    });
+    c.addEventListener('mouseleave',function(){c.style.transform='perspective(600px) rotateX(0) rotateY(0)'})
+  })
+}
+
+// Carousel
+function initCarousel(){
+  const wrap=document.getElementById('carousel');
+  if(!wrap)return;
+  const track=wrap.querySelector('.carousel-track'),slides=track.querySelectorAll('.carousel-slide'),dots=wrap.querySelector('.carousel-dots');
+  if(!slides.length)return;
+  let idx=0,tmr;
+  slides.forEach(function(s,i){const d=document.createElement('button');d.className='carousel-dot'+(i===0?' active':'');d.addEventListener('click',function(){go(i)});dots.appendChild(d)});
+  function go(i){idx=i;track.style.transform='translateX(-'+(idx*100)+'%)';dots.querySelectorAll('.carousel-dot').forEach(function(d,j){d.className='carousel-dot'+(j===idx?' active':'')})}
+  function ad(){tmr=setTimeout(function(){go((idx+1)%slides.length);ad()},4000)}
+  ad();
+  wrap.addEventListener('mouseenter',function(){clearTimeout(tmr)});
+  wrap.addEventListener('mouseleave',ad)
+}
+
+// Scroll reveal
+function observeSections(){
+  document.querySelectorAll('.tl-entry,.feat-card').forEach(function(el){
+    el.style.opacity='0';el.style.transform='translateY(24px)';el.style.transition='opacity .6s ease, transform .6s ease'
+  });
+  const obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}})},{threshold:.1});
+  document.querySelectorAll('.tl-entry,.feat-card').forEach(function(el,i){setTimeout(function(){obs.observe(el)},i*80)})
+}
+
+// OS tabs
+function switchOS(btn){
+  const sel=btn.closest('#install');
+  sel.querySelectorAll('.os-btn').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  sel.querySelectorAll('.os-pane').forEach(function(p){p.classList.remove('active')});
+  const p=sel.querySelector('[data-pane="'+btn.dataset.os+'"]');if(p)p.classList.add('active')
+}
+function detectOS(){const u=navigator.userAgent.toLowerCase();if(u.includes('win'))return'windows';if(u.includes('mac'))return'mac';return'linux'}
+function initOS(){const os=detectOS();const btn=document.querySelector('.os-btn[data-os="'+os+'"]');if(btn)switchOS(btn)}
+
+// Copy
+function copyTerm(btn){
+  const lines=btn.closest('.term-body').querySelectorAll('.os-pane.active .term-line .tc,.os-pane.active .term-line .to');
+  let t='';
+  lines.forEach(function(l){t+=l.textContent+'\n'});
+  navigator.clipboard.writeText(t.trim()).then(function(){btn.textContent='Copied!';btn.classList.add('copied');setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied')},2000)}).catch(function(){btn.textContent='Copy'})
+}
+
+// Mobile nav
+function toggleNav(){document.querySelector('.nav-links').classList.toggle('open')}
+
+// Copy one-liner
+function copyOneLiner(el){
+  const text=el.querySelector('.ol-text')?el.querySelector('.ol-text').textContent.trim():el.querySelector('.ol-cmd')?el.querySelector('.ol-cmd').textContent.trim():'';
+  navigator.clipboard.writeText(text).then(function(){
+    const btn=el.querySelector('.ol-copy')||el.querySelector('.ol-badge');
+    if(btn){const orig=btn.textContent;btn.textContent='Copied!';btn.classList.add('copied');setTimeout(function(){btn.textContent=orig;btn.classList.remove('copied')},2000)}
+  }).catch(function(e){console.warn('Copy failed:',e);var ta=document.createElement('textarea');ta.value=text;ta.position='fixed';ta.opacity=0;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta)})
+}
+
+// Init
+document.addEventListener('DOMContentLoaded',function(){
+  initParticles();
+  setTimeout(initTerminal,500);
+  animateCounters();
+  initTilt();
+  initCarousel();
+  observeSections();
+  initOS();
+  document.querySelectorAll('.nav-links a').forEach(function(a){a.addEventListener('click',function(){document.querySelector('.nav-links').classList.remove('open')})})
+})
+</script>
 </body>
 </html>
