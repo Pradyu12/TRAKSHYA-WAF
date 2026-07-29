@@ -534,6 +534,7 @@ footer{padding:48px 40px 32px;border-top:1px solid var(--border);position:relati
       <span class="ol-cmd">curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/install.sh | bash</span>
       <span class="ol-badge">copy</span>
     </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:10px">Requires <strong style="color:var(--text-sec)">Rust</strong> (cargo), <strong style="color:var(--text-sec)">Go</strong> 1.24+, and <strong style="color:var(--text-sec)">GCC</strong>. Builds proxy, API &amp; dashboard from source.</p>
   </div>
   <div class="os-selector">
     <button class="os-btn active" data-os="linux" onclick="switchOS(this)">Linux</button>
@@ -546,20 +547,35 @@ footer{padding:48px 40px 32px;border-top:1px solid var(--border);position:relati
       <div class="os-pane active" data-pane="linux">
         <span class="term-line"><span class="tp">$</span> <span class="tc">git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git</span></span>
         <span class="term-line"><span class="tp">$</span> <span class="tc">cd TRAKSHYA-WAF</span></span>
-        <span class="term-line"><span class="tp">$</span> <span class="tc">docker compose up --build</span></span>
+        <span class="term-line"><span class="tp">$</span> <span class="tc">./install.sh</span></span>
+        <span class="term-line"><span class="tp">$</span> <span class="tc">trakshya-waf</span></span>
+        <span class="term-line term-out"><span class="to">[1/3] Building Rust proxy (cargo build --release)...</span></span>
+        <span class="term-line term-out"><span class="to">[2/3] Building Go API (go build)...</span></span>
+        <span class="term-line term-out"><span class="to">[3/3] Installing launcher to ~/.local/bin...</span></span>
         <span class="term-line term-out"><span class="to">Dashboard → http://localhost:8000</span></span>
+        <span class="term-line term-out"><span class="to">Proxy → http://localhost:8080</span></span>
       </div>
       <div class="os-pane" data-pane="mac">
         <span class="term-line"><span class="tp">$</span> <span class="tc">git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git</span></span>
         <span class="term-line"><span class="tp">$</span> <span class="tc">cd TRAKSHYA-WAF</span></span>
-        <span class="term-line"><span class="tp">$</span> <span class="tc">docker compose up --build</span></span>
+        <span class="term-line"><span class="tp">$</span> <span class="tc">./install.sh</span></span>
+        <span class="term-line"><span class="tp">$</span> <span class="tc">trakshya-waf</span></span>
+        <span class="term-line term-out"><span class="to">[1/3] Building Rust proxy (cargo build --release)...</span></span>
+        <span class="term-line term-out"><span class="to">[2/3] Building Go API (go build)...</span></span>
+        <span class="term-line term-out"><span class="to">[3/3] Installing launcher to ~/.local/bin...</span></span>
         <span class="term-line term-out"><span class="to">Dashboard → http://localhost:8000</span></span>
+        <span class="term-line term-out"><span class="to">Proxy → http://localhost:8080</span></span>
       </div>
       <div class="os-pane" data-pane="windows">
         <span class="term-line"><span class="tp">&gt;</span> <span class="tc">git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git</span></span>
         <span class="term-line"><span class="tp">&gt;</span> <span class="tc">cd TRAKSHYA-WAF</span></span>
-        <span class="term-line"><span class="tp">&gt;</span> <span class="tc">docker compose up --build</span></span>
+        <span class="term-line"><span class="tp">&gt;</span> <span class="tc">bash install.sh</span></span>
+        <span class="term-line"><span class="tp">&gt;</span> <span class="tc">trakshya-waf</span></span>
+        <span class="term-line term-out"><span class="to">[1/3] Building Rust proxy (cargo build --release)...</span></span>
+        <span class="term-line term-out"><span class="to">[2/3] Building Go API (go build)...</span></span>
+        <span class="term-line term-out"><span class="to">[3/3] Installing launcher to ~/.local/bin...</span></span>
         <span class="term-line term-out"><span class="to">Dashboard → http://localhost:8000</span></span>
+        <span class="term-line term-out"><span class="to">Proxy → http://localhost:8080</span></span>
       </div>
       <button class="copy-btn" onclick="copyTerm(this)">Copy</button>
     </div>
