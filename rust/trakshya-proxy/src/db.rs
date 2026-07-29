@@ -466,7 +466,7 @@ pub fn get_siem_alerts(conn: &Connection, limit: i64, offset: i64) -> Result<Vec
 }
 
 pub fn get_rules(conn: &Connection, enabled: Option<bool>) -> Result<Vec<Rule>> {
-    let mut stmt = if let Some(enabled_val) = enabled {
+    let mut stmt = if let Some(_enabled_val) = enabled {
         conn.prepare("SELECT id, pattern, severity, category, description, enabled, created_at, updated_at FROM rules WHERE enabled = $1 ORDER BY id")?
     } else {
         conn.prepare("SELECT id, pattern, severity, category, description, enabled, created_at, updated_at FROM rules ORDER BY id")?

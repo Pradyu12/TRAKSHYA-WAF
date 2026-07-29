@@ -10,12 +10,11 @@ use axum::{
         sse::{Event, Sse},
         IntoResponse, Response,
     },
-    routing::{delete, get, post, put},
+    routing::{delete, get, post},
     Json, Router,
 };
 use chrono::Utc;
 use futures_util::StreamExt;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;

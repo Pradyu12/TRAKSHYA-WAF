@@ -12,11 +12,14 @@
     "productName": "Trakshya WAF",
     "linux": {
       "category": "Security",
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "icon": "assets/icon.png"
     },
     "files": [
-      "main.js", "preload.js",
+      "main.js",
+      "preload.js",
       "renderer/**/*",
       "assets/**/*",
       "bin/**/*",
@@ -24,7 +27,7 @@
     ]
   },
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
   }
 }

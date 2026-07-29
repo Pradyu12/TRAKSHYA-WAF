@@ -1,3 +1,5 @@
+//go:build cgo
+
 package db
 
 import (
@@ -8,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/marcboeker/go-duckdb"
 	"github.com/trakshya/trakshya-api/pkg/models"
 )
 
@@ -38,8 +40,8 @@ func boolInt(v bool) int {
 }
 
 type Store struct {
-	db         *sql.DB
-	writeCh    chan RawEvent
+	db         *sql.DB           // single write connection (DuckDB constraint)
+	writeCh    chan RawEvent      // buffered ingestion channel
 	flushMu    sync.Mutex
 	flushTimer *time.Ticker
 	flushSize  int
@@ -49,16 +51,16 @@ type Store struct {
 }
 
 func NewStore(dbPath string, onIncident func(*models.Incident)) (*Store, error) {
-	db, err := sql.Open("sqlite", dbPath+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)")
+	db, err := sql.Open("duckdb", dbPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open sqlite: %w", err)
+		return nil, fmt.Errorf("failed to open duckdb: %w", err)
 	}
-	db.SetMaxOpenConns(1)
+	db.SetMaxOpenConns(1) // enforce single writer
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("failed to ping sqlite: %w", err)
+		return nil, fmt.Errorf("failed to ping duckdb: %w", err)
 	}
 
 	s := &Store{
@@ -113,9 +115,9 @@ func (s *Store) runMigrations() error {
 			severity TEXT NOT NULL,
 			message TEXT,
 			source TEXT,
-			timestamp TEXT DEFAULT (datetime('now')),
+			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			acknowledged INTEGER DEFAULT 0,
-			acked_at TEXT,
+			acked_at TIMESTAMP,
 			acked_by TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS rules (
@@ -125,26 +127,26 @@ func (s *Store) runMigrations() error {
 			category TEXT NOT NULL,
 			description TEXT,
 			enabled INTEGER NOT NULL DEFAULT 1,
-			created_at TEXT DEFAULT (datetime('now')),
-			updated_at TEXT DEFAULT (datetime('now'))
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS blacklist (
 			id TEXT PRIMARY KEY,
 			ip TEXT NOT NULL UNIQUE,
 			reason TEXT,
-			created_at TEXT DEFAULT (datetime('now')),
-			expires_at TEXT
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			expires_at TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS system_config (
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL,
-			updated_at TEXT DEFAULT (datetime('now'))
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS request_stats (
 			client_ip TEXT PRIMARY KEY,
 			request_count INTEGER NOT NULL DEFAULT 0,
 			blocked_count INTEGER NOT NULL DEFAULT 0,
-			last_seen TEXT DEFAULT (datetime('now'))
+			last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS vulnerabilities (
 			id TEXT PRIMARY KEY,
@@ -154,15 +156,15 @@ func (s *Store) runMigrations() error {
 			severity TEXT NOT NULL,
 			cve_id TEXT,
 			description TEXT,
-			created_at TEXT DEFAULT (datetime('now')),
-			updated_at TEXT DEFAULT (datetime('now'))
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS vuln_scans (
 			id TEXT PRIMARY KEY,
 			status TEXT DEFAULT 'running',
 			target TEXT NOT NULL,
-			started_at TEXT,
-			completed_at TEXT,
+			started_at TIMESTAMP,
+			completed_at TIMESTAMP,
 			total_pkgs INTEGER DEFAULT 0,
 			total_cves INTEGER DEFAULT 0
 		)`,
@@ -181,8 +183,8 @@ func (s *Store) runMigrations() error {
 			id TEXT PRIMARY KEY,
 			status TEXT DEFAULT 'running',
 			target TEXT NOT NULL,
-			started_at TEXT,
-			completed_at TEXT,
+			started_at TIMESTAMP,
+			completed_at TIMESTAMP,
 			total_probes INTEGER DEFAULT 0
 		)`,
 		`CREATE TABLE IF NOT EXISTS vapt_findings (
@@ -194,25 +196,6 @@ func (s *Store) runMigrations() error {
 			description TEXT,
 			evidence TEXT,
 			remediation TEXT
-		)`,
-		`CREATE TABLE IF NOT EXISTS raw_events (
-			timestamp      TEXT NOT NULL,
-			source_ip      TEXT NOT NULL,
-			destination_ip TEXT NOT NULL DEFAULT '',
-			method         TEXT NOT NULL DEFAULT '',
-			host           TEXT NOT NULL DEFAULT '',
-			path           TEXT NOT NULL DEFAULT '',
-			query          TEXT NOT NULL DEFAULT '',
-			status_code    INTEGER NOT NULL DEFAULT 0,
-			country        TEXT NOT NULL DEFAULT '',
-			attack_type    TEXT NOT NULL DEFAULT '',
-			rule_name      TEXT NOT NULL DEFAULT '',
-			action         TEXT NOT NULL DEFAULT '',
-			blocked        INTEGER NOT NULL DEFAULT 0,
-			bytes_sent     INTEGER NOT NULL DEFAULT 0,
-			bytes_received INTEGER NOT NULL DEFAULT 0,
-			latency_ms     INTEGER NOT NULL DEFAULT 0,
-			user_agent     TEXT NOT NULL DEFAULT ''
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_incidents_timestamp ON incidents(timestamp DESC)`,
 		`CREATE INDEX IF NOT EXISTS idx_incidents_client_ip ON incidents(client_ip)`,
@@ -231,6 +214,26 @@ func (s *Store) runMigrations() error {
 		`CREATE INDEX IF NOT EXISTS idx_vuln_findings_severity ON vuln_findings(severity)`,
 		`CREATE INDEX IF NOT EXISTS idx_vapt_findings_scan ON vapt_findings(scan_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_vapt_findings_severity ON vapt_findings(severity)`,
+		// Analytics tables
+		`CREATE TABLE IF NOT EXISTS raw_events (
+			timestamp      TIMESTAMPTZ NOT NULL,
+			source_ip      VARCHAR NOT NULL,
+			destination_ip VARCHAR NOT NULL DEFAULT '',
+			method         VARCHAR NOT NULL DEFAULT '',
+			host           VARCHAR NOT NULL DEFAULT '',
+			path           VARCHAR NOT NULL DEFAULT '',
+			query          VARCHAR NOT NULL DEFAULT '',
+			status_code    INTEGER NOT NULL DEFAULT 0,
+			country        VARCHAR NOT NULL DEFAULT '',
+			attack_type    VARCHAR NOT NULL DEFAULT '',
+			rule_name      VARCHAR NOT NULL DEFAULT '',
+			action         VARCHAR NOT NULL DEFAULT '',
+			blocked        BOOLEAN NOT NULL DEFAULT false,
+			bytes_sent     BIGINT NOT NULL DEFAULT 0,
+			bytes_received BIGINT NOT NULL DEFAULT 0,
+			latency_ms     INTEGER NOT NULL DEFAULT 0,
+			user_agent     VARCHAR NOT NULL DEFAULT ''
+		)`,
 		`CREATE INDEX IF NOT EXISTS idx_re_ts ON raw_events(timestamp)`,
 		`CREATE INDEX IF NOT EXISTS idx_re_ip_ts ON raw_events(source_ip, timestamp)`,
 		`CREATE INDEX IF NOT EXISTS idx_re_attack ON raw_events(attack_type, timestamp)`,
@@ -238,7 +241,7 @@ func (s *Store) runMigrations() error {
 	}
 	for _, m := range stmts {
 		if _, err := s.db.Exec(m); err != nil {
-			return fmt.Errorf("migration failed: %w\nStatement: %s", err, m)
+			return fmt.Errorf("migration failed: %w", err)
 		}
 	}
 	if err := s.seedDefaults(); err != nil {
@@ -250,12 +253,12 @@ func (s *Store) runMigrations() error {
 func (s *Store) seedDefaults() error {
 	seeds := []string{
 		`INSERT INTO rules (id, pattern, severity, category, description, enabled) VALUES
-			('SQLI-001', '(\\bunion\\b.*\\bselect\\b|\\bdrop\\b.*\\btable\\b)', 'critical', 'sqli', 'SQL Injection', 1),
+			('SQLI-001', '(\bunion\b.*\bselect\b|\bdrop\b.*\btable\b)', 'critical', 'sqli', 'SQL Injection', 1),
 			('XSS-001', '(<script|javascript:|onerror=|onload=)', 'high', 'xss', 'Cross-Site Scripting', 1),
-			('TRAV-001', '(\\.\\./|\\.\\.\\\\|%2e%2e)', 'high', 'path_traversal', 'Path Traversal', 1),
-			('CMDI-001', '(;\\s*(cat|ls|rm|sh|bash)|\\$\\()', 'critical', 'cmd_injection', 'Command Injection', 1),
+			('TRAV-001', '(\.\./|\.\.\\|%2e%2e)', 'high', 'path_traversal', 'Path Traversal', 1),
+			('CMDI-001', '(;\s*(cat|ls|rm|sh|bash)|\$\()', 'critical', 'cmd_injection', 'Command Injection', 1),
 			('RFI-001', '(include=|require=|file=.*http)', 'medium', 'rfi', 'Remote File Inclusion', 1),
-			('LFI-001', '(\\.\\./etc/passwd|/proc/self)', 'high', 'lfi', 'Local File Inclusion', 1),
+			('LFI-001', '(\.\./etc/passwd|/proc/self)', 'high', 'lfi', 'Local File Inclusion', 1),
 			('SCANNER-001', '(wp-admin|phpmyadmin|/manager)', 'low', 'scanner', 'Scanner Detection', 1),
 			('BRUTE-001', '(/api/auth/login.*POST)', 'medium', 'brute_force', 'Brute Force', 1)
 		ON CONFLICT (id) DO NOTHING`,
@@ -284,7 +287,7 @@ func (s *Store) CreateIncident(inc *models.Incident) error {
 	_, err := s.db.Exec(
 		`INSERT INTO incidents (id, incident_type, rule_id, attack_type, client_ip, path, method, severity, message, source, timestamp, acknowledged)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-		inc.ID, inc.Type, inc.RuleID, inc.AttackType, inc.ClientIP, inc.Path, inc.Method, inc.Severity, inc.Message, inc.Source, inc.Timestamp.Format(time.RFC3339), 0,
+		inc.ID, inc.Type, inc.RuleID, inc.AttackType, inc.ClientIP, inc.Path, inc.Method, inc.Severity, inc.Message, inc.Source, inc.Timestamp, 0,
 	)
 	return err
 }
@@ -302,18 +305,16 @@ func (s *Store) ListIncidents() ([]models.Incident, error) {
 	var out []models.Incident
 	for rows.Next() {
 		var inc models.Incident
-		var tsStr string
-		if err := rows.Scan(&inc.ID, &inc.Type, &inc.RuleID, &inc.AttackType, &inc.ClientIP, &inc.Path, &inc.Method, &inc.Severity, &inc.Message, &inc.Source, &tsStr, &inc.Acknowledged); err != nil {
+		if err := rows.Scan(&inc.ID, &inc.Type, &inc.RuleID, &inc.AttackType, &inc.ClientIP, &inc.Path, &inc.Method, &inc.Severity, &inc.Message, &inc.Source, &inc.Timestamp, &inc.Acknowledged); err != nil {
 			return nil, err
 		}
-		inc.Timestamp, _ = time.Parse(time.RFC3339, tsStr)
 		out = append(out, inc)
 	}
 	return out, nil
 }
 
 func (s *Store) AcknowledgeIncident(id string) error {
-	result, err := s.db.Exec("UPDATE incidents SET acknowledged = 1, acked_at = datetime('now'), acked_by = 'api' WHERE id = $1", id)
+	result, err := s.db.Exec("UPDATE incidents SET acknowledged = 1, acked_at = NOW(), acked_by = 'api' WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -359,7 +360,7 @@ func (s *Store) ListAgents() ([]models.Agent, error) {
 func (s *Store) CreateRule(r *models.Rule) error {
 	_, err := s.db.Exec(
 		`INSERT INTO rules (id, pattern, severity, category, description, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, datetime('now'), datetime('now'))`,
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
 		r.RuleID, r.Pattern, r.Severity, r.Category, r.Description, boolInt(r.IsActive),
 	)
 	return err
@@ -387,7 +388,7 @@ func (s *Store) ListRules() ([]models.Rule, error) {
 }
 
 func (s *Store) ToggleRule(id string, isActive bool) error {
-	result, err := s.db.Exec("UPDATE rules SET enabled = $1, updated_at = datetime('now') WHERE id = $2", boolInt(isActive), id)
+	result, err := s.db.Exec("UPDATE rules SET enabled = $1, updated_at = NOW() WHERE id = $2", boolInt(isActive), id)
 	if err != nil {
 		return err
 	}
@@ -413,7 +414,7 @@ func (s *Store) DeleteRule(id string) error {
 // ── Blacklist CRUD ──────────────────────────────────────────────────────────
 
 func (s *Store) CreateBlacklistEntry(entry *models.BlacklistEntry) error {
-	_, err := s.db.Exec("INSERT INTO blacklist (id, ip, reason) VALUES ($1, $2, $3) ON CONFLICT (ip) DO UPDATE SET reason = excluded.reason", entry.ID, entry.IPAddress, entry.Reason)
+	_, err := s.db.Exec("INSERT INTO blacklist (id, ip, reason) VALUES ($1, $2, $3) ON CONFLICT (ip) DO UPDATE SET reason = EXCLUDED.reason", entry.ID, entry.IPAddress, entry.Reason)
 	return err
 }
 
@@ -482,12 +483,14 @@ func (s *Store) GetSIEMAlerts(limit int) ([]models.SIEMAlert, error) {
 	var alerts []models.SIEMAlert
 	for rows.Next() {
 		var a models.SIEMAlert
-		var tsStr string
+		var ts sql.NullTime
 		var acked int
-		if err := rows.Scan(&a.ID, &a.RuleName, &a.Severity, &a.Description, &a.SourceIP, &a.Path, &tsStr, &acked); err != nil {
+		if err := rows.Scan(&a.ID, &a.RuleName, &a.Severity, &a.Description, &a.SourceIP, &a.Path, &ts, &acked); err != nil {
 			return nil, err
 		}
-		a.Timestamp = tsStr
+		if ts.Valid {
+			a.Timestamp = ts.Time.Format(time.RFC3339)
+		}
 		a.Acked = acked != 0
 		alerts = append(alerts, a)
 	}
@@ -495,7 +498,7 @@ func (s *Store) GetSIEMAlerts(limit int) ([]models.SIEMAlert, error) {
 }
 
 func (s *Store) AckSIEMAlert(id string) error {
-	result, err := s.db.Exec("UPDATE incidents SET acknowledged = 1, acked_at = datetime('now'), acked_by = 'siem' WHERE id = $1", id)
+	result, err := s.db.Exec("UPDATE incidents SET acknowledged = 1, acked_at = NOW(), acked_by = 'siem' WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -519,10 +522,10 @@ func (s *Store) GetDashboardStats() (*models.DashboardStats, error) {
 	if err := s.db.QueryRow("SELECT COALESCE(SUM(blocked_count), 0) FROM request_stats").Scan(&stats.BlockedRequests); err != nil {
 		log.Printf("dashboard stats blocked_count: %v", err)
 	}
-	if err := s.db.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM request_stats WHERE last_seen > datetime('now', '-1 hour')").Scan(&stats.ActiveIPs); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM request_stats WHERE last_seen > NOW() - INTERVAL '1' HOUR").Scan(&stats.ActiveIPs); err != nil {
 		log.Printf("dashboard stats active_ips: %v", err)
 	}
-	if err := s.db.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > datetime('now', '-1 day')").Scan(&stats.IncidentsToday); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > now()::TIMESTAMP - INTERVAL '1' DAY").Scan(&stats.IncidentsToday); err != nil {
 		log.Printf("dashboard stats incidents_today: %v", err)
 	}
 	agents, _ := s.ListAgents()
@@ -569,18 +572,15 @@ func (s *Store) GetGeoData() (*models.GeoStats, error) {
 	for rows.Next() {
 		var ip string
 		var count int
-		var lastSeenStr sql.NullString
-		if err := rows.Scan(&ip, &count, &lastSeenStr); err != nil {
+		var lastSeen sql.NullTime
+		if err := rows.Scan(&ip, &count, &lastSeen); err != nil {
 			continue
 		}
-		loc := models.GeoLocation{
+		stats.Locations = append(stats.Locations, models.GeoLocation{
 			IP:       ip,
 			Count:    count,
-		}
-		if lastSeenStr.Valid {
-			loc.LastSeen = lastSeenStr.String
-		}
-		stats.Locations = append(stats.Locations, loc)
+			LastSeen: lastSeen.Time.Format(time.RFC3339),
+		})
 	}
 	stats.TotalIPs = len(stats.Locations)
 	return stats, nil
@@ -591,21 +591,13 @@ func (s *Store) GetGeoData() (*models.GeoStats, error) {
 func (s *Store) CreateVulnScan(scan *models.VulnScan) error {
 	query := `INSERT INTO vuln_scans (id, status, target, started_at, completed_at, total_pkgs, total_cves)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`
-	completedAt := ""
-	if scan.CompletedAt != nil {
-		completedAt = scan.CompletedAt.Format(time.RFC3339)
-	}
-	_, err := s.db.Exec(query, scan.ID, scan.Status, scan.Target, scan.StartedAt.Format(time.RFC3339), completedAt, scan.TotalPkgs, scan.TotalCVEs)
+	_, err := s.db.Exec(query, scan.ID, scan.Status, scan.Target, scan.StartedAt, scan.CompletedAt, scan.TotalPkgs, scan.TotalCVEs)
 	return err
 }
 
 func (s *Store) UpdateVulnScan(scan *models.VulnScan) error {
 	query := `UPDATE vuln_scans SET status=$1, completed_at=$2, total_pkgs=$3, total_cves=$4 WHERE id=$5`
-	completedAt := ""
-	if scan.CompletedAt != nil {
-		completedAt = scan.CompletedAt.Format(time.RFC3339)
-	}
-	result, err := s.db.Exec(query, scan.Status, completedAt, scan.TotalPkgs, scan.TotalCVEs, scan.ID)
+	result, err := s.db.Exec(query, scan.Status, scan.CompletedAt, scan.TotalPkgs, scan.TotalCVEs, scan.ID)
 	if err != nil {
 		return err
 	}
@@ -618,19 +610,13 @@ func (s *Store) UpdateVulnScan(scan *models.VulnScan) error {
 
 func (s *Store) GetVulnScan(id string) (*models.VulnScan, error) {
 	var scan models.VulnScan
-	var startedAt, completedAt string
 	query := `SELECT id, status, target, started_at, completed_at, total_pkgs, total_cves FROM vuln_scans WHERE id=$1`
-	err := s.db.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &startedAt, &completedAt, &scan.TotalPkgs, &scan.TotalCVEs)
+	err := s.db.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalPkgs, &scan.TotalCVEs)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
-	}
-	scan.StartedAt, _ = time.Parse(time.RFC3339, startedAt)
-	if completedAt != "" {
-		t, _ := time.Parse(time.RFC3339, completedAt)
-		scan.CompletedAt = &t
 	}
 	scan.Findings, _ = s.ListVulnFindings(id)
 	return &scan, nil
@@ -650,14 +636,8 @@ func (s *Store) ListVulnScans(limit int) ([]models.VulnScan, error) {
 	var scans []models.VulnScan
 	for rows.Next() {
 		var scan models.VulnScan
-		var startedAt, completedAt string
-		if err := rows.Scan(&scan.ID, &scan.Status, &scan.Target, &startedAt, &completedAt, &scan.TotalPkgs, &scan.TotalCVEs); err != nil {
+		if err := rows.Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalPkgs, &scan.TotalCVEs); err != nil {
 			return nil, err
-		}
-		scan.StartedAt, _ = time.Parse(time.RFC3339, startedAt)
-		if completedAt != "" {
-			t, _ := time.Parse(time.RFC3339, completedAt)
-			scan.CompletedAt = &t
 		}
 		scans = append(scans, scan)
 	}
@@ -701,8 +681,8 @@ func (s *Store) ListVulnFindings(scanID string) ([]models.VulnFinding, error) {
 func (s *Store) ListAllVulnFindings() ([]models.VulnFinding, error) {
 	query := `SELECT f.id, f.scan_id, f.package, f.installed_version, f.available_version, f.severity, f.cve, f.description, f.category
 		FROM vuln_findings f
-		INNER JOIN vuln_scans sc ON f.scan_id = sc.id
-		WHERE sc.id = (SELECT id FROM vuln_scans ORDER BY started_at DESC LIMIT 1)
+		INNER JOIN vuln_scans s ON f.scan_id = s.id
+		WHERE s.id = (SELECT id FROM vuln_scans ORDER BY started_at DESC LIMIT 1)
 		ORDER BY
 		CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`
 	rows, err := s.db.Query(query)
@@ -731,16 +711,16 @@ func (s *Store) GetVulnStats() (*models.VulnStats, error) {
 	}
 
 	lastScanQuery := `SELECT id, status, started_at, total_pkgs, total_cves FROM vuln_scans ORDER BY started_at DESC LIMIT 1`
-	var lastScanID, lastStatus, lastStartedStr string
+	var lastScanID, lastStatus string
+	var lastStarted sql.NullTime
 	var lastPkgs, lastCVEs int
-	err := s.db.QueryRow(lastScanQuery).Scan(&lastScanID, &lastStatus, &lastStartedStr, &lastPkgs, &lastCVEs)
+	err := s.db.QueryRow(lastScanQuery).Scan(&lastScanID, &lastStatus, &lastStarted, &lastPkgs, &lastCVEs)
 	if err == nil {
 		stats.LastScanStatus = lastStatus
 		stats.TotalPackages = lastPkgs
 		stats.TotalCVEs = lastCVEs
-		if lastStartedStr != "" {
-			t, _ := time.Parse(time.RFC3339, lastStartedStr)
-			stats.LastScanTime = &t
+		if lastStarted.Valid {
+			stats.LastScanTime = &lastStarted.Time
 		}
 	}
 
@@ -782,21 +762,13 @@ func (s *Store) GetVulnStats() (*models.VulnStats, error) {
 func (s *Store) CreateVaptScan(scan *models.VaptScan) error {
 	query := `INSERT INTO vapt_scans (id, status, target, started_at, completed_at, total_probes)
 		VALUES ($1, $2, $3, $4, $5, $6)`
-	completedAt := ""
-	if scan.CompletedAt != nil {
-		completedAt = scan.CompletedAt.Format(time.RFC3339)
-	}
-	_, err := s.db.Exec(query, scan.ID, scan.Status, scan.Target, scan.StartedAt.Format(time.RFC3339), completedAt, scan.TotalProbes)
+	_, err := s.db.Exec(query, scan.ID, scan.Status, scan.Target, scan.StartedAt, scan.CompletedAt, scan.TotalProbes)
 	return err
 }
 
 func (s *Store) UpdateVaptScan(scan *models.VaptScan) error {
 	query := `UPDATE vapt_scans SET status=$1, completed_at=$2, total_probes=$3 WHERE id=$4`
-	completedAt := ""
-	if scan.CompletedAt != nil {
-		completedAt = scan.CompletedAt.Format(time.RFC3339)
-	}
-	result, err := s.db.Exec(query, scan.Status, completedAt, scan.TotalProbes, scan.ID)
+	result, err := s.db.Exec(query, scan.Status, scan.CompletedAt, scan.TotalProbes, scan.ID)
 	if err != nil {
 		return err
 	}
@@ -809,19 +781,13 @@ func (s *Store) UpdateVaptScan(scan *models.VaptScan) error {
 
 func (s *Store) GetVaptScan(id string) (*models.VaptScan, error) {
 	var scan models.VaptScan
-	var startedAt, completedAt string
 	query := `SELECT id, status, target, started_at, completed_at, total_probes FROM vapt_scans WHERE id=$1`
-	err := s.db.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &startedAt, &completedAt, &scan.TotalProbes)
+	err := s.db.QueryRow(query, id).Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalProbes)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
-	}
-	scan.StartedAt, _ = time.Parse(time.RFC3339, startedAt)
-	if completedAt != "" {
-		t, _ := time.Parse(time.RFC3339, completedAt)
-		scan.CompletedAt = &t
 	}
 	scan.Findings, _ = s.ListVaptFindings(id)
 	return &scan, nil
@@ -841,14 +807,8 @@ func (s *Store) ListVaptScans(limit int) ([]models.VaptScan, error) {
 	var scans []models.VaptScan
 	for rows.Next() {
 		var scan models.VaptScan
-		var startedAt, completedAt string
-		if err := rows.Scan(&scan.ID, &scan.Status, &scan.Target, &startedAt, &completedAt, &scan.TotalProbes); err != nil {
+		if err := rows.Scan(&scan.ID, &scan.Status, &scan.Target, &scan.StartedAt, &scan.CompletedAt, &scan.TotalProbes); err != nil {
 			return nil, err
-		}
-		scan.StartedAt, _ = time.Parse(time.RFC3339, startedAt)
-		if completedAt != "" {
-			t, _ := time.Parse(time.RFC3339, completedAt)
-			scan.CompletedAt = &t
 		}
 		scans = append(scans, scan)
 	}
@@ -892,8 +852,8 @@ func (s *Store) ListVaptFindings(scanID string) ([]models.VaptFinding, error) {
 func (s *Store) ListAllVaptFindings() ([]models.VaptFinding, error) {
 	query := `SELECT f.id, f.scan_id, f.category, f.severity, f.title, f.description, f.evidence, f.remediation
 		FROM vapt_findings f
-		INNER JOIN vapt_scans sc ON f.scan_id = sc.id
-		WHERE sc.id = (SELECT id FROM vapt_scans ORDER BY started_at DESC LIMIT 1)
+		INNER JOIN vapt_scans s ON f.scan_id = s.id
+		WHERE s.id = (SELECT id FROM vapt_scans ORDER BY started_at DESC LIMIT 1)
 		ORDER BY
 		CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END`
 	rows, err := s.db.Query(query)
@@ -920,15 +880,15 @@ func (s *Store) GetVaptStats() (*models.VaptStats, error) {
 	stats := &models.VaptStats{BySeverity: make(map[string]int)}
 
 	lastScanQuery := `SELECT id, status, started_at, total_probes FROM vapt_scans ORDER BY started_at DESC LIMIT 1`
-	var lastScanID, lastStatus, lastStartedStr string
+	var lastScanID, lastStatus string
+	var lastStarted sql.NullTime
 	var lastProbes int
-	err := s.db.QueryRow(lastScanQuery).Scan(&lastScanID, &lastStatus, &lastStartedStr, &lastProbes)
+	err := s.db.QueryRow(lastScanQuery).Scan(&lastScanID, &lastStatus, &lastStarted, &lastProbes)
 	if err == nil {
 		stats.LastScanStatus = lastStatus
 		stats.TotalProbes = lastProbes
-		if lastStartedStr != "" {
-			t, _ := time.Parse(time.RFC3339, lastStartedStr)
-			stats.LastScanTime = &t
+		if lastStarted.Valid {
+			stats.LastScanTime = &lastStarted.Time
 		}
 	}
 
@@ -971,7 +931,7 @@ func (s *Store) Ingest(evt RawEvent) {
 	select {
 	case s.writeCh <- evt:
 	default:
-		log.Printf("WARN: sqlite write buffer full, dropping event from %s", evt.SourceIP)
+		log.Printf("WARN: duckdb write buffer full, dropping event from %s", evt.SourceIP)
 	}
 }
 
@@ -982,11 +942,11 @@ func (s *Store) RecordRequest(clientIP string, blocked bool) {
 	}
 	_, err := s.db.Exec(
 		`INSERT INTO request_stats (client_ip, request_count, blocked_count, last_seen)
-		 VALUES ($1, 1, $2, datetime('now'))
+		 VALUES ($1, 1, $2, CURRENT_TIMESTAMP)
 		 ON CONFLICT(client_ip) DO UPDATE SET
 		     request_count = request_stats.request_count + 1,
 		     blocked_count = request_stats.blocked_count + $3,
-		     last_seen = datetime('now')`,
+		     last_seen = CURRENT_TIMESTAMP`,
 		clientIP, blockedVal, blockedVal,
 	)
 	if err != nil {
@@ -1018,7 +978,7 @@ flush:
 		return
 	}
 	if err := s.writeBatch(batch); err != nil {
-		log.Printf("ERROR: sqlite batch write failed: %v", err)
+		log.Printf("ERROR: duckdb batch write failed: %v", err)
 	}
 }
 
@@ -1043,8 +1003,8 @@ func (s *Store) writeBatch(batch []RawEvent) error {
 
 	for _, e := range batch {
 		if _, err := stmt.ExecContext(ctx,
-			e.Timestamp.Format(time.RFC3339), e.SourceIP, e.DestinationIP, e.Method, e.Host, e.Path, e.Query,
-			e.StatusCode, e.Country, e.AttackType, e.RuleName, e.Action, boolInt(e.Blocked),
+			e.Timestamp, e.SourceIP, e.DestinationIP, e.Method, e.Host, e.Path, e.Query,
+			e.StatusCode, e.Country, e.AttackType, e.RuleName, e.Action, e.Blocked,
 			e.BytesSent, e.BytesReceived, e.LatencyMs, e.UserAgent,
 		); err != nil {
 			tx.Rollback()
@@ -1058,7 +1018,7 @@ func (s *Store) writeBatch(batch []RawEvent) error {
 	return nil
 }
 
-// ── Sliding-Window Correlation Rules ────────────────────────────────────────
+// ── 7 Sliding-Window Correlation Rules ──────────────────────────────────────
 
 func (s *Store) RunCorrelationRules() []models.Incident {
 	var incidents []models.Incident
@@ -1101,8 +1061,8 @@ func (s *Store) RunCorrelationRules() []models.Incident {
 const bruteForceSQL = `
 	SELECT source_ip, COUNT(*) AS cnt
 	FROM   raw_events
-	WHERE  blocked = 1
-	  AND  timestamp >= datetime('now', '-5 minutes')
+	WHERE  blocked = true
+	  AND  timestamp >= now()::TIMESTAMP - INTERVAL '5' MINUTE
 	GROUP  BY source_ip
 	HAVING COUNT(*) >= 10
 	ORDER  BY cnt DESC
@@ -1124,7 +1084,7 @@ func scanBruteForce(row *sql.Row) (models.Incident, bool, error) {
 		ClientIP:   ip,
 		Severity:   "critical",
 		Message:    fmt.Sprintf("Brute force: %d blocked requests from %s in 5m", cnt, ip),
-		Source:     "sqlite-siem",
+		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 	}, true, nil
 }
@@ -1132,7 +1092,7 @@ func scanBruteForce(row *sql.Row) (models.Incident, bool, error) {
 const portScanSQL = `
 	SELECT source_ip, COUNT(DISTINCT path) AS paths
 	FROM   raw_events
-	WHERE  timestamp >= datetime('now', '-10 minutes')
+	WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '10' MINUTE
 	GROUP  BY source_ip
 	HAVING COUNT(DISTINCT path) >= 15
 	ORDER  BY paths DESC
@@ -1154,7 +1114,7 @@ func scanPortScan(row *sql.Row) (models.Incident, bool, error) {
 		ClientIP:   ip,
 		Severity:   "high",
 		Message:    fmt.Sprintf("Port scan: %d distinct paths probed from %s in 10m", paths, ip),
-		Source:     "sqlite-siem",
+		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 	}, true, nil
 }
@@ -1163,7 +1123,7 @@ const xssWaveSQL = `
 	SELECT COUNT(*) AS cnt
 	FROM   raw_events
 	WHERE  attack_type = 'xss'
-	  AND  timestamp >= datetime('now', '-5 minutes')
+	  AND  timestamp >= now()::TIMESTAMP - INTERVAL '5' MINUTE
 `
 
 func scanXssWave(row *sql.Row) (models.Incident, bool, error) {
@@ -1182,7 +1142,7 @@ func scanXssWave(row *sql.Row) (models.Incident, bool, error) {
 		AttackType: "xss_wave",
 		Severity:   "high",
 		Message:    fmt.Sprintf("XSS wave: %d XSS attacks detected across all sources in 5m", cnt),
-		Source:     "sqlite-siem",
+		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 	}, true, nil
 }
@@ -1191,7 +1151,7 @@ const sqliWaveSQL = `
 	SELECT COUNT(*) AS cnt
 	FROM   raw_events
 	WHERE  attack_type = 'sql_injection'
-	  AND  timestamp >= datetime('now', '-5 minutes')
+	  AND  timestamp >= now()::TIMESTAMP - INTERVAL '5' MINUTE
 `
 
 func scanSqlWave(row *sql.Row) (models.Incident, bool, error) {
@@ -1210,7 +1170,7 @@ func scanSqlWave(row *sql.Row) (models.Incident, bool, error) {
 		AttackType: "sqli_wave",
 		Severity:   "critical",
 		Message:    fmt.Sprintf("SQLi wave: %d injection attacks detected in 5m", cnt),
-		Source:     "sqlite-siem",
+		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 	}, true, nil
 }
@@ -1218,7 +1178,7 @@ func scanSqlWave(row *sql.Row) (models.Incident, bool, error) {
 const rapidScanSQL = `
 	SELECT source_ip, COUNT(*) AS cnt
 	FROM   raw_events
-	WHERE  timestamp >= datetime('now', '-10 seconds')
+	WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '10' SECOND
 	GROUP  BY source_ip
 	HAVING COUNT(*) >= 20
 	ORDER  BY cnt DESC
@@ -1240,7 +1200,7 @@ func scanRapidScan(row *sql.Row) (models.Incident, bool, error) {
 		ClientIP:   ip,
 		Severity:   "high",
 		Message:    fmt.Sprintf("Rapid scan: %d requests from %s in 10s", cnt, ip),
-		Source:     "sqlite-siem",
+		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 	}, true, nil
 }
@@ -1248,9 +1208,9 @@ func scanRapidScan(row *sql.Row) (models.Incident, bool, error) {
 const dataExfilSQL = `
 	SELECT source_ip, SUM(bytes_sent) AS total_sent
 	FROM   raw_events
-	WHERE  blocked = 0
+	WHERE  blocked = false
 	  AND  status_code BETWEEN 200 AND 299
-	  AND  timestamp >= datetime('now', '-1 hour')
+	  AND  timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR
 	GROUP  BY source_ip
 	HAVING SUM(bytes_sent) >= 100000000
 	ORDER  BY total_sent DESC
@@ -1273,7 +1233,7 @@ func scanDataExfil(row *sql.Row) (models.Incident, bool, error) {
 		ClientIP:   ip,
 		Severity:   "high",
 		Message:    fmt.Sprintf("Possible exfiltration: %.2f MB sent from %s in 1h", mb, ip),
-		Source:     "sqlite-siem",
+		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 	}, true, nil
 }
@@ -1281,7 +1241,7 @@ func scanDataExfil(row *sql.Row) (models.Incident, bool, error) {
 const geoAnomalySQL = `
 	SELECT source_ip, COUNT(DISTINCT country) AS countries
 	FROM   raw_events
-	WHERE  timestamp >= datetime('now', '-30 minutes')
+	WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '30' MINUTE
 	  AND  country != ''
 	GROUP  BY source_ip
 	HAVING COUNT(DISTINCT country) >= 3
@@ -1304,7 +1264,7 @@ func scanGeoAnomaly(row *sql.Row) (models.Incident, bool, error) {
 		ClientIP:   ip,
 		Severity:   "medium",
 		Message:    fmt.Sprintf("Geo anomaly: %s observed from %d distinct countries in 30m", ip, countries),
-		Source:     "sqlite-siem",
+		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 	}, true, nil
 }
@@ -1316,7 +1276,7 @@ const beaconingSQL = `
 			   MIN(timestamp) AS first_seen,
 			   MAX(timestamp) AS last_seen
 		FROM   raw_events
-		WHERE  timestamp >= datetime('now', '-10 minutes')
+		WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '10' MINUTE
 		GROUP  BY source_ip, host
 		HAVING COUNT(*) >= 12
 	)
@@ -1341,13 +1301,13 @@ func scanBeaconing(row *sql.Row) (models.Incident, bool, error) {
 		ClientIP:   ip,
 		Severity:   "medium",
 		Message:    fmt.Sprintf("Beaconing: %d periodic requests from %s to %s in 10m", cnt, ip, host),
-		Source:     "sqlite-siem",
+		Source:     "duckdb-siem",
 		Timestamp:  time.Now(),
 		Path:       host,
 	}, true, nil
 }
 
-// ── Analytics queries ───────────────────────────────────────────────────────
+// ── Dashboard / Analytics queries ───────────────────────────────────────────
 
 type AttackCount struct {
 	AttackType string `json:"attack_type"`
@@ -1375,9 +1335,11 @@ func (s *Store) GetEventStats() (*EventStats, error) {
 	}
 
 	_ = s.db.QueryRow(`SELECT COUNT(*) FROM raw_events`).Scan(&stats.TotalEvents)
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE blocked = 1`).Scan(&stats.BlockedEvents)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE blocked = true`).Scan(&stats.BlockedEvents)
 	_ = s.db.QueryRow(`SELECT COUNT(DISTINCT source_ip) FROM raw_events`).Scan(&stats.UniqueIPs)
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE timestamp >= datetime('now', '-1 hour')`).Scan(&stats.EventsLastHour)
+	_ = s.db.QueryRow(`SELECT COUNT(*) FROM raw_events WHERE timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR`).Scan(&stats.EventsLastHour)
+
+	stats.BySeverity = make(map[string]int64)
 
 	aRows, err := s.db.Query(`
 		SELECT attack_type, COUNT(*) AS cnt
@@ -1398,17 +1360,19 @@ func (s *Store) GetEventStats() (*EventStats, error) {
 	}
 
 	tRows, err := s.db.Query(`
-		SELECT strftime('%Y-%m-%d %H:%M:00', timestamp) AS minute, COUNT(*) AS cnt
+		SELECT date_trunc('minute', timestamp) AS minute, COUNT(*) AS cnt
 		FROM   raw_events
-		WHERE  timestamp >= datetime('now', '-1 hour')
-		GROUP  BY strftime('%Y-%m-%d %H:%M:00', timestamp)
+		WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR
+		GROUP  BY date_trunc('minute', timestamp)
 		ORDER  BY minute
 	`)
 	if err == nil {
 		defer tRows.Close()
 		for tRows.Next() {
 			var tb TimeBucket
-			if tRows.Scan(&tb.Time, &tb.Count) == nil {
+			var t time.Time
+			if tRows.Scan(&t, &tb.Count) == nil {
+				tb.Time = t.UTC().Format(time.RFC3339)
 				stats.Timeline = append(stats.Timeline, tb)
 			}
 		}
@@ -1450,10 +1414,10 @@ func (s *Store) GetTopAttackers(limit int) ([]AttackCount, error) {
 
 func (s *Store) GetTimeline() ([]TimeBucket, error) {
 	rows, err := s.db.Query(`
-		SELECT strftime('%Y-%m-%d %H:%M:00', timestamp) AS minute, COUNT(*) AS cnt
+		SELECT date_trunc('minute', timestamp) AS minute, COUNT(*) AS cnt
 		FROM   raw_events
-		WHERE  timestamp >= datetime('now', '-1 hour')
-		GROUP  BY strftime('%Y-%m-%d %H:%M:00', timestamp)
+		WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR
+		GROUP  BY date_trunc('minute', timestamp)
 		ORDER  BY minute
 	`)
 	if err != nil {
@@ -1464,9 +1428,11 @@ func (s *Store) GetTimeline() ([]TimeBucket, error) {
 	var out []TimeBucket
 	for rows.Next() {
 		var tb TimeBucket
-		if err := rows.Scan(&tb.Time, &tb.Count); err != nil {
+		var t time.Time
+		if err := rows.Scan(&t, &tb.Count); err != nil {
 			continue
 		}
+		tb.Time = t.UTC().Format(time.RFC3339)
 		out = append(out, tb)
 	}
 	if out == nil {
@@ -1538,15 +1504,15 @@ func (s *Store) PruneOldEvents(retentionDays int) (int64, error) {
 
 	res, err := s.db.Exec(fmt.Sprintf(`
 		DELETE FROM raw_events
-		WHERE timestamp < datetime('now', '-%d days')
+		WHERE timestamp < now()::TIMESTAMP - INTERVAL '%d' DAY
 	`, retentionDays))
 	if err != nil {
 		return 0, fmt.Errorf("prune events delete: %w", err)
 	}
 	deleted, _ := res.RowsAffected()
 
-	if _, err := s.db.Exec(`PRAGMA optimize`); err != nil {
-		log.Printf("WARN: sqlite optimize failed: %v", err)
+	if _, err := s.db.Exec(`VACUUM`); err != nil {
+		log.Printf("WARN: duckdb vacuum failed: %v", err)
 	}
 	return deleted, nil
 }
@@ -1571,18 +1537,13 @@ func (s *Store) GetRecentEvents(limit int) ([]RawEvent, error) {
 	var events []RawEvent
 	for rows.Next() {
 		var e RawEvent
-		var tsStr string
 		if err := rows.Scan(
-			&tsStr, &e.SourceIP, &e.DestinationIP, &e.Method, &e.Host,
+			&e.Timestamp, &e.SourceIP, &e.DestinationIP, &e.Method, &e.Host,
 			&e.Path, &e.Query, &e.StatusCode, &e.Country, &e.AttackType,
 			&e.RuleName, &e.Action, &e.Blocked, &e.BytesSent, &e.BytesReceived,
 			&e.LatencyMs, &e.UserAgent,
 		); err != nil {
 			continue
-		}
-		e.Timestamp, _ = time.Parse(time.RFC3339, tsStr)
-		if e.Timestamp.IsZero() {
-			e.Timestamp, _ = time.Parse("2006-01-02 15:04:05", tsStr)
 		}
 		events = append(events, e)
 	}
