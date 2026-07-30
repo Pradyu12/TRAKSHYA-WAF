@@ -9,6 +9,15 @@ API_PORT="${API_PORT:-8000}"
 PROXY_PORT="${PROXY_PORT:-8080}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# ── Check binaries exist ──────────────────────────────────────────
+for bin in "$DIR/app/bin/trakshya-api" "$DIR/app/bin/trakshya-proxy"; do
+  if [ ! -f "$bin" ]; then
+    echo -e "${RED}Error: Binary not found: $bin${NC}"
+    echo "Run 'make build' or build manually first."
+    exit 1
+  fi
+done
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
@@ -25,7 +34,7 @@ echo -e "${NC}"
 echo -e "${RED}[1/5]${NC} Cleaning up old processes..."
 pkill -f "trakshya-api" 2>/dev/null || true
 pkill -f "trakshya-proxy" 2>/dev/null || true
-pkill -f "node.*server.js" 2>/dev/null || true
+pkill -f "server.js" 2>/dev/null || true
 sleep 1
 echo -e "      Done.\n"
 
@@ -99,7 +108,7 @@ cleanup() {
     kill $UPSTREAM_PID $API_PID $PROXY_PID 2>/dev/null || true
     pkill -f "trakshya-api" 2>/dev/null || true
     pkill -f "trakshya-proxy" 2>/dev/null || true
-    pkill -f "node.*server.js" 2>/dev/null || true
+    pkill -f "server.js" 2>/dev/null || true
     echo -e "${GREEN}All services stopped.${NC}"
 }
 trap cleanup EXIT INT TERM
