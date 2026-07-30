@@ -6,7 +6,7 @@
 
 A high-performance polyglot Web Application Firewall with integrated SIEM/XDR capabilities.
 Built with **Rust** (core proxy), **Go** (management API), and **C** (system monitoring).
-Runs entirely on your machine via an Electron desktop app. No cloud dependency.
+Runs entirely on your machine — no Docker, no cloud dependency.
 
 ## Contents
 
@@ -14,7 +14,6 @@ Runs entirely on your machine via an Electron desktop app. No cloud dependency.
 - [Architecture](#architecture)
 - [Management CLI](#management-cli)
 - [Local HTTPS Dev Certs](#local-https-dev-certs)
-- [Docker](#docker)
 - [Make Targets](#make-targets)
 - [Testing](#testing)
 - [CI/CD](#cicd)
@@ -24,23 +23,17 @@ Runs entirely on your machine via an Electron desktop app. No cloud dependency.
 ## Quick Install
 
 ```bash
-# Option 1: local npm CLI
-cd npm-package && npm link
-trakshya-install install --mode=local
-trakshya-waf
+# One-line install (recommended)
+curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/scripts/install.sh | bash
 
-# Option 2: clone and setup
+# Or clone and build locally
 git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git
 cd TRAKSHYA-WAF
 bash install.sh
 trakshya-waf
-
-# Option 3: Docker
-git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git
-cd TRAKSHYA-WAF
-docker compose up --build
-# Dashboard / API at http://localhost:8000
 ```
+
+No Docker required — TRAKSHYA WAF builds natively with Cargo and Go.
 
 ## Architecture
 
@@ -91,8 +84,6 @@ TRAKSHYA-WAF/
 ├── config/trakshya.yaml     # Shared configuration
 ├── frontend/dashboard.html  # Web dashboard (static HTML)
 ├── scripts/                 # Build/run/test helpers
-├── docker-compose.yml       # Local multi-service orchestration
-├── docker-compose.stack.yml # Full container stack
 ├── openapi.yml              # Management API spec
 ├── Makefile                 # Local task entrypoints
 ├── dev-certs/               # Localhost TLS material
@@ -113,10 +104,8 @@ trakshya-waf test
 trakshya-waf certs
 trakshya-waf scan
 
-# Windows installer
+# Windows
 powershell -ExecutionPolicy Bypass -File npm-package/bin/trakshya-install.ps1 install --mode=local
-powershell -ExecutionPolicy Bypass -File npm-package/bin/trakshya-install.ps1 install --mode=service
-powershell -ExecutionPolicy Bypass -File npm-package/bin/trakshya-install.ps1 status
 ```
 
 ## Local HTTPS Dev Certs
@@ -144,19 +133,6 @@ curl http://127.0.0.1:8000/ready
 - **macOS Keychain:** `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain dev-certs/trakshya-ca.crt`
 - **Ubuntu:** copy `dev-certs/trakshya-ca.crt` to `/usr/local/share/ca-certificates/trakshya-ca.crt` and run `sudo update-ca-certificates`.
 
-## Docker
-
-```bash
-# build and run full stack
-docker compose -f docker-compose.stack.yml up --build
-
-# detached
-docker compose -f docker-compose.stack.yml up -d --build
-
-# stop
-docker compose -f docker-compose.stack.yml down
-```
-
 ## Kubernetes Deployment
 
 TRAKSHYA-WAF can be deployed on Kubernetes using the included Helm chart or raw manifests.
@@ -165,7 +141,6 @@ TRAKSHYA-WAF can be deployed on Kubernetes using the included Helm chart or raw 
 
 - Kubernetes 1.24+
 - Helm 3.12+ (for Helm deployment)
-- A container registry (Docker Hub, GHCR, etc.)
 
 ### Using Helm
 
@@ -173,9 +148,6 @@ TRAKSHYA-WAF can be deployed on Kubernetes using the included Helm chart or raw 
 # Add your registry images to values.yaml or pass inline
 helm install trakshya-waf ./helm/trakshya-waf \
   --namespace trakshya-waf --create-namespace \
-  --set image.dashboard.repository=ghcr.io/Pradyu12/trakshya-waf-dashboard \
-  --set image.proxy.repository=ghcr.io/Pradyu12/trakshya-waf-proxy \
-  --set image.api.repository=ghcr.io/Pradyu12/trakshya-waf-api \
   --set secrets.apiKey=$(openssl rand -hex 32)
 ```
 
@@ -190,12 +162,9 @@ kubectl apply -f k8s/
 The recommended Kubernetes update path is rolling image updates. When you change firewall rules or config:
 
 1. Update `config/trakshya.yaml` or the WAF rules source
-2. Rebuild and push images with a new tag:
-   - `docker compose -f docker-compose.stack.yml build`
-   - `docker push ghcr.io/Pradyu12/trakshya-waf-proxy:newtag`
+2. Rebuild and push images with a new tag
 3. Roll the deployment:
-   - `kubectl set image deployment/trakshya-proxy proxy=ghcr.io/Pradyu12/trakshya-waf-proxy:newtag -n trakshya-waf`
-   - `kubectl rollout status deployment/trakshya-proxy -n trakshya-waf`
+   - `kubectl rollout restart deployment/trakshya-proxy -n trakshya-waf`
 4. For config-only changes, use a rolling restart:
    - `kubectl rollout restart deployment/trakshya-proxy -n trakshya-waf`
 
@@ -241,9 +210,6 @@ make smoke          # run smoke tests
 make regression     # run regression tests
 make test           # smoke + regression
 make certs          # generate localhost dev certs
-make docker-build   # build docker images
-make docker-up      # docker compose up
-make docker-down    # docker compose down
 make lint           # pre-commit run --all-files
 make pre-commit-run # pre-commit run on changed files
 make openapi-validate # validate openapi.yml schema
@@ -268,8 +234,6 @@ Use the GitHub Actions workflows in `.github/workflows/`:
 - `regression.yml` — VAPT + WAF rule regression against live API
 - `dependency-scan.yml` — `npm audit`, `cargo audit`, `govulncheck`
 - `openapi-validation.yml` — `openapi.yml` schema validation
-- `docker-publish.yml` — build/push Kubernetes images (api, proxy, dashboard)
-- `compose-healthgate.yml` — compose file/service ordering validation
 - `release.yml` — release workflow
 
 ## Contributing

@@ -2,7 +2,7 @@
 export
 
 .PHONY: build run smoke regression test clean certs lint pre-commit-run \
-        docker-build docker-up docker-down docker-push k8s-apply k8s-rollout openapi-validate changelog help
+        k8s-apply k8s-rollout openapi-validate changelog help
 
 REPO_ROOT := $(shell pwd)
 BUILD_DIR := $(REPO_ROOT)/build
@@ -19,12 +19,6 @@ help:
 	@echo "  lint                - pre-commit run on all files"
 	@echo "  pre-commit-run      - pre-commit run on changed files"
 	@echo "  certs               - generate localhost dev certs"
-	@echo "  docker-build        - build docker images"
-	@echo "  docker-up           - docker compose up"
-	@echo "  docker-down         - docker compose down"
-	@echo "  docker-push         - docker compose build and push"
-	@echo "  k8s-apply           - apply kubernetes manifests"
-	@echo "  k8s-rollout         - rolling restart kubernetes deployments"
 	@echo "  openapi-validate    - validate openapi.yml schema"
 	@echo "  changelog           - show unreleased changes"
 	@echo "  clean               - remove build artifacts"
@@ -60,19 +54,6 @@ pre-commit-run:
 
 certs:
 	@bash scripts/generate-dev-certs.sh
-
-docker-build:
-	docker compose -f docker-compose.stack.yml build
-
-docker-up:
-	docker compose -f docker-compose.stack.yml up -d --build
-
-docker-down:
-	docker compose -f docker-compose.stack.yml down
-
-docker-push:
-	docker compose -f docker-compose.stack.yml build
-	docker compose -f docker-compose.stack.yml push
 
 k8s-apply:
 	kubectl apply -f k8s/

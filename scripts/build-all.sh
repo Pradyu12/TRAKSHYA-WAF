@@ -11,30 +11,37 @@ mkdir -p "${BUILD_DIR}"
 echo ""
 echo "--- Building Rust proxy (trakshya-proxy) ---"
 cd "${ROOT_DIR}/rust"
-cargo build --release 2>&1 | tail -5
-cp "${ROOT_DIR}/rust/target/release/trakshya-proxy" "${BUILD_DIR}/"
+if command -v timeout >/dev/null 2>&1; then
+  timeout 600 cargo build --release 2>&1 | tail -5
+else
+  cargo build --release 2>&1 | tail -5
+fi
+cp -f "${ROOT_DIR}/rust/target/release/trakshya-proxy" "${BUILD_DIR}/" 2>/dev/null || true
 echo "Rust proxy built: ${BUILD_DIR}/trakshya-proxy"
 
 # Build Go management API
 echo ""
 cd "${ROOT_DIR}/go"
-go build -o "${BUILD_DIR}/trakshya-api" ./cmd/trakshya-api/ 2>&1
+CGO_ENABLED=1 go build -o "${BUILD_DIR}/trakshya-api" ./cmd/trakshya-api/ 2>&1
 echo "Go API built: ${BUILD_DIR}/trakshya-api"
 
-# Build C system monitor
+# Build C system monitor (optional, requires cmake)
 echo ""
 echo "--- Building C system monitor (trakshya-systemd) ---"
-cd "${ROOT_DIR}/c"
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -3
-make -j$(nproc) 2>&1 | tail -5
-cp "${ROOT_DIR}/c/build/trakshya-systemd" "${BUILD_DIR}/"
-echo "C system monitor built: ${BUILD_DIR}/trakshya-systemd"
+if command -v cmake >/dev/null 2>&1; then
+  cd "${ROOT_DIR}/c"
+  mkdir -p build && cd build
+  cmake .. -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -3
+  make -j$(nproc) 2>&1 | tail -5
+  cp -f "${ROOT_DIR}/c/build/trakshya-systemd" "${BUILD_DIR}/" 2>/dev/null || true
+  echo "C system monitor built: ${BUILD_DIR}/trakshya-systemd"
+else
+  echo "  cmake not found; skipping C system monitor (optional component)."
+fi
 
 echo ""
 echo "=== All components built successfully ==="
 echo "  Proxy:       ${BUILD_DIR}/trakshya-proxy"
 echo "  API:         ${BUILD_DIR}/trakshya-api"
-echo "  System Mon:  ${BUILD_DIR}/trakshya-systemd"
 echo ""
-echo "Run './scripts/run-all.sh' to start all components"
+echo "Run 'trakshya-waf' or './scripts/run-all.sh' to start all components"

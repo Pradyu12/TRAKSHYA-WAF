@@ -31,6 +31,11 @@ dist/
 trakshya_events.*
 /package-lock.json
 
+# Docker (removed — TRAKSHYA builds natively)
+docker-compose*
+Dockerfile
+/docker
+
 # Environment
 .env
 .env.example
