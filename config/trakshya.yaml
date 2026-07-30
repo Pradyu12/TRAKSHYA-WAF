@@ -1,22 +1,21 @@
 # TRAKSHYA-WAF Configuration
 # Shared configuration for all components (Rust proxy, Go API)
 
-database_path: /data/trakshya_events.duckdb
+database_path: trakshya_events.duckdb
 
 global:
   log_level: info
-  data_dir: /var/lib/trakshya
 
 proxy:
   port: 8080
-  upstream_url: http://trakshya-api:8000
+  upstream_url: http://127.0.0.1:3000
   posture: monitor  # monitor | standard | under_attack
-  management_api_url: http://trakshya-api:8000
+  management_api_url: http://127.0.0.1:8000
 
 rate_limiter:
   enabled: true
-  requests_per_minute: 60
-  burst_size: 10
+  requests_per_minute: 120
+  burst_size: 20
 
 circuit_breaker:
   enabled: true
@@ -26,30 +25,15 @@ circuit_breaker:
 
 api:
   port: 8000
-  api_key: ""  # empty means localhost-only (secure by default)
-
-c_system_monitor:
-  port: 9001
-  enabled: true
+  api_key: ""
 
 geoip:
   enabled: false
-  db_path: /var/lib/trakshya/GeoLite2-City.mmdb
   blocked_countries: []
 
 jwt:
   enabled: false
-  secret: ""
-  required_role: "admin"
 
 trusted_ips:
   - 127.0.0.1
   - ::1
-
-webhooks:
-  slack_webhook_url: ""
-  discord_webhook_url: ""
-
-telemetry:
-  prometheus_enabled: true
-  otlp_endpoint: ""

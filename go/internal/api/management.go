@@ -421,3 +421,42 @@ func (s *Server) simulateAttack(w http.ResponseWriter, r *http.Request) {
 		"incident": inc,
 	})
 }
+
+// Traffic Generator control endpoints
+
+func (s *Server) getTrafficStatus(w http.ResponseWriter, r *http.Request) {
+	if s.traffic == nil {
+		s.json(w, http.StatusOK, map[string]interface{}{
+			"running": false,
+			"message": "traffic generator not initialized",
+		})
+		return
+	}
+	s.json(w, http.StatusOK, map[string]interface{}{
+		"running": true,
+		"message": "traffic generator active",
+	})
+}
+
+func (s *Server) startTraffic(w http.ResponseWriter, r *http.Request) {
+	if s.traffic == nil {
+		s.traffic = NewTrafficGenerator(s.db)
+	}
+	if !s.traffic.running {
+		s.traffic.Start(2 * time.Second)
+	}
+	s.json(w, http.StatusOK, map[string]interface{}{
+		"status":  "started",
+		"message": "traffic generator started",
+	})
+}
+
+func (s *Server) stopTraffic(w http.ResponseWriter, r *http.Request) {
+	if s.traffic != nil {
+		s.traffic.Stop()
+	}
+	s.json(w, http.StatusOK, map[string]interface{}{
+		"status":  "stopped",
+		"message": "traffic generator stopped",
+	})
+}

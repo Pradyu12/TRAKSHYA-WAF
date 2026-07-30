@@ -1,4 +1,4 @@
-# TRAKSHYA WAF — Desktop Web Application Firewall
+# TRAKSHYA WAF — Web Application Firewall
 
 ![Deploy Landing Page](https://github.com/Pradyu12/TRAKSHYA-WAF/actions/workflows/deploy-dashboard.yml/badge.svg)
 
@@ -8,48 +8,102 @@ A high-performance polyglot Web Application Firewall with integrated SIEM/XDR ca
 Built with **Rust** (core proxy), **Go** (management API), and **C** (system monitoring).
 Runs entirely on your machine — no Docker, no cloud dependency.
 
-## Contents
+## Quick Start
 
-- [Quick Install](#quick-install)
-- [Architecture](#architecture)
-- [Management CLI](#management-cli)
-- [Local HTTPS Dev Certs](#local-https-dev-certs)
-- [Make Targets](#make-targets)
-- [Testing](#testing)
-- [CI/CD](#cicd)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Quick Install
-
-```bash
-# One-line install (recommended)
-curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/scripts/install.sh | bash
-
-# Or clone and build locally
+### Windows
+```cmd
 git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git
 cd TRAKSHYA-WAF
-bash install.sh
-trakshya-waf
+start-waf.bat
 ```
 
-No Docker required — TRAKSHYA WAF builds natively with Cargo and Go.
+### macOS / Linux
+```bash
+git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git
+cd TRAKSHYA-WAF
+chmod +x start-waf.sh
+./start-waf.sh
+```
+
+This starts all services and opens the dashboard in your browser at **http://localhost:8000**.
 
 ## Architecture
 
 ```
-Internet → [Rust Proxy :8080] → Upstream Web App
-               │
-        (reports incidents via REST/JSON)
-               ↓
-         [Go API :8000] ←→ DuckDB (live events/SIEM/rules)
-               ↑
-        (C daemon reports via HTTP)
-               │
-         [C Daemon :9001]
+Client Request → WAF Proxy (8080) → Rust Rules Engine inspects
+                                        ↓
+                                  Attack? → 403 BLOCKED
+                                  Clean?  → Forward to Upstream (3000)
+                                        ↓
+                                  Reports incident to Go API (8000)
+                                        ↓
+                                  Dashboard shows live WAF data (browser)
 ```
 
-Deployed on **Kubernetes** (Helm chart + raw manifests). The dashboard proxies `/api` to the Go management API so all UI data is live from DuckDB — no Datadog, n8n, Firebase, or mock backends.
+| Service | Port | Description |
+|---------|------|-------------|
+| **Upstream Server** | 3000 | Your protected backend website |
+| **Go API** | 8000 | Dashboard, management API, traffic generator |
+| **WAF Proxy** | 8080 | Real WAF — inspects, blocks attacks, forwards clean traffic |
+
+## What the WAF Blocks
+
+| Attack Type | Rule | Severity |
+|-------------|------|----------|
+| SQL Injection | `SQLI-001` | Critical |
+| Cross-Site Scripting | `XSS-001`, `XSS-002` | High |
+| Path Traversal | `PT-001`, `PT-003` | High |
+| Command Injection | `CMDI-001` | Critical |
+| Remote File Inclusion | `RFI-001` | Medium |
+| Local File Inclusion | `LFI-001` | High |
+| SSRF | `SSRF-001` | High |
+| XXE | `XXE-001` | High |
+| SSTI | `SSTI-001` | High |
+| JNDI | `JNDI-001` | High |
+| Scanner/Bot Detection | `SCANNER-001` | Low |
+
+## Testing the WAF
+
+### Normal traffic (should pass)
+```bash
+curl http://localhost:8080/
+# → 200 OK (forwarded to upstream)
+```
+
+### Attack traffic (should be blocked)
+```bash
+# SQL Injection
+curl "http://localhost:8080/api/users?id=1' OR '1'='1"
+# → 403 Forbidden (blocked by SQLI-001)
+
+# XSS
+curl "http://localhost:8080/search?q=<script>alert(1)</script>"
+# → 403 Forbidden (blocked by XSS-001)
+
+# Path Traversal
+curl "http://localhost:8080/files?name=../../../etc/passwd"
+# → 403 Forbidden (blocked by PT-001)
+```
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `UPSTREAM_PORT` | 3000 | Port for the upstream backend server |
+| `TRAKSHYA_FRONTEND_DIR` | `frontend` | Directory containing dashboard.html |
+| `TRAKSHYA_DUCKDB_PATH` | `trakshya_events.db` | Database file path |
+
+### Custom Ports
+```bash
+# macOS/Linux
+UPSTREAM_PORT=4000 ./start-waf.sh
+
+# Windows
+set UPSTREAM_PORT=4000
+start-waf.bat
+```
 
 ## Project Structure
 
@@ -71,134 +125,46 @@ TRAKSHYA-WAF/
 │       ├── webhooks/        # Slack/Discord notification dispatcher
 │       ├── telemetry/       # Prometheus metrics + OTLP tracing
 │       ├── ws/              # WebSocket & SSE real-time events
-│       └── db/              # DuckDB database layer (events, incidents, SIEM)
-├── c/                       # C project (system-level monitoring)
-│   ├── include/trakshya.h   # Shared header
-│   ├── src/
-│   │   ├── hids/            # Host-based intrusion detection
-│   │   ├── fim/             # File integrity monitoring (SHA-256)
-│   │   ├── sca/             # Security configuration assessment
-│   │   ├── vuln/            # CVE vulnerability scanning
-│   │   └── active_response/ # iptables/UFW blocking, posture
-│   └── tests/
+│       └── db/              # Database layer (events, incidents, SIEM)
+├── frontend/dashboard.html  # Web dashboard (browser-based)
 ├── config/trakshya.yaml     # Shared configuration
-├── frontend/dashboard.html  # Web dashboard (static HTML)
+├── server.js                # Sample upstream backend server
+├── start-waf.bat            # Windows start script
+├── start-waf.sh             # macOS/Linux start script
 ├── scripts/                 # Build/run/test helpers
-├── openapi.yml              # Management API spec
 ├── Makefile                 # Local task entrypoints
-├── dev-certs/               # Localhost TLS material
-└── .env.example             # Environment template
+└── openapi.yml              # Management API spec
 ```
 
-## Management CLI
+## Building from Source
 
+### Prerequisites
+- [Rust](https://rustup.rs/) (for WAF proxy)
+- [Go 1.22+](https://go.dev/dl/) (for management API)
+- [Node.js](https://nodejs.org/) (for upstream server)
+
+### Build
 ```bash
-# local development stack
-trakshya-waf start
-trakshya-waf status
-trakshya-waf logs [service]
-trakshya-waf stop
+# Build Go API
+cd go && go build -o ../app/bin/trakshya-api ./cmd/trakshya-api
 
-# quality and certs
-trakshya-waf test
-trakshya-waf certs
-trakshya-waf scan
-
-# Windows
-powershell -ExecutionPolicy Bypass -File npm-package/bin/trakshya-install.ps1 install --mode=local
+# Build Rust proxy
+cd rust && cargo build --release -p trakshya-proxy
+cp target/release/trakshya-proxy ../app/bin/
 ```
-
-## Local HTTPS Dev Certs
-
-The project includes a local dev certificate generator so you can test TLS scanner paths against `https://127.0.0.1:8443`.
-
-```bash
-# generate local certs
-make certs
-
-# start live Go API (serves dashboard + DuckDB)
-cd go && go run ./cmd/trakshya-api/
-
-# request local health endpoint
-curl http://127.0.0.1:8000/health
-curl http://127.0.0.1:8000/ready
-```
-
-### Trust the local CA
-
-`curl -k` works for quick checks, but browsers and some scanners will still warn. To trust the local CA more broadly:
-
-- **Chrome/Chromium:** open `Settings → Privacy and security → Security → Manage certificates → Authorities → Import` and import `dev-certs/trakshya-ca.crt`.
-- **Firefox:** open `Preferences → Privacy & Security → View Certificates → Authorities → Import` and import `dev-certs/trakshya-ca.crt`.
-- **macOS Keychain:** `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain dev-certs/trakshya-ca.crt`
-- **Ubuntu:** copy `dev-certs/trakshya-ca.crt` to `/usr/local/share/ca-certificates/trakshya-ca.crt` and run `sudo update-ca-certificates`.
 
 ## Kubernetes Deployment
 
-TRAKSHYA-WAF can be deployed on Kubernetes using the included Helm chart or raw manifests.
-
-### Prerequisites
-
-- Kubernetes 1.24+
-- Helm 3.12+ (for Helm deployment)
-
 ### Using Helm
-
 ```bash
-# Add your registry images to values.yaml or pass inline
 helm install trakshya-waf ./helm/trakshya-waf \
   --namespace trakshya-waf --create-namespace \
   --set secrets.apiKey=$(openssl rand -hex 32)
 ```
 
 ### Using kubectl
-
 ```bash
 kubectl apply -f k8s/
-```
-
-### Updating WAF rules/config without redeploying pods
-
-The recommended Kubernetes update path is rolling image updates. When you change firewall rules or config:
-
-1. Update `config/trakshya.yaml` or the WAF rules source
-2. Rebuild and push images with a new tag
-3. Roll the deployment:
-   - `kubectl rollout restart deployment/trakshya-proxy -n trakshya-waf`
-4. For config-only changes, use a rolling restart:
-   - `kubectl rollout restart deployment/trakshya-proxy -n trakshya-waf`
-
-### Exposing the dashboard
-
-```bash
-# Option 1: LoadBalancer (cloud)
-kubectl expose deployment trakshya-dashboard --port=8000 --target-port=8000 --type=LoadBalancer -n trakshya-waf
-
-# Option 2: NodePort
-kubectl expose deployment trakshya-dashboard --port=8000 --target-port=8000 --type=NodePort -n trakshya-waf
-
-# Option 3: Ingress
-kubectl apply -f - <<EOF
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: trakshya-dashboard
-  namespace: trakshya-waf
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-spec:
-  rules:
-    - host: waf.example.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: trakshya-dashboard
-                port:
-                  number: 8000
-EOF
 ```
 
 ## Make Targets
@@ -210,9 +176,6 @@ make smoke          # run smoke tests
 make regression     # run regression tests
 make test           # smoke + regression
 make certs          # generate localhost dev certs
-make lint           # pre-commit run --all-files
-make pre-commit-run # pre-commit run on changed files
-make openapi-validate # validate openapi.yml schema
 make clean          # remove build artifacts
 ```
 
@@ -228,12 +191,11 @@ python3 scripts/regression.py
 
 ## CI/CD
 
-Use the GitHub Actions workflows in `.github/workflows/`:
-
-- `validate.yml` — live DuckDB API smoke checks
-- `regression.yml` — VAPT + WAF rule regression against live API
-- `dependency-scan.yml` — `npm audit`, `cargo audit`, `govulncheck`
-- `openapi-validation.yml` — `openapi.yml` schema validation
+GitHub Actions workflows in `.github/workflows/`:
+- `validate.yml` — live API smoke checks
+- `regression.yml` — WAF rule regression tests
+- `dependency-scan.yml` — npm audit, cargo audit, govulncheck
+- `openapi-validation.yml` — OpenAPI schema validation
 - `release.yml` — release workflow
 
 ## Contributing

@@ -68,6 +68,19 @@ tools/
 # Duplicates
 globe.glb
 
+# Zip archives
+*.zip
+
+# Electron app databases
+app/*.db*
+app/*.duckdb*
+
+# Proxy databases
+trakshya_proxy.*
+
+# WSL files
+WSL_Installation_Guide.pdf
+
 
 # Node
 node_modules/

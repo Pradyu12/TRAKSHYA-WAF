@@ -228,8 +228,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .scan-status.running{background:var(--cyan-dim);color:var(--cyan)}
 .scan-status.completed{background:var(--green-dim);color:var(--green)}
 .scan-status.idle{background:rgba(255,255,255,0.06);color:var(--text-dim)}
-.scan-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;min-height:110px}
-.scan-card .scan-card-top{display:flex;flex-direction:column;align-items:center;gap:6px}
+.scan-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;min-height:110px}
+.scan-card .scan-card-top{display:flex;flex-direction:column;align-items:center;gap:4px}
+.scan-card .scan-status{margin-bottom:0}
 .scan-card .mc-label{font-size:10px;color:var(--text-dim);margin-top:2px}
 .scan-card .scan-last-time{font-size:13px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums}
 @media(max-width:1200px){.dashboard{grid-template-columns:60px 1fr}.right-panel{display:none}.topbar-live-metrics{display:none}}

@@ -1,5 +1,5 @@
 const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, nativeImage } = require('electron');
-const { execFile } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -80,7 +80,7 @@ function createTitleBar() {
   return '';
 }
 
-function createWindow() {
+function createWindow(apiReady = true) {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -97,11 +97,17 @@ function createWindow() {
     },
   });
 
-  const dashboardPath = path.join(__dirname, 'renderer', 'dashboard.html');
-  if (fs.existsSync(dashboardPath)) {
-    mainWindow.loadFile(dashboardPath);
+  // Load dashboard from the Go API server so relative API URLs work
+  if (apiReady) {
+    mainWindow.loadURL(`http://localhost:${BACKENDS.api.port}/`);
   } else {
-    mainWindow.loadURL('http://localhost:8001');
+    // Fallback to local file if API not ready
+    const dashboardPath = path.join(__dirname, 'renderer', 'dashboard.html');
+    if (fs.existsSync(dashboardPath)) {
+      mainWindow.loadFile(dashboardPath);
+    } else {
+      mainWindow.loadURL('about:blank');
+    }
   }
 
   mainWindow.on('close', (e) => {
@@ -157,16 +163,43 @@ ipcMain.handle('restart-backend', (_, name) => {
 });
 
 ipcMain.handle('get-auto-launch', () => {
-  const desktopPath = path.join(os.homedir(), '.config', 'autostart', 'trakshya-waf.desktop');
-  return fs.existsSync(desktopPath);
+  if (process.platform === 'win32') {
+    // Check Windows Registry
+    try {
+      const result = execFileSync('reg', ['query', 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run', '/v', 'trakshya-waf'], { encoding: 'utf-8' });
+      return result.includes('trakshya-waf');
+    } catch {
+      return false;
+    }
+  } else {
+    // Linux: check XDG autostart
+    const desktopPath = path.join(os.homedir(), '.config', 'autostart', 'trakshya-waf.desktop');
+    return fs.existsSync(desktopPath);
+  }
 });
 
 ipcMain.handle('set-auto-launch', (_, enabled) => {
-  const autostartDir = path.join(os.homedir(), '.config', 'autostart');
-  const desktopPath = path.join(autostartDir, 'trakshya-waf.desktop');
-  if (enabled) {
+  if (process.platform === 'win32') {
+    // Windows: use Registry for autostart
     const execPath = process.env.APPIMAGE || process.execPath;
-    const content = `[Desktop Entry]
+    const regKey = 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run';
+    try {
+      if (enabled) {
+        execFileSync('reg', ['add', regKey, '/v', 'trakshya-waf', '/t', 'REG_SZ', '/d', `"${execPath}" --hidden`, '/f']);
+      } else {
+        execFileSync('reg', ['delete', regKey, '/v', 'trakshya-waf', '/f']);
+      }
+    } catch (err) {
+      console.error('Failed to update Windows autostart registry:', err.message);
+      return false;
+    }
+  } else {
+    // Linux: use XDG autostart desktop file
+    const autostartDir = path.join(os.homedir(), '.config', 'autostart');
+    const desktopPath = path.join(autostartDir, 'trakshya-waf.desktop');
+    if (enabled) {
+      const execPath = process.env.APPIMAGE || process.execPath;
+      const content = `[Desktop Entry]
 Type=Application
 Name=Trakshya WAF
 Exec=${execPath} --hidden
@@ -174,10 +207,11 @@ Icon=trakshya-waf
 Terminal=false
 X-GNOME-Autostart-enabled=true
 `;
-    if (!fs.existsSync(autostartDir)) fs.mkdirSync(autostartDir, { recursive: true });
-    fs.writeFileSync(desktopPath, content);
-  } else {
-    if (fs.existsSync(desktopPath)) fs.unlinkSync(desktopPath);
+      if (!fs.existsSync(autostartDir)) fs.mkdirSync(autostartDir, { recursive: true });
+      fs.writeFileSync(desktopPath, content);
+    } else {
+      if (fs.existsSync(desktopPath)) fs.unlinkSync(desktopPath);
+    }
   }
   return true;
 });
@@ -189,7 +223,7 @@ ipcMain.on('minimize-to-tray', () => mainWindow && mainWindow.hide());
 
 // SSE monitoring for desktop notifications
 function monitorSSE() {
-  const req = http.get('http://localhost:8001/api/stream', (res) => {
+  const req = http.get(`http://localhost:${BACKENDS.api.port}/api/stream`, (res) => {
     res.on('data', (chunk) => {
       try {
         const data = chunk.toString();
@@ -218,17 +252,23 @@ function monitorSSE() {
 }
 
 app.whenReady().then(async () => {
+  const startHidden = process.argv.includes('--hidden');
   console.log('Trakshya WAF v' + app.getVersion());
 
   Object.keys(BACKENDS).forEach(name => startBackend(name));
 
   console.log('Waiting for backends...');
-  const apiReady = await waitForBackend(8000);
+  const apiReady = await waitForBackend(BACKENDS.api.port);
   if (!apiReady) console.warn('Go API not ready — dashboard may not load');
 
-  createWindow();
   createTray();
   monitorSSE();
+
+  if (startHidden) {
+    console.log('Started with --hidden, minimizing to tray.');
+  } else {
+    createWindow(apiReady);
+  }
 });
 
 app.on('before-quit', () => {

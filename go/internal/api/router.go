@@ -36,6 +36,7 @@ type Server struct {
 	metrics *telemetry.Metrics
 	startAt time.Time
 	cfgMu   sync.RWMutex
+	traffic *TrafficGenerator
 }
 
 func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Handler {
@@ -45,6 +46,10 @@ func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Ha
 		metrics: metrics,
 		startAt: time.Now(),
 	}
+
+	// Start automatic traffic generator
+	srv.traffic = NewTrafficGenerator(store)
+	srv.traffic.Start(2 * time.Second)
 
 	r := chi.NewRouter()
 
@@ -136,6 +141,11 @@ func NewRouter(cfg *Config, store *db.Store, metrics *telemetry.Metrics) http.Ha
 			r.Handle("/metrics", srv.metrics.Handler())
 
 			r.Post("/simulate-attack", srv.simulateAttack)
+
+			// Traffic Generator control endpoints
+			r.Get("/traffic/status", srv.getTrafficStatus)
+			r.Post("/traffic/start", srv.startTraffic)
+			r.Post("/traffic/stop", srv.stopTraffic)
 		})
 	})
 
