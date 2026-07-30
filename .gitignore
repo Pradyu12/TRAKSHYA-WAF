@@ -17,13 +17,19 @@ c/cmake-build-*/
 # Build output
 build/
 bin/
+dist/
 
 # TRAKSHYA data
 *.db
 *.db-shm
 *.db-wal
 *.duckdb
-*.duckdb.wal
+*.duckdb-shm
+*.duckdb-wal
+
+# Runtime
+trakshya_events.*
+package-lock.json
 
 # Environment
 .env
@@ -38,6 +44,7 @@ bin/
 # OS
 .DS_Store
 Thumbs.db
+docker
 
 # Logs
 *.log
@@ -49,6 +56,9 @@ app/bin/
 .agent-id
 .agents/
 .hermes/
+
+# Vendor tools
+tools/
 
 # Duplicates
 globe.glb
