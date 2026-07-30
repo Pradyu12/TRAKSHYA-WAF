@@ -9,6 +9,12 @@ API_PORT="${API_PORT:-8000}"
 PROXY_PORT="${PROXY_PORT:-8080}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
 # ── Check binaries exist ──────────────────────────────────────────
 for bin in "$DIR/app/bin/trakshya-api" "$DIR/app/bin/trakshya-proxy"; do
   if [ ! -f "$bin" ]; then
@@ -17,12 +23,6 @@ for bin in "$DIR/app/bin/trakshya-api" "$DIR/app/bin/trakshya-proxy"; do
     exit 1
   fi
 done
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m'
 
 echo -e "${CYAN}${BOLD}"
 echo "  ╔══════════════════════════════════════════╗"
