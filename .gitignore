@@ -71,6 +71,7 @@ globe.glb
 
 # Node
 node_modules/
+app/package-lock.json
 
 # Python
 .venv/
