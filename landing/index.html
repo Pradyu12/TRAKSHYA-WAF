@@ -288,9 +288,9 @@ footer{padding:48px 40px 32px;border-top:1px solid var(--border);position:relati
         <circle cx="50" cy="49" r="48" fill="url(#hglow)"/>
       </svg>
     </div>
-    <div class="hero-badge">v2.1.0 &middot; WAF + SIEM/XDR &middot; DuckDB</div>
+    <div class="hero-badge">v2.2.0 &middot; Cross-Platform WAF &middot; Real Traffic Inspection &middot; Browser Dashboard</div>
     <h1>TRAKSHYA WAF</h1>
-    <p class="hero-p">A firewall that respects your privacy. Real-time threat detection — SQLi to Log4Shell — running entirely on your machine. No cloud, no data egress, no accounts.</p>
+    <p class="hero-p">A real Web Application Firewall that runs entirely on your machine. Inspects HTTP traffic, blocks attacks (SQLi, XSS, path traversal, command injection), and forwards clean traffic — all locally. No cloud, no data egress, no accounts.</p>
     <pre class="hero-terminal" id="hero-terminal"><code><span class="term-prompt">$</span> <span class="term-cmd">./trakshya --scan --upstream localhost:3000</span><span class="term-cursor"></span></code></pre>
     <div class="one-liner">
       <div class="one-liner-label">Single-line install</div>
@@ -323,6 +323,13 @@ footer{padding:48px 40px 32px;border-top:1px solid var(--border);position:relati
     <p class="section-sub">Latest enhancements to TRAKSHYA WAF.</p>
   </div>
   <div class="timeline">
+    <div class="tl-entry">
+      <div class="tl-marker">v2.2</div>
+      <div class="tl-body">
+        <h4>Cross-Platform WAF &middot; Real Traffic Inspection &middot; Browser Dashboard</h4>
+        <p>Full WAF pipeline: Client → WAF Proxy (8080) → Upstream (3000). Traffic generator sends real HTTP requests through the WAF proxy for live attack demonstration. Cross-platform start scripts for Windows, macOS, and Linux. Dashboard runs in your browser — no Electron required. Auto-start on boot support. Titlebar buttons (Refresh, Minimize, Exit).</p>
+      </div>
+    </div>
     <div class="tl-entry">
       <div class="tl-marker">v2.1</div>
       <div class="tl-body">
@@ -509,12 +516,12 @@ footer{padding:48px 40px 32px;border-top:1px solid var(--border);position:relati
         <tr><th>Feature</th><th class="col-win">TRAKSHYA</th><th>ModSecurity</th><th>Cloudflare</th><th>AWS WAF</th><th>NGINX</th></tr>
       </thead>
       <tbody>
-        <tr><td>Deployment</td><td class="col-win">Local / K8s</td><td>NGINX module</td><td>Cloud edge</td><td>Cloud</td><td>NGINX Plus</td></tr>
+        <tr><td>Deployment</td><td class="col-win">Local / K8s / Win+Mac+Linux</td><td>NGINX module</td><td>Cloud edge</td><td>Cloud</td><td>NGINX Plus</td></tr>
         <tr><td>Data Privacy</td><td class="col-win"><span class="tag-green">100% local</span></td><td>100% local</td><td>Traffic via CF</td><td>Traffic via AWS</td><td>100% local</td></tr>
         <tr><td>SIEM/XDR</td><td class="col-win">Built-in (7 rules)</td><td>External</td><td>Cloud SIEM +$</td><td>Security Lake +$</td><td>External</td></tr>
         <tr><td>Attack Vectors</td><td class="col-win"><strong>11</strong></td><td>OWASP CRS</td><td>Managed rules</td><td>Managed rules</td><td>Limited</td></tr>
         <tr><td>Active Response</td><td class="col-win">iptables/UFW</td><td>Actions only</td><td>Managed</td><td>Managed</td><td>Deny only</td></tr>
-        <tr><td>Dashboard</td><td class="col-win">Desktop UI</td><td>Grafana/Kibana</td><td>Cloud console</td><td>AWS console</td><td>NGINX Plus</td></tr>
+        <tr><td>Dashboard</td><td class="col-win">Browser + Electron</td><td>Grafana/Kibana</td><td>Cloud console</td><td>AWS console</td><td>NGINX Plus</td></tr>
         <tr><td>Cost</td><td class="col-win"><span class="tag-green">Free (MIT)</span></td><td>Free (Apache)</td><td>$20/mo + usage</td><td>$5/mo + $1/rule</td><td>License $$$</td></tr>
       </tbody>
     </table>
@@ -531,10 +538,10 @@ footer{padding:48px 40px 32px;border-top:1px solid var(--border);position:relati
   <div class="install-hero">
     <div class="install-one-liner" onclick="copyOneLiner(this)">
       <span class="ol-prom">$</span>
-      <span class="ol-cmd">curl -fsSL https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/scripts/install.sh | bash</span>
+      <span class="ol-cmd">git clone https://github.com/Pradyu12/TRAKSHYA-WAF.git && cd TRAKSHYA-WAF && ./start-waf.sh</span>
       <span class="ol-badge">copy</span>
     </div>
-    <p style="font-size:11px;color:var(--text-dim);margin-top:10px">Requires <strong style="color:var(--text-sec)">Rust</strong> (cargo), <strong style="color:var(--text-sec)">Go</strong> 1.24+, <strong style="color:var(--text-sec)">GCC</strong>, and <strong style="color:var(--text-sec)">Git</strong>. Builds proxy, API &amp; dashboard from source.</p>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:10px">Requires <strong style="color:var(--text-sec)">Rust</strong> (cargo), <strong style="color:var(--text-sec)">Go</strong> 1.22+, <strong style="color:var(--text-sec)">Node.js</strong>, and <strong style="color:var(--text-sec)">Git</strong>. Builds and starts the full WAF stack. Dashboard opens in your browser.</p>
   </div>
   <div class="os-selector">
     <button class="os-btn active" data-os="linux" onclick="switchOS(this)">Linux</button>
