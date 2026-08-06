@@ -30,7 +30,7 @@ sleep 1
 if [ -x "${ROOT_DIR}/rust/target/release/trakshya-proxy" ]; then
   export TRAKSHYA_CONFIG="${CONFIG}"
   export TRAKSHYA_PROXY_PORT=8080
-  export TRAKSHYA_UPSTREAM_URL=http://localhost:8000
+  export TRAKSHYA_UPSTREAM_URL=http://localhost:3000
   export TRAKSHYA_MGMT_API_URL=http://localhost:8000
   export RUST_LOG=info
   echo "  Starting Rust proxy on :8080..."

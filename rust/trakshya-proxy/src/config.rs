@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
 
@@ -15,15 +16,24 @@ pub struct Config {
     #[serde(default)]
     pub jwt: JWTConfig,
     #[serde(default)]
-    pub trusted_ips: Vec<String>,
+    pub api: ApiConfig,
     #[serde(default)]
-    pub api_key: String,
+    pub trusted_ips: Vec<String>,
     #[serde(default = "default_db_path")]
     pub database_path: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ApiConfig {
+    #[serde(default)]
+    pub port: u16,
+    #[serde(default)]
+    pub api_key: String,
+}
+
 fn default_db_path() -> String {
-    std::env::var("TRAKSHYA_DUCKDB_PATH").unwrap_or_else(|_| "trakshya_events.duckdb".to_string())
+    std::env::var("TRAKSHYA_DUCKDB_PATH")
+        .unwrap_or_else(|_| "trakshya_events.duckdb".to_string())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,6 +184,9 @@ impl Config {
             if let Ok(port) = std::env::var("TRAKSHYA_PROXY_PORT") {
                 cfg.proxy.port = port.parse()?;
             }
+            if let Ok(key) = std::env::var("TRAKSHYA_API_KEY") {
+                cfg.api.api_key = key;
+            }
             return Ok(cfg);
         }
 
@@ -183,8 +196,8 @@ impl Config {
             circuit_breaker: CircuitBreakerConfig::default(),
             geoip: GeoIPConfig::default(),
             jwt: JWTConfig::default(),
+            api: ApiConfig::default(),
             trusted_ips: vec![],
-            api_key: std::env::var("TRAKSHYA_API_KEY").unwrap_or_default(),
             database_path: default_db_path(),
         })
     }
@@ -198,6 +211,7 @@ pub struct AppState {
     pub start_time: Instant,
     pub broadcast_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
     pub rate_limiter: trakshya_rate_limiter::RateLimiter,
+    pub rules_engine: Arc<trakshya_rules::Engine>,
 }
 
 impl AppState {
@@ -210,13 +224,15 @@ impl AppState {
 
         let gateway = crate::gateway::Gateway::new(
             &cfg.proxy.management_api_url,
-            &cfg.api_key,
+            &cfg.api.api_key,
         );
 
         let rate_limiter = trakshya_rate_limiter::RateLimiter::new(
             cfg.rate_limiter.requests_per_minute,
             cfg.rate_limiter.burst_size,
         );
+
+        let rules_engine = Arc::new(trakshya_rules::Engine::new());
 
         Ok(Self {
             config: RwLock::new(cfg.clone()),
@@ -228,6 +244,7 @@ impl AppState {
             start_time: Instant::now(),
             broadcast_tx: tx,
             rate_limiter,
+            rules_engine,
         })
     }
 

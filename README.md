@@ -146,11 +146,11 @@ TRAKSHYA-WAF/
 ### Build
 ```bash
 # Build Go API
-cd go && go build -o ../app/bin/trakshya-api ./cmd/trakshya-api
+cd go && CGO_ENABLED=1 go build -o ../build/trakshya-api ./cmd/trakshya-api
 
 # Build Rust proxy
 cd rust && cargo build --release -p trakshya-proxy
-cp target/release/trakshya-proxy ../app/bin/
+cp target/release/trakshya-proxy ../build/
 ```
 
 ## Kubernetes Deployment

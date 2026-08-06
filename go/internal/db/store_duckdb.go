@@ -104,6 +104,9 @@ func (s *Store) GetDB() *sql.DB { return s.db }
 
 func (s *Store) runMigrations() error {
 	stmts := []string{
+		// Drop the index on request_stats.last_seen — DuckDB cannot UPDATE a
+		// column referenced by an index in ON CONFLICT DO UPDATE SET.
+		`DROP INDEX IF EXISTS idx_request_stats_last_seen`,
 		`CREATE TABLE IF NOT EXISTS incidents (
 			id TEXT PRIMARY KEY,
 			incident_type TEXT NOT NULL,
@@ -206,7 +209,6 @@ func (s *Store) runMigrations() error {
 		`CREATE INDEX IF NOT EXISTS idx_rules_enabled ON rules(enabled)`,
 		`CREATE INDEX IF NOT EXISTS idx_blacklist_ip ON blacklist(ip)`,
 		`CREATE INDEX IF NOT EXISTS idx_blacklist_expires ON blacklist(expires_at)`,
-		`CREATE INDEX IF NOT EXISTS idx_request_stats_last_seen ON request_stats(last_seen)`,
 		`CREATE INDEX IF NOT EXISTS idx_vulns_package ON vulnerabilities(package_name)`,
 		`CREATE INDEX IF NOT EXISTS idx_vulns_severity ON vulnerabilities(severity)`,
 		`CREATE INDEX IF NOT EXISTS idx_vulns_cve ON vulnerabilities(cve_id)`,
@@ -522,7 +524,7 @@ func (s *Store) GetDashboardStats() (*models.DashboardStats, error) {
 	if err := s.db.QueryRow("SELECT COALESCE(SUM(blocked_count), 0) FROM request_stats").Scan(&stats.BlockedRequests); err != nil {
 		log.Printf("dashboard stats blocked_count: %v", err)
 	}
-	if err := s.db.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM request_stats WHERE last_seen > NOW() - INTERVAL '1' HOUR").Scan(&stats.ActiveIPs); err != nil {
+	if err := s.db.QueryRow("SELECT COUNT(DISTINCT client_ip) FROM request_stats WHERE last_seen > NOW()::TIMESTAMP - INTERVAL '1' HOUR").Scan(&stats.ActiveIPs); err != nil {
 		log.Printf("dashboard stats active_ips: %v", err)
 	}
 	if err := s.db.QueryRow("SELECT COUNT(*) FROM incidents WHERE timestamp > now()::TIMESTAMP - INTERVAL '1' DAY").Scan(&stats.IncidentsToday); err != nil {
@@ -940,14 +942,15 @@ func (s *Store) RecordRequest(clientIP string, blocked bool) {
 	if blocked {
 		blockedVal = 1
 	}
+	now := time.Now()
 	_, err := s.db.Exec(
 		`INSERT INTO request_stats (client_ip, request_count, blocked_count, last_seen)
-		 VALUES ($1, 1, $2, CURRENT_TIMESTAMP)
+		 VALUES ($1, 1, $2, $4)
 		 ON CONFLICT(client_ip) DO UPDATE SET
 		     request_count = request_stats.request_count + 1,
 		     blocked_count = request_stats.blocked_count + $3,
-		     last_seen = CURRENT_TIMESTAMP`,
-		clientIP, blockedVal, blockedVal,
+		     last_seen = $4`,
+		clientIP, blockedVal, blockedVal, now,
 	)
 	if err != nil {
 		log.Printf("WARN: failed to record request stats: %v", err)
@@ -1360,10 +1363,10 @@ func (s *Store) GetEventStats() (*EventStats, error) {
 	}
 
 	tRows, err := s.db.Query(`
-		SELECT date_trunc('minute', timestamp) AS minute, COUNT(*) AS cnt
+		SELECT date_trunc('minute', timestamp::TIMESTAMP) AS minute, COUNT(*) AS cnt
 		FROM   raw_events
 		WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR
-		GROUP  BY date_trunc('minute', timestamp)
+		GROUP  BY date_trunc('minute', timestamp::TIMESTAMP)
 		ORDER  BY minute
 	`)
 	if err == nil {
@@ -1414,10 +1417,10 @@ func (s *Store) GetTopAttackers(limit int) ([]AttackCount, error) {
 
 func (s *Store) GetTimeline() ([]TimeBucket, error) {
 	rows, err := s.db.Query(`
-		SELECT date_trunc('minute', timestamp) AS minute, COUNT(*) AS cnt
+		SELECT date_trunc('minute', timestamp::TIMESTAMP) AS minute, COUNT(*) AS cnt
 		FROM   raw_events
 		WHERE  timestamp >= now()::TIMESTAMP - INTERVAL '1' HOUR
-		GROUP  BY date_trunc('minute', timestamp)
+		GROUP  BY date_trunc('minute', timestamp::TIMESTAMP)
 		ORDER  BY minute
 	`)
 	if err != nil {

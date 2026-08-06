@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="${ROOT_DIR}/build"
 
-if [ ! -f "${BUILD_DIR}/trakshya-proxy" ] || [ ! -f "${BUILD_DIR}/trakshya-api" ] || [ ! -f "${BUILD_DIR}/trakshya-systemd" ]; then
+if [ ! -f "${BUILD_DIR}/trakshya-proxy" ] || [ ! -f "${BUILD_DIR}/trakshya-api" ]; then
     echo "Build artifacts not found. Run 'scripts/build-all.sh' first."
     exit 1
 fi

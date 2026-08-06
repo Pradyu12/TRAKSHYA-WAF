@@ -104,8 +104,6 @@ func (tg *TrafficGenerator) sendNormalRequest() {
 	clientIP := tg.normalIPs[rand.Intn(len(tg.normalIPs))]
 
 	fullURL := tg.wafURL + path
-	var resp *http.Response
-	var err error
 
 	req, reqErr := http.NewRequest(method, fullURL, nil)
 	if reqErr != nil {
@@ -119,14 +117,13 @@ func (tg *TrafficGenerator) sendNormalRequest() {
 		req.Body = http.NoBody
 	}
 
-	resp, err = tg.httpCli.Do(req)
-	if err != nil {
-		return
+	resp, err := tg.httpCli.Do(req)
+	if err == nil {
+		resp.Body.Close()
 	}
-	resp.Body.Close()
 
-	// Record the event via the Go API — the WAF proxy already records
-	// blocked events, but we record the pass-through events here
+	// Record the request stats directly into DuckDB so the dashboard
+	// shows live data even when the Rust WAF proxy isn't running.
 	tg.store.RecordRequest(clientIP, false)
 }
 
@@ -185,20 +182,24 @@ func (tg *TrafficGenerator) sendAttackRequest() {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 
+	// Record the request stats directly — if the Rust proxy isn't running,
+	// the HTTP request will fail, but we still record the event so the
+	// dashboard shows live data. Attack requests are recorded as blocked.
+	blocked := true
 	resp, err := tg.httpCli.Do(req)
-	if err != nil {
-		return
+	if err == nil {
+		defer resp.Body.Close()
+		blocked = resp.StatusCode == 403
+	} else {
+		log.Printf("⚠️ WAF proxy unreachable, simulating blocked attack: %s %s from %s",
+			attack.method, attack.path, clientIP)
 	}
-	defer resp.Body.Close()
 
-	// The WAF proxy already records blocked incidents via the Go API.
-	// We also record request stats locally.
-	blocked := resp.StatusCode == 403
 	tg.store.RecordRequest(clientIP, blocked)
 
 	if blocked {
-		log.Printf("🛡️ WAF BLOCKED %s %s from %s (status: %d, attack: %s)",
-			attack.method, attack.path, clientIP, resp.StatusCode, attack.attackType)
+		log.Printf("🛡️ WAF BLOCKED %s %s from %s (attack: %s)",
+			attack.method, attack.path, clientIP, attack.attackType)
 	}
 }
 

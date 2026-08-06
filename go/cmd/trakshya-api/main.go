@@ -1,21 +1,27 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/trakshya/trakshya-api/internal/api"
 	"github.com/trakshya/trakshya-api/internal/db"
 	"github.com/trakshya/trakshya-api/internal/telemetry"
 	"github.com/trakshya/trakshya-api/pkg/models"
+	"gopkg.in/yaml.v3"
 )
 
 func main() {
 	cfg := loadConfig()
 
 	dbPath := os.Getenv("TRAKSHYA_DUCKDB_PATH")
+	if dbPath == "" {
+		dbPath = cfg.DatabasePath
+	}
 	if dbPath == "" {
 		dbPath = "trakshya_events.duckdb"
 	}
@@ -65,7 +71,7 @@ func main() {
 
 	addr := ":" + os.Getenv("TRAKSHYA_MGMT_PORT")
 	if addr == ":" {
-		addr = ":8000"
+		addr = fmt.Sprintf(":%d", cfg.ManagementPort)
 	}
 
 	log.Printf("TRAKSHYA management API listening on %s (DuckDB: %s)", addr, dbPath)
@@ -75,23 +81,83 @@ func main() {
 }
 
 func loadConfig() *api.Config {
-	dbPath := os.Getenv("TRAKSHYA_DUCKDB_PATH")
-	if dbPath == "" {
-		dbPath = "trakshya_events.duckdb"
+	configPath := os.Getenv("TRAKSHYA_CONFIG")
+	if configPath == "" {
+		configPath = "/etc/trakshya/config.yaml"
 	}
-	frontendDir := os.Getenv("TRAKSHYA_FRONTEND_DIR")
-	if frontendDir == "" {
-		frontendDir = "/opt/trakshya/frontend"
-	}
-	apiKey := os.Getenv("TRAKSHYA_API_KEY")
-	return &api.Config{
+
+	cfg := &api.Config{
 		ProxyPort:      8080,
-		UpstreamURL:    "http://localhost:8000",
+		UpstreamURL:    "http://localhost:3000",
 		ManagementPort: 8000,
-		DatabasePath:   dbPath,
+		DatabasePath:   "trakshya_events.duckdb",
 		Posture:        "monitor",
 		LogLevel:       "info",
-		FrontendDir:    frontendDir,
-		APIKey:         apiKey,
+		FrontendDir:    "/opt/trakshya/frontend",
 	}
+
+	if data, err := os.ReadFile(configPath); err == nil {
+		var yamlCfg struct {
+			Proxy struct {
+				Port             int    `yaml:"port"`
+				UpstreamURL      string `yaml:"upstream_url"`
+				Posture          string `yaml:"posture"`
+				ManagementAPIURL string `yaml:"management_api_url"`
+			} `yaml:"proxy"`
+			API struct {
+				Port   int    `yaml:"port"`
+				APIKey string `yaml:"api_key"`
+			} `yaml:"api"`
+			DatabasePath string   `yaml:"database_path"`
+			TrustedIPs   []string `yaml:"trusted_ips"`
+		}
+
+		if err := yaml.Unmarshal(data, &yamlCfg); err == nil {
+			if yamlCfg.Proxy.Port > 0 {
+				cfg.ProxyPort = yamlCfg.Proxy.Port
+			}
+			if yamlCfg.Proxy.UpstreamURL != "" {
+				cfg.UpstreamURL = yamlCfg.Proxy.UpstreamURL
+			}
+			if yamlCfg.Proxy.Posture != "" {
+				cfg.Posture = yamlCfg.Proxy.Posture
+			}
+			if yamlCfg.API.Port > 0 {
+				cfg.ManagementPort = yamlCfg.API.Port
+			}
+			if yamlCfg.API.APIKey != "" {
+				cfg.APIKey = yamlCfg.API.APIKey
+			}
+			if yamlCfg.DatabasePath != "" {
+				cfg.DatabasePath = yamlCfg.DatabasePath
+			}
+			if len(yamlCfg.TrustedIPs) > 0 {
+				cfg.TrustedIPs = yamlCfg.TrustedIPs
+			}
+		} else {
+			log.Printf("WARN: Failed to parse config YAML: %v", err)
+		}
+	} else {
+		log.Printf("INFO: Config file not found at %s, using defaults", configPath)
+	}
+
+	// Environment variable overrides
+	if v := os.Getenv("TRAKSHYA_MGMT_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.ManagementPort = port
+		}
+	}
+	if v := os.Getenv("TRAKSHYA_API_KEY"); v != "" {
+		cfg.APIKey = v
+	}
+	if v := os.Getenv("TRAKSHYA_UPSTREAM_URL"); v != "" {
+		cfg.UpstreamURL = v
+	}
+	if v := os.Getenv("TRAKSHYA_PROXY_PORT"); v != "" {
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.ProxyPort = port
+		}
+	}
+
+	return cfg
 }

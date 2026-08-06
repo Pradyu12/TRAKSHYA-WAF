@@ -28,6 +28,7 @@ type Config struct {
 	LogLevel         string   `yaml:"log_level"`
 	FrontendDir      string   `yaml:"frontend_dir"`
 	APIKey           string   `yaml:"api_key"`
+	TrustedIPs       []string `yaml:"trusted_ips"`
 }
 
 type Server struct {
@@ -206,6 +207,12 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// If no API key is configured, allow all requests (development mode)
+		if s.cfg.APIKey == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		host := r.RemoteAddr
 		if h, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 			host = h
@@ -216,11 +223,20 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if key := r.Header.Get("X-API-Key"); key != "" && s.cfg.APIKey != "" {
-			if subtle.ConstantTimeCompare([]byte(key), []byte(s.cfg.APIKey)) == 1 {
-				next.ServeHTTP(w, r)
-				return
+		key := r.Header.Get("X-API-Key")
+		if key == "" {
+			// Also check Authorization header as fallback
+			key = r.Header.Get("Authorization")
+			if len(key) > 7 && key[:7] == "Bearer " {
+				key = key[7:]
+			} else {
+				key = ""
 			}
+		}
+
+		if key != "" && subtle.ConstantTimeCompare([]byte(key), []byte(s.cfg.APIKey)) == 1 {
+			next.ServeHTTP(w, r)
+			return
 		}
 
 		s.errorJSON(w, http.StatusUnauthorized, "unauthorized: provide valid X-API-Key header or connect from localhost")

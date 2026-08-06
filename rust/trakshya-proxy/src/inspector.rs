@@ -31,19 +31,72 @@ impl RequestInspector {
             return Ok(());
         }
 
+        // Rate limiting runs first for all non-trusted IPs, regardless of posture,
+        // so attack traffic is also subject to rate limits.
+        if cfg.rate_limiter.enabled {
+            if !self.state.rate_limiter.allow(client_ip) {
+                tracing::warn!("Rate limit exceeded for {}", client_ip);
+
+                let incident = Incident {
+                    id: Uuid::new_v4().to_string(),
+                    incident_type: "rate_limit".to_string(),
+                    rule_id: "RATE_LIMIT".to_string(),
+                    attack_type: "rate_limit".to_string(),
+                    client_ip: client_ip.to_string(),
+                    path: uri_path.to_string(),
+                    method: method.to_string(),
+                    severity: "medium".to_string(),
+                    message: "Rate limit exceeded".to_string(),
+                    source: "trakshya-proxy".to_string(),
+                    timestamp: Utc::now(),
+                    acknowledged: false,
+                    acked_at: None,
+                    acked_by: None,
+                };
+
+                let state_clone = self.state.clone();
+                let incident_clone = incident.clone();
+                let client_ip_owned = client_ip.to_string();
+                tokio::spawn(async move {
+                    state_clone.gateway.record_incident(
+                        &incident_clone.incident_type,
+                        &incident_clone.rule_id,
+                        &incident_clone.attack_type,
+                        &incident_clone.client_ip,
+                        &incident_clone.path,
+                        &incident_clone.method,
+                        &incident_clone.severity,
+                        &incident_clone.message,
+                        &incident_clone.source,
+                    ).await;
+                    state_clone.gateway.record_request(&client_ip_owned, true).await;
+                    let _ = state_clone.broadcast_tx.send(serde_json::json!({
+                        "type": "incident",
+                        "data": incident_clone
+                    }));
+                });
+
+                return Err(self.rate_limit_response());
+            }
+        }
+
         if cfg.proxy.posture == Posture::UnderAttack && method != "GET" && method != "HEAD" {
             return Err(self.block_response("Under attack posture active"));
         }
 
         let body_str = String::from_utf8_lossy(body);
 
-        let combined = format!(
-            "{} {} {} {} {}",
-            uri_path, query, body_str, method, client_ip
-        );
+        let mut matched_rule: Option<trakshya_rules::RuleMatch> = None;
 
-        let rules_engine = trakshya_rules::Engine::new();
-        if let Some(rule) = rules_engine.check_attack(&combined) {
+        let parts: [&str; 3] = [uri_path, query, &body_str];
+        for part in parts.iter() {
+            if let Some(rule) = self.state.rules_engine.check_attack(part) {
+                matched_rule = Some(rule);
+                break;
+            }
+        }
+
+        if let Some(rule) = matched_rule {
             tracing::warn!(
                 "Blocked request: {} {} from {} - {}",
                 method,
@@ -69,7 +122,6 @@ impl RequestInspector {
                 acked_by: None,
             };
 
-            // Record to Go API (sole DuckDB writer)
             let state_clone = self.state.clone();
             let incident_clone = incident.clone();
             let client_ip_owned = client_ip.to_string();
@@ -87,12 +139,16 @@ impl RequestInspector {
                 ).await;
                 state_clone.gateway.record_request(&client_ip_owned, true).await;
 
-                // Broadcast to SSE clients
                 let _ = state_clone.broadcast_tx.send(serde_json::json!({
                     "type": "incident",
                     "data": incident_clone
                 }));
             });
+
+            // In monitor mode we log but do not block
+            if cfg.proxy.posture == Posture::Monitor {
+                return Ok(());
+            }
 
             return Err(self.block_response(&format!("Blocked: {}", rule.attack_type)));
         }
@@ -100,55 +156,9 @@ impl RequestInspector {
         // Record successful request via Go API
         let state_clone = self.state.clone();
         let client_ip_owned = client_ip.to_string();
-        let client_ip_for_rate_limit = client_ip_owned.clone();
         tokio::spawn(async move {
             state_clone.gateway.record_request(&client_ip_owned, false).await;
         });
-
-        if cfg.proxy.posture != Posture::Monitor && cfg.rate_limiter.enabled {
-            if !self.state.rate_limiter.allow(&client_ip_for_rate_limit) {
-                tracing::warn!("Rate limit exceeded for {}", client_ip);
-
-                let incident = Incident {
-                    id: Uuid::new_v4().to_string(),
-                    incident_type: "rate_limit".to_string(),
-                    rule_id: "RATE_LIMIT".to_string(),
-                    attack_type: "rate_limit".to_string(),
-                    client_ip: client_ip.to_string(),
-                    path: uri_path.to_string(),
-                    method: method.to_string(),
-                    severity: "medium".to_string(),
-                    message: "Rate limit exceeded".to_string(),
-                    source: "trakshya-proxy".to_string(),
-                    timestamp: Utc::now(),
-                    acknowledged: false,
-                    acked_at: None,
-                    acked_by: None,
-                };
-
-                let state_clone = self.state.clone();
-                let incident_clone = incident.clone();
-                tokio::spawn(async move {
-                    state_clone.gateway.record_incident(
-                        &incident_clone.incident_type,
-                        &incident_clone.rule_id,
-                        &incident_clone.attack_type,
-                        &incident_clone.client_ip,
-                        &incident_clone.path,
-                        &incident_clone.method,
-                        &incident_clone.severity,
-                        &incident_clone.message,
-                        &incident_clone.source,
-                    ).await;
-                    let _ = state_clone.broadcast_tx.send(serde_json::json!({
-                        "type": "incident",
-                        "data": incident_clone
-                    }));
-                });
-
-                return Err(self.rate_limit_response());
-            }
-        }
 
         Ok(())
     }

@@ -1,6 +1,7 @@
-# TRAKSHYA-WAF Configuration
-# Shared configuration for all components (Rust proxy, Go API)
+# TRAKSHYA-WAF Production Configuration
+# All values can be overridden with environment variables (see .env.example)
 
+# Database path (DuckDB) — shared by Rust proxy and Go API
 database_path: trakshya_events.duckdb
 
 global:
@@ -25,7 +26,7 @@ circuit_breaker:
 
 api:
   port: 8000
-  api_key: ""
+  api_key: ""  # Set a strong key in production
 
 geoip:
   enabled: false
@@ -33,6 +34,8 @@ geoip:
 
 jwt:
   enabled: false
+  secret: ""  # Set a strong secret in production
+  required_role: admin
 
 trusted_ips:
   - 127.0.0.1

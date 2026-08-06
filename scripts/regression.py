@@ -24,6 +24,8 @@ def request(url: str, *, path: str = "", method: str = "GET", body: bytes | None
     req = urllib.request.Request(target, method=method, data=body)
     req.add_header("User-Agent", "trakshya-regression/1.0")
     req.add_header("Accept", "application/json")
+    if body is not None:
+        req.add_header("Content-Type", "application/json")
     if headers:
         for k, v in headers.items():
             req.add_header(k, v)
@@ -47,8 +49,8 @@ def rule_checks() -> bool:
         ("CMDI-001", re.compile(r"(?i);\s*(cat|ls|rm|sh|bash)|`.*`|\$\("), "; ls", True),
         ("RFI-001", re.compile(r"(?i)include=|require=|file=.*http"), "file=http://evil", True),
         ("LFI-001", re.compile(r"(?i)\.\./etc/passwd|/proc/self"), "../../etc/passwd", True),
-        ("SCANNER-001", re.compile(r"(?i)wp-admin|phpmyadmin|/manager"), "/wp-admin", True),
-        ("BRUTE-001", re.compile(r"(?i)/api/auth/login.*POST"), "/api/auth/login POST", True),
+        ("XXE-001", re.compile(r"(?i)<!DOCTYPE|<!ENTITY"), "<!DOCTYPE foo [", True),
+        ("SSTI-001", re.compile(r"(?i)\{\{.*__class__|{%\s.*include"), "{{ ''.__class__ }}", True),
     ]
     ok = True
     for rule_id, pattern, payload, expected in rules:
@@ -100,6 +102,11 @@ def waf_proxy_checks() -> bool:
     if status == 0 or status >= 500:
         print(f"(skipping proxy checks — proxy unavailable status={status})")
         return True
+
+    # Ensure proxy is in standard posture so attacks are actually blocked
+    status, _, _ = request(PROXY_BASE, path="/api/posture", method="PUT", body=b'{"posture":"standard"}')
+    if status not in (200, 202):
+        print(f"(warning: could not set posture to standard, status={status})")
 
     ok = True
     malicious_queries = [

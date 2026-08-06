@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/prometheus/client_golang v1.19.1
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.29.6
 )
 

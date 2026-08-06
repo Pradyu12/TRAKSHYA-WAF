@@ -7,10 +7,12 @@ use hyper::StatusCode;
 use std::sync::Arc;
 
 pub async fn handle_proxy_request(state: Arc<AppState>, req: Request) -> Response {
+    tracing::debug!("Proxy handler called: {} {}", req.method(), req.uri().path());
     let client_ip = RequestInspector::extract_client_ip(req.headers());
     let uri_path = req.uri().path().to_lowercase();
     let query = req.uri().query().unwrap_or("").to_string();
-    let decoded_query = urlencoding::decode(&query).unwrap_or_default();
+    let normalized_query = query.replace('+', " ");
+    let decoded_query = urlencoding::decode(&normalized_query).unwrap_or_default();
     let method = req.method().to_string();
 
     let (parts, body) = req.into_parts();
@@ -82,10 +84,32 @@ async fn forward_to_upstream(
     };
 
     for (key, value) in headers.iter() {
+        // Skip hop-by-hop headers that should not be forwarded
+        if key.as_str().eq_ignore_ascii_case("connection")
+            || key.as_str().eq_ignore_ascii_case("keep-alive")
+            || key.as_str().eq_ignore_ascii_case("proxy-authenticate")
+            || key.as_str().eq_ignore_ascii_case("proxy-authorization")
+            || key.as_str().eq_ignore_ascii_case("te")
+            || key.as_str().eq_ignore_ascii_case("trailers")
+            || key.as_str().eq_ignore_ascii_case("transfer-encoding")
+            || key.as_str().eq_ignore_ascii_case("upgrade")
+        {
+            continue;
+        }
         if let Ok(v) = value.to_str() {
             req_builder = req_builder.header(key.as_str(), v);
         }
     }
+
+    // Forward the original Host header so upstream can route correctly
+    if let Some(host) = headers.get("host") {
+        if let Ok(host_str) = host.to_str() {
+            req_builder = req_builder.header("host", host_str);
+        }
+    }
+
+    // Add X-Forwarded-For with the real client IP
+    req_builder = req_builder.header("x-forwarded-for", client_ip);
 
     match req_builder.send().await {
         Ok(resp) => {

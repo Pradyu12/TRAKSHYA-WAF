@@ -16,7 +16,7 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # ── Check binaries exist ──────────────────────────────────────────
-for bin in "$DIR/app/bin/trakshya-api" "$DIR/app/bin/trakshya-proxy"; do
+for bin in "$DIR/build/trakshya-api" "$DIR/build/trakshya-proxy"; do
   if [ ! -f "$bin" ]; then
     echo -e "${RED}Error: Binary not found: $bin${NC}"
     echo "Run 'make build' or build manually first."
@@ -54,7 +54,7 @@ echo ""
 echo -e "${GREEN}[3/5]${NC} Starting Go API on port ${API_PORT}..."
 TRAKSHYA_FRONTEND_DIR="$DIR/frontend" \
 TRAKSHYA_DUCKDB_PATH="$DIR/trakshya_events.db" \
-"$DIR/app/bin/trakshya-api" > /tmp/trakshya-api.log 2>&1 &
+"$DIR/build/trakshya-api" > /tmp/trakshya-api.log 2>&1 &
 API_PID=$!
 sleep 3
 if kill -0 $API_PID 2>/dev/null; then
@@ -66,10 +66,10 @@ echo ""
 
 # ── Start WAF Proxy ────────────────────────────────────────────────
 echo -e "${GREEN}[4/5]${NC} Starting WAF Proxy on port ${PROXY_PORT}..."
-TRAKSHYA_DUCKDB_PATH="$DIR/trakshya_proxy.db" \
+TRAKSHYA_DUCKDB_PATH="$DIR/trakshya_events.duckdb" \
 TRAKSHYA_MGMT_API_URL="http://127.0.0.1:${API_PORT}" \
 TRAKSHYA_UPSTREAM_URL="http://127.0.0.1:${UPSTREAM_PORT}" \
-"$DIR/app/bin/trakshya-proxy" > /tmp/trakshya-proxy.log 2>&1 &
+"$DIR/build/trakshya-proxy" > /tmp/trakshya-proxy.log 2>&1 &
 PROXY_PID=$!
 sleep 3
 if kill -0 $PROXY_PID 2>/dev/null; then
