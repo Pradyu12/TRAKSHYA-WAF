@@ -1,6 +1,6 @@
 # TRAKSHYA WAF — Windows launcher
 # Usage: irm https://raw.githubusercontent.com/Pradyu12/TRAKSHYA-WAF/main/landing/start.ps1 | iex
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
 
 function Show-Spinner {
     param([string]$Message, [int]$DurationMs = 2000)
@@ -101,16 +101,24 @@ if ((Test-Path "docker-compose.stack.yml") -and (Test-Path "frontend")) {
     Write-Host "  [*] Cloning TRAKSHYA-WAF..." -ForegroundColor Cyan
     Show-Spinner "Cloning repository..." 3000
     git clone --depth 1 https://github.com/Pradyu12/TRAKSHYA-WAF.git $repoDir 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [Error] Failed to clone repository" -ForegroundColor Red
+        exit 1
+    }
     Write-Host "  [OK] Repository cloned" -ForegroundColor Green
 }
 
-Set-Location $repoDir
+Set-Location $repoDir -ErrorAction Stop
 
 # ── Build & Launch ──────────────────────────────────────
 Write-Host ""
 Write-Host "  ── BUILDING CONTAINERS ──────────────────────────────────" -ForegroundColor Green
 
-docker compose -f docker-compose.stack.yml up --build -d 2>&1 | Out-Null
+docker compose -f docker-compose.stack.yml up --build -d 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [Error] Failed to build and start containers" -ForegroundColor Red
+    exit 1
+}
 Write-Host "  [OK] Containers built and started" -ForegroundColor Green
 
 # ── Wait for health ─────────────────────────────────────
